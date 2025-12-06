@@ -9,25 +9,50 @@
   z-index: 100;
 }
 
-.header-container {
+.site-header .header-container,
+.site-header .container.header-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 100px;
+  padding-right: 100px;
+  height: auto;
+  position: relative;
+  flex-direction: row;
 }
 
-.logo-img {
+@media (max-width: 1200px) {
+  .site-header .header-container,
+  .site-header .container.header-container {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+}
+
+@media (max-width: 768px) {
+  .site-header .header-container,
+  .site-header .container.header-container {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
+.site-header .logo-img {
   width: 120px;
   height: 80px;
   object-fit: contain;
 }
 
-.main-navigation ul {
+.site-header .main-navigation ul {
   display: flex;
   gap: 24px;
 }
 
-.main-navigation ul li a {
+.site-header .main-navigation ul li a {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -36,19 +61,19 @@
   color: #0f283c;
 }
 
-.main-navigation ul li a img {
+.site-header .main-navigation ul li a img {
   width: 16px;
   height: 8px;
   transform: rotate(0deg);
 }
 
-.header-actions {
+.site-header .header-actions {
   display: flex;
   align-items: center;
   gap: 20px;
 }
 
-.apply-now-link {
+.site-header .apply-now-link {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -57,12 +82,12 @@
   color: #9979f6;
 }
 
-.apply-dot {
+.site-header .apply-dot {
   width: 8px;
   height: 8px;
 }
 
-.btn.btn-primary {
+.site-header .btn.btn-primary {
   background-color: #9979f6;
   color: #ffffff;
   padding: 12px 20px;
@@ -76,7 +101,7 @@
   display: inline-block;
 }
 
-.mobile-nav-toggle {
+.site-header .mobile-nav-toggle {
   display: none;
   background: none;
   border: none;
@@ -84,7 +109,7 @@
   padding: 8px;
 }
 
-.menu-icon {
+.site-header .menu-icon {
   width: 24px;
   height: 24px;
   display: block;
@@ -202,12 +227,12 @@
 }
 
 @media (max-width: 992px) {
-  .main-navigation,
-  .header-actions {
+  .site-header .main-navigation,
+  .site-header .header-actions {
     display: none;
   }
 
-  .mobile-nav-toggle {
+  .site-header .mobile-nav-toggle {
     display: block;
   }
 }

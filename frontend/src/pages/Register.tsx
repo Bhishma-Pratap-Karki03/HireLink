@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../styles/Register.css";
@@ -17,11 +17,9 @@ import recruiterSelectedIcon from "../images/Register Page Images/Recruiter Sele
 import recruiterUnselectedIcon from "../images/Register Page Images/Recruiter Unselected.png";
 
 const Register = () => {
-  // State to track which user type is selected: "candidate" or "recruiter"
   const [userType, setUserType] = useState<"candidate" | "recruiter">(
     "candidate"
   );
-  // State to store form input values
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -30,60 +28,93 @@ const Register = () => {
     terms: false,
   });
 
-  // state to show success or error message after form submission
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusType, setStatusType] = useState<"success" | "error" | null>(
     null
   );
+  const [isLoading, setIsLoading] = useState(false);
+  const [showVerificationLink, setShowVerificationLink] = useState(false);
+  const [existingUserEmail, setExistingUserEmail] = useState<string>("");
+  const navigate = useNavigate();
 
-  // Handle input changes for form fields
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value, //store checkbox as boolean
+      [name]: type === "checkbox" ? checked : value,
     }));
+
+    // Reset verification link when user changes email
+    if (name === "email") {
+      setShowVerificationLink(false);
+    }
   };
 
-  // handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (isLoading) return;
 
     // Clear previous status
     setStatusMessage(null);
     setStatusType(null);
+    setShowVerificationLink(false);
 
-    // Basic client-side validation
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setStatusMessage(
+        "Please enter a valid email address (example@domain.com)"
+      );
+      setStatusType("error");
+      return;
+    }
+
+    // Name validation
+    if (formData.fullName.trim().length < 2) {
+      setStatusMessage("Full name must be at least 2 characters long");
+      setStatusType("error");
+      return;
+    }
+
+    // Password length validation
+    if (formData.password.length < 8) {
+      setStatusMessage("Password must be at least 8 characters long");
+      setStatusType("error");
+      return;
+    }
+
+    // Password complexity validation
+    if (
+      !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(
+        formData.password
+      )
+    ) {
+      setStatusMessage(
+        "Password must contain uppercase, lowercase, number, and special character"
+      );
+      setStatusType("error");
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
-      console.error("Passwords do not match");
       setStatusMessage("Passwords do not match");
       setStatusType("error");
       return;
     }
 
-    //check if terms are accepted
     if (!formData.terms) {
-      console.error("Terms not accepted");
       setStatusMessage("Please accept the terms and conditions");
       setStatusType("error");
       return;
     }
 
-    // log form submission data
-    console.log("Form submitted (frontend):", {
-      userType,
-      fullName: formData.fullName,
-      email: formData.email,
-      terms: formData.terms,
-    });
+    setIsLoading(true);
 
     try {
-      //call backend API to register user
       const response = await fetch("http://localhost:5000/api/users/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName: formData.fullName,
           email: formData.email,
@@ -94,24 +125,121 @@ const Register = () => {
 
       const data = await response.json();
 
-      // handle error response from backend
       if (!response.ok) {
-        console.error("Registration failed (frontend):", data);
+        // If user exists but is verified
+        if (data.isVerified) {
+          setStatusMessage(
+            data.message || "Email already verified. Please login."
+          );
+          setStatusType("error");
+          setIsLoading(false);
+          return;
+        }
+
+        // If user exists but not verified and has active code
+        if (data.emailExists && data.hasActiveCode) {
+          setStatusMessage(
+            data.message ||
+              "Email already registered but not verified. Please enter the verification code."
+          );
+          setStatusType("error");
+          setShowVerificationLink(true);
+          setExistingUserEmail(data.email);
+          setIsLoading(false);
+          return;
+        }
+
+        // If user exists, not verified, and code expired
+        if (data.emailExists && data.codeExpired) {
+          setStatusMessage(
+            data.message || "Verification code expired. New code sent."
+          );
+          setStatusType("success");
+          setShowVerificationLink(true);
+          setExistingUserEmail(data.email);
+
+          // Redirect to verification page after 3 seconds
+          setTimeout(() => {
+            navigate("/verify-email", {
+              state: {
+                email: data.email,
+                message: data.message,
+              },
+            });
+          }, 3000);
+          setIsLoading(false);
+          return;
+        }
+
+        // If user exists and requires verification (new registration flow)
+        if (data.requiresVerification) {
+          setStatusMessage(
+            data.message || "Please verify your email to continue"
+          );
+          setStatusType("success");
+
+          // Redirect to verification page after 2 seconds
+          setTimeout(() => {
+            navigate("/verify-email", {
+              state: {
+                email: formData.email,
+                message: data.message,
+              },
+            });
+          }, 2000);
+          setIsLoading(false);
+          return;
+        }
+
+        // Other errors
         setStatusMessage(data.message || "Registration failed");
         setStatusType("error");
+        setIsLoading(false);
         return;
       }
 
-      // Registration successful
-      console.log("Registration successful (frontend):", data);
-      setStatusMessage("Registration successful");
+      // Registration successful (new user)
+      setStatusMessage(
+        data.message ||
+          "Registration successful! Redirecting to verification..."
+      );
       setStatusType("success");
 
-    
+      // Clear the form
+      setFormData({
+        fullName: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        terms: false,
+      });
+
+      // Redirect to verification page after 2 seconds
+      setTimeout(() => {
+        navigate("/verify-email", {
+          state: {
+            email: formData.email,
+            message: data.message,
+          },
+        });
+      }, 2000);
     } catch (error) {
-      console.error("Error calling registration API (frontend):", error);
+      console.error("Error calling registration API:", error);
       setStatusMessage("Something went wrong. Please try again.");
       setStatusType("error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoToVerification = () => {
+    if (existingUserEmail) {
+      navigate("/verify-email", {
+        state: {
+          email: existingUserEmail,
+          message: "Please enter verification code sent to your email",
+        },
+      });
     }
   };
 
@@ -143,7 +271,7 @@ const Register = () => {
       <section id="registration" className="registration-section">
         <div className="container">
           <div className="form-wrapper">
-            <div className="form-header">
+            <div className="form-header1">
               <h2>Register Now</h2>
               <div className="title-underline">
                 <div className="title-underline-accent"></div>
@@ -245,8 +373,8 @@ const Register = () => {
                   Accept our terms and conditions and privacy policy
                 </label>
               </div>
-              <button type="submit" className="btn-submit">
-                Register Now
+              <button type="submit" className="btn-submit" disabled={isLoading}>
+                {isLoading ? "Registering..." : "Register Now"}
               </button>
             </form>
 
@@ -254,14 +382,39 @@ const Register = () => {
               <p className="login-prompt">
                 Already have an account? <Link to="/login">Login</Link>
               </p>
+
               {statusMessage && (
-                <p
-                  className={`status-message ${
-                    statusType === "success" ? "status-success" : "status-error"
-                  }`}
-                >
-                  {statusMessage}
-                </p>
+                <div>
+                  <p
+                    className={`status-message ${
+                      statusType === "success"
+                        ? "status-success"
+                        : "status-error"
+                    }`}
+                  >
+                    {statusMessage}
+                  </p>
+
+                  {showVerificationLink && existingUserEmail && (
+                    <div style={{ marginTop: "10px", textAlign: "center" }}>
+                      <button
+                        onClick={handleGoToVerification}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#0068ce",
+                          textDecoration: "underline",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                          padding: "0",
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        Go to Verification Page
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
