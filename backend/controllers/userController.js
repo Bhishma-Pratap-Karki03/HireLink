@@ -10,6 +10,8 @@ const generateVerificationCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
 };
 
+// Defining admin email
+const ADMIN_EMAIL = "hirelinknp@gmail.com";
 // REGISTER USER - UPDATED to prevent re-registration during verification
 exports.registerUser = async (req, res) => {
   try {
@@ -33,6 +35,13 @@ exports.registerUser = async (req, res) => {
     // Email format validation
     if (!emailRegex.test(email)) {
       return res.status(400).json({ message: "Please provide a valid email" });
+    }
+
+    // Prevent registration with admin email
+    if (email == ADMIN_EMAIL) {
+      return res
+        .status(400)
+        .json({ message: "Registration with this email is not allowed" });
     }
 
     // Password strength validation
@@ -102,7 +111,7 @@ exports.registerUser = async (req, res) => {
 
           // Update user with new details and code
           existingUser.fullName = fullName;
-          existingUser.password = password; // This will be hashed by the pre-save hook
+          existingUser.password = password;
           existingUser.role = role;
           existingUser.verificationCode = verificationCode;
           existingUser.verificationCodeExpires = verificationCodeExpires;
@@ -214,36 +223,42 @@ exports.loginUser = async (req, res) => {
       });
     }
 
-    // Check if user is verified
-    if (!user.isVerified) {
-      // If code is not expired, inform user to verify
-      if (user.verificationCode && user.verificationCodeExpires > new Date()) {
-        const timeLeft = Math.ceil(
-          (user.verificationCodeExpires - new Date()) / 1000 / 60
-        );
-        return res.status(403).json({
-          message: `Please verify your email first. Verification code sent to ${user.email} is still valid for ${timeLeft} minutes.`,
-          requiresVerification: true,
-          email: user.email,
-          hasActiveCode: true,
-        });
-      } else {
-        // If code expired, send new one
-        const verificationCode = generateVerificationCode();
-        const verificationCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
+    // Admin: Skip verification check for admin users
+    if (user.role != "admin") {
+      // Check if user is verified
+      if (!user.isVerified) {
+        // If code is not expired, inform user to verify
+        if (
+          user.verificationCode &&
+          user.verificationCodeExpires > new Date()
+        ) {
+          const timeLeft = Math.ceil(
+            (user.verificationCodeExpires - new Date()) / 1000 / 60
+          );
+          return res.status(403).json({
+            message: `Please verify your email first. Verification code sent to ${user.email} is still valid for ${timeLeft} minutes.`,
+            requiresVerification: true,
+            email: user.email,
+            hasActiveCode: true,
+          });
+        } else {
+          // If code expired, send new one
+          const verificationCode = generateVerificationCode();
+          const verificationCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
 
-        user.verificationCode = verificationCode;
-        user.verificationCodeExpires = verificationCodeExpires;
-        await user.save();
+          user.verificationCode = verificationCode;
+          user.verificationCodeExpires = verificationCodeExpires;
+          await user.save();
 
-        await sendVerificationEmail(user.email, verificationCode);
+          await sendVerificationEmail(user.email, verificationCode);
 
-        return res.status(403).json({
-          message: "Verification code expired. New code sent to your email.",
-          requiresVerification: true,
-          email: user.email,
-          codeExpired: true,
-        });
+          return res.status(403).json({
+            message: "Verification code expired. New code sent to your email.",
+            requiresVerification: true,
+            email: user.email,
+            codeExpired: true,
+          });
+        }
       }
     }
 

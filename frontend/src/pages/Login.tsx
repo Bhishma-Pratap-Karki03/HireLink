@@ -124,14 +124,19 @@ const Login = () => {
         localStorage.setItem("authToken", data.token);
         localStorage.setItem("userData", JSON.stringify(data.user));
 
+        //Check if this is the admin email
+        const isAdminEmail = data.user.email === "hirelinknp@gmail.com";
+
         // Simple redirect based on user role
         setTimeout(() => {
-          if (data.user.role === "recruiter") {
+          if (isAdminEmail) {
+            window.location.href = "/admin-dashboard";
+          } else if (data.user.role === "recruiter") {
             window.location.href = "/recruiter-home";
           } else {
             window.location.href = "/candidate-home";
           }
-        }, 2000);
+        }, 500);
       }
     } catch (error) {
       console.error("Error calling login API:", error);

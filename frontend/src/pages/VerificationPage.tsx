@@ -1,8 +1,32 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../styles/VerificationPage.css";
+
+// Define TypeScript interfaces for API responses
+interface VerificationResponse {
+  message: string;
+  success?: boolean;
+  codeExpired?: boolean;
+  resetToken?: string;
+  verified?: boolean;
+  user?: {
+    id: string;
+    fullName: string;
+    email: string;
+    role: string;
+    isVerified: boolean;
+  };
+}
+
+interface StatusResponse {
+  isVerified: boolean;
+  hasPendingVerification?: boolean;
+  expiresAt?: string;
+  timeLeft?: number;
+  isExpired?: boolean;
+}
 
 const VerificationPage = () => {
   const [verificationCode, setVerificationCode] = useState<string[]>([
@@ -17,7 +41,7 @@ const VerificationPage = () => {
   const [isResending, setIsResending] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [statusType, setStatusType] = useState<"success" | "error">("error");
-  const [timer, setTimer] = useState<number>(0); 
+  const [timer, setTimer] = useState<number>(0);
   const [canResend, setCanResend] = useState<boolean>(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState<boolean>(true);
 
@@ -29,9 +53,13 @@ const VerificationPage = () => {
   const userEmail = location.state?.email || "";
   const initialMessage = location.state?.message || "";
   const fromLogin = location.state?.fromLogin || false;
+  const isPasswordReset = location.state?.isPasswordReset || false;
 
-  const checkVerificationStatus = useCallback(async () => {
-    if (!userEmail) return;
+  // Check if this is for email verification or password reset
+  const isVerificationType = !isPasswordReset;
+
+  const checkVerificationStatus = async () => {
+    if (!userEmail || isPasswordReset) return;
 
     setIsCheckingStatus(true);
     try {
@@ -40,7 +68,7 @@ const VerificationPage = () => {
           userEmail
         )}`
       );
-      const data = await response.json();
+      const data: StatusResponse = await response.json();
 
       if (response.ok) {
         if (data.isVerified) {
@@ -52,13 +80,13 @@ const VerificationPage = () => {
         }
 
         // Set timer from server data
-        if (data.timeLeft > 0) {
+        if (data.timeLeft && data.timeLeft > 0) {
           setTimer(data.timeLeft);
           setCanResend(false);
         } else {
           // Code expired or no code
           setTimer(0);
-          setCanResend(data.hasPendingVerification || data.isExpired);
+          setCanResend(data.hasPendingVerification || data.isExpired || false);
         }
       }
     } catch (error) {
@@ -66,12 +94,17 @@ const VerificationPage = () => {
     } finally {
       setIsCheckingStatus(false);
     }
-  }, [userEmail, navigate]);
+  };
 
   // Initialize timer and check verification status
   useEffect(() => {
-    if (userEmail) {
+    if (userEmail && !isPasswordReset) {
       checkVerificationStatus();
+    } else {
+      // For password reset or no email, set default timer
+      setTimer(300);
+      setCanResend(false);
+      setIsCheckingStatus(false);
     }
 
     if (initialMessage) {
@@ -83,9 +116,9 @@ const VerificationPage = () => {
     if (inputRefs.current[0]) {
       setTimeout(() => inputRefs.current[0]?.focus(), 100);
     }
-  }, [userEmail, initialMessage, fromLogin, checkVerificationStatus]);
+  }, [userEmail, initialMessage, fromLogin, isPasswordReset]);
 
-  // Timer countdown - sync with server every 30 seconds
+  // Timer countdown - sync with server every second for verification
   useEffect(() => {
     let interval: ReturnType<typeof setTimeout> | undefined;
     let syncInterval: ReturnType<typeof setTimeout> | undefined;
@@ -99,11 +132,11 @@ const VerificationPage = () => {
           }
           return prevTimer - 1;
         });
-      }, 1000);
+      }, 500);
     }
 
-    // Sync with server every 30 seconds to ensure accuracy
-    if (userEmail && !isCheckingStatus) {
+    // Sync with server every 30 seconds to ensure accuracy (only for verification, not password reset)
+    if (userEmail && !isPasswordReset && !isCheckingStatus) {
       syncInterval = setInterval(() => {
         checkVerificationStatus();
       }, 30000);
@@ -113,7 +146,7 @@ const VerificationPage = () => {
       if (interval) clearInterval(interval);
       if (syncInterval) clearInterval(syncInterval);
     };
-  }, [timer, canResend, userEmail, isCheckingStatus, checkVerificationStatus]);
+  }, [timer, canResend, userEmail, isPasswordReset, isCheckingStatus]);
 
   const handleInputChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
@@ -170,7 +203,7 @@ const VerificationPage = () => {
     }
 
     if (!userEmail) {
-      setStatusMessage("Email not found. Please register again.");
+      setStatusMessage("Email not found. Please try again.");
       setStatusType("error");
       return;
     }
@@ -179,53 +212,106 @@ const VerificationPage = () => {
     setStatusMessage("");
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/verify/verify-email",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: userEmail,
-            code: code,
-          }),
-        }
-      );
+      let response: Response;
+      let data: VerificationResponse;
 
-      const data = await response.json();
+      if (isVerificationType) {
+        // Email verification flow
+        response = await fetch(
+          "http://localhost:5000/api/verify/verify-email",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: userEmail,
+              code: code,
+            }),
+          }
+        );
 
-      if (!response.ok) {
-        if (data.codeExpired) {
-          setStatusMessage("Code expired. Please request a new one.");
-          setCanResend(true);
-          setTimer(0);
-          // Refresh status to get updated expiration
-          checkVerificationStatus();
-        } else {
-          setStatusMessage(data.message || "Invalid verification code");
+        data = await response.json();
+
+        if (!response.ok) {
+          if (data.codeExpired) {
+            setStatusMessage("Code expired. Please request a new one.");
+            setCanResend(true);
+            setTimer(0);
+            // Refresh status to get updated expiration
+            if (!isPasswordReset) {
+              checkVerificationStatus();
+            }
+          } else {
+            setStatusMessage(data.message || "Invalid verification code");
+          }
+          setStatusType("error");
+          setIsLoading(false);
+          return;
         }
-        setStatusType("error");
-        setIsLoading(false);
-        return;
+
+        // Verification successful
+        setStatusMessage(
+          "Email verified successfully! Welcome to HireLink. Check your email for welcome message."
+        );
+        setStatusType("success");
+        setTimer(0);
+        setCanResend(false);
+
+        // Redirect to login after 3 seconds with success message
+        setTimeout(() => {
+          navigate("/login", {
+            state: {
+              message: `Welcome to HireLink! Your email has been verified successfully. You can now login.`,
+              verifiedSuccess: true,
+              userEmail: userEmail,
+            },
+          });
+        }, 500);
+      } else {
+        // Password reset verification flow
+        response = await fetch(
+          "http://localhost:5000/api/password/verify-code",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: userEmail,
+              code: code,
+            }),
+          }
+        );
+
+        data = await response.json();
+
+        if (!response.ok) {
+          if (data.codeExpired) {
+            setStatusMessage("Reset code expired. Please request a new one.");
+            setCanResend(true);
+            setTimer(0);
+          } else {
+            setStatusMessage(data.message || "Invalid reset code");
+          }
+          setStatusType("error");
+          setIsLoading(false);
+          return;
+        }
+
+        // Reset code verified successfully
+        setStatusMessage(
+          "Reset code verified! Redirecting to set new password..."
+        );
+        setStatusType("success");
+
+        // Redirect to new password page with token
+        setTimeout(() => {
+          navigate("/reset-password", {
+            state: {
+              email: userEmail,
+              token: data.resetToken,
+              message: "Please enter your new password",
+            },
+          });
+        }, 500);
       }
-
-      // Verification successful
-      setStatusMessage(
-        "Email verified successfully! Welcome to HireLink. Check your email for welcome message."
-      );
-      setStatusType("success");
-      setTimer(0);
-      setCanResend(false);
-
-      // Redirect to login after 3 seconds with success message
-      setTimeout(() => {
-        navigate("/login", {
-          state: {
-            message: `Welcome to HireLink! Your email has been verified successfully. You can now login.`,
-            verifiedSuccess: true,
-            userEmail: userEmail,
-          },
-        });
-      }, 3000);
     } catch (error) {
       setStatusMessage("An error occurred. Please try again.");
       setStatusType("error");
@@ -242,16 +328,32 @@ const VerificationPage = () => {
     setStatusMessage("");
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/verify/resend-verification",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: userEmail }),
-        }
-      );
+      let response: Response;
+      let data: VerificationResponse;
 
-      const data = await response.json();
+      if (isVerificationType) {
+        // Resend verification code
+        response = await fetch(
+          "http://localhost:5000/api/verify/resend-verification",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: userEmail }),
+          }
+        );
+      } else {
+        // Resend password reset code
+        response = await fetch(
+          "http://localhost:5000/api/password/resend-code",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: userEmail }),
+          }
+        );
+      }
+
+      data = await response.json();
 
       if (!response.ok) {
         setStatusMessage(data.message || "Failed to resend code");
@@ -261,11 +363,21 @@ const VerificationPage = () => {
       }
 
       // Resend successful
-      setStatusMessage("New verification code sent to your email!");
+      setStatusMessage(
+        isVerificationType
+          ? "New verification code sent to your email!"
+          : "New reset code sent to your email!"
+      );
       setStatusType("success");
 
-      // Refresh status to get new expiration time
-      await checkVerificationStatus();
+      // For verification, refresh status; for password reset, set timer
+      if (isVerificationType) {
+        await checkVerificationStatus();
+      } else {
+        // Reset timer (5 minutes = 300 seconds)
+        setTimer(300);
+        setCanResend(false);
+      }
 
       // Clear inputs
       setVerificationCode(["", "", "", "", "", ""]);
@@ -297,7 +409,11 @@ const VerificationPage = () => {
         <div className="verification-card">
           <div className="verification-content">
             <header className="verification-header">
-              <h1 className="title">Enter Verification Code</h1>
+              <h1 className="title">
+                {isVerificationType
+                  ? "Enter Verification Code"
+                  : "Enter Reset Code"}
+              </h1>
               <div className="separator">
                 <div className="line-gray"></div>
                 <div className="line-blue"></div>
@@ -349,7 +465,11 @@ const VerificationPage = () => {
               onClick={handleVerify}
               disabled={!isCodeComplete || isLoading}
             >
-              {isLoading ? "Verifying..." : "Verify Account"}
+              {isLoading
+                ? "Verifying..."
+                : isVerificationType
+                ? "Verify Account"
+                : "Verify Code"}
             </button>
 
             {/* Timer display below verify button */}
@@ -376,17 +496,28 @@ const VerificationPage = () => {
                   onClick={handleResendCode}
                   disabled={isResending}
                 >
-                  {isResending ? "Sending..." : "Resend Code"}
+                  {isResending
+                    ? "Sending..."
+                    : isVerificationType
+                    ? "Resend Verification Code"
+                    : "Resend Reset Code"}
                 </button>
               )}
 
-              <Link to="/register" className="link-action">
-                Back to Register Page
-              </Link>
-
-              <Link to="/login" className="link-action">
-                Back to Login Page
-              </Link>
+              {isVerificationType ? (
+                <>
+                  <Link to="/register" className="link-action">
+                    Back to Register Page
+                  </Link>
+                  <Link to="/login" className="link-action">
+                    Back to Login Page
+                  </Link>
+                </>
+              ) : (
+                <Link to="/forgot-password" className="link-action">
+                  Back to Forgot Password
+                </Link>
+              )}
             </div>
           </div>
         </div>

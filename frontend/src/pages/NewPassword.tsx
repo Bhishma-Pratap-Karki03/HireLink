@@ -7,7 +7,6 @@ import "../styles/NewPassword.css";
 // Import images from Forget Password Page Images folder
 import decorRight from "../images/Login Page Images/16_1331.svg";
 
-
 const NewPassword = () => {
   const [formData, setFormData] = useState({
     password: "",
@@ -19,9 +18,10 @@ const NewPassword = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get email/token from location state (will come from reset password link)
+  // Get email and token from location state
   const email = location.state?.email || "";
   const resetToken = location.state?.token || "";
+  const initialMessage = location.state?.message || "";
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -33,7 +33,7 @@ const NewPassword = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Basic validation
     if (!formData.password.trim()) {
       setStatusMessage("Please enter a new password");
@@ -54,8 +54,14 @@ const NewPassword = () => {
     }
 
     // Password complexity validation
-    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(formData.password)) {
-      setStatusMessage("Password must contain uppercase, lowercase, number, and special character");
+    if (
+      !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(
+        formData.password
+      )
+    ) {
+      setStatusMessage(
+        "Password must contain uppercase, lowercase, number, and special character"
+      );
       setStatusType("error");
       return;
     }
@@ -66,32 +72,69 @@ const NewPassword = () => {
       return;
     }
 
+    if (!resetToken) {
+      setStatusMessage("Invalid reset token. Please request a new reset link.");
+      setStatusType("error");
+      return;
+    }
+
     setIsLoading(true);
     setStatusMessage("");
 
-    // For now, just show a success message
-    // Later we'll implement actual backend API call
-    setTimeout(() => {
-      setStatusMessage("Password has been reset successfully! Redirecting to login...");
+    try {
+      const response = await fetch("http://localhost:5000/api/password/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: resetToken,
+          newPassword: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setStatusMessage(data.message || "Failed to reset password");
+        setStatusType("error");
+        setIsLoading(false);
+        return;
+      }
+
+      // Password reset successful
+      setStatusMessage(
+        "Password has been reset successfully! Redirecting to login..."
+      );
       setStatusType("success");
-      
+
+      // Clear form
+      setFormData({
+        password: "",
+        confirmPassword: "",
+      });
+
       // Redirect to login after 3 seconds
       setTimeout(() => {
         navigate("/login", {
           state: {
-            message: "Password reset successful! You can now login with your new password.",
+            message:
+              "Password reset successful! You can now login with your new password.",
+            verifiedSuccess: true,
           },
         });
-      }, 3000);
-      
+      }, 500);
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      setStatusMessage("Something went wrong. Please try again.");
+      setStatusType("error");
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
     <>
       <Navbar />
-      
+
       <section id="section-header">
         <div className="header-container">
           {/* Decorative Element Top Right */}
@@ -99,27 +142,35 @@ const NewPassword = () => {
 
           {/* Header Content */}
           <div className="header-content">
-            <h1 className="header-title">Forget Password</h1>
+            <h1 className="header-title">Reset Password</h1>
             <div className="header-subtitle-wrapper">
-              <span className="header-subtitle">New Password</span>
+              <span className="header-subtitle">Set New Password</span>
             </div>
           </div>
-
         </div>
       </section>
-      
+
       <section id="section-main">
         <div className="main-container">
           <div className="card">
             <div className="card-header">
-              <h2 className="card-title">Forget Your Password</h2>
+              <h2 className="card-title">Set New Password</h2>
               <div className="separator">
                 <div className="line-gray"></div>
                 <div className="line-blue"></div>
               </div>
             </div>
 
-            <p className="card-description">Enter your new password</p>
+            <p className="card-description">
+              {email
+                ? `Enter your new password for ${email}`
+                : "Enter your new password"}
+            </p>
+
+            {/* Initial message from location state */}
+            {initialMessage && !statusMessage && (
+              <div className={`status-message success`}>{initialMessage}</div>
+            )}
 
             {/* Status Message */}
             {statusMessage && (
@@ -133,7 +184,7 @@ const NewPassword = () => {
                 <input
                   type="password"
                   name="password"
-                  placeholder="Password"
+                  placeholder="New Password"
                   className="form-input"
                   value={formData.password}
                   onChange={handleInputChange}
@@ -146,7 +197,7 @@ const NewPassword = () => {
                 <input
                   type="password"
                   name="confirmPassword"
-                  placeholder="Confirm Password"
+                  placeholder="Confirm New Password"
                   className="form-input"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
@@ -155,22 +206,20 @@ const NewPassword = () => {
                 />
               </div>
 
-              <button 
-                type="submit" 
-                className="btn-verify"
-                disabled={isLoading}
-              >
+              <button type="submit" className="btn-verify" disabled={isLoading}>
                 {isLoading ? "Resetting..." : "Reset Password"}
               </button>
             </form>
 
             <div className="card-footer">
-              <Link to="/login" className="link-back">Back to Login Page</Link>
+              <Link to="/login" className="link-back">
+                Back to Login Page
+              </Link>
             </div>
           </div>
         </div>
       </section>
-      
+
       <Footer />
     </>
   );

@@ -9,6 +9,8 @@ const generateVerificationCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
+const ADMIN_EMAIL = "hirelinknp@gmail.com";
+
 // POST /api/verify/verify-email
 router.post("/verify-email", async (req, res) => {
   try {
@@ -47,13 +49,18 @@ router.post("/verify-email", async (req, res) => {
     user.verificationCodeExpires = null;
     await user.save();
 
-    // Send welcome email after successful verification
-    try {
-      await sendWelcomeEmail(user.email, user.fullName, user.role);
-      console.log(`Welcome email sent to ${user.email} after verification`);
-    } catch (emailError) {
-      console.error("Failed to send welcome email:", emailError);
-      // Don't fail the verification if welcome email fails
+    // Check if this is admin email
+    const isAdminEmail = user.email == ADMIN_EMAIL;
+
+    // Send welcome email after successful verification not for admin
+    if (!isAdminEmail) {
+      try {
+        await sendWelcomeEmail(user.email, user.fullName, user.role);
+        console.log(`Welcome email sent to ${user.email} after verification`);
+      } catch (emailError) {
+        console.error("Failed to send welcome email:", emailError);
+        // Don't fail the verification if welcome email fails
+      }
     }
 
     res.status(200).json({
@@ -126,7 +133,6 @@ router.post("/resend-verification", async (req, res) => {
   }
 });
 
-// GET /api/verify/check-status?email=user@example.com
 router.get("/check-status", async (req, res) => {
   try {
     const { email } = req.query;

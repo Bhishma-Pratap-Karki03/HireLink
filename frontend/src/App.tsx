@@ -6,6 +6,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import NewPassword from "./pages/NewPassword";
 import RecruiterHomePage from "./pages/RecruiterHomePage";
 import CandidateHomePage from "./pages/CandidateHomePage";
+import AdminHomePage from "./pages/AdminHomePage";
 import "./App.css";
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
         <Route path="/reset-password" element={<NewPassword />} />
         <Route path="/recruiter-home" element={<RecruiterHomePage />} />
         <Route path="/candidate-home" element={<CandidateHomePage />} />
+        <Route path="/admin-dashboard" element={<AdminHomePage />} />
       </Routes>
     </Router>
   );

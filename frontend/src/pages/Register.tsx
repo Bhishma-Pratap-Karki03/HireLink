@@ -166,7 +166,7 @@ const Register = () => {
                 message: data.message,
               },
             });
-          }, 3000);
+          }, 500);
           setIsLoading(false);
           return;
         }
@@ -186,7 +186,7 @@ const Register = () => {
                 message: data.message,
               },
             });
-          }, 2000);
+          }, 500);
           setIsLoading(false);
           return;
         }
@@ -222,7 +222,7 @@ const Register = () => {
             message: data.message,
           },
         });
-      }, 2000);
+      }, 500);
     } catch (error) {
       console.error("Error calling registration API:", error);
       setStatusMessage("Something went wrong. Please try again.");
