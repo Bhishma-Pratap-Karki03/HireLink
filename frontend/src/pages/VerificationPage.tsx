@@ -102,7 +102,7 @@ const VerificationPage = () => {
       checkVerificationStatus();
     } else {
       // For password reset or no email, set default timer
-      setTimer(300);
+      setTimer(900);
       setCanResend(false);
       setIsCheckingStatus(false);
     }
@@ -256,7 +256,7 @@ const VerificationPage = () => {
         setTimer(0);
         setCanResend(false);
 
-        // Redirect to login after 3 seconds with success message
+        // Redirect to login with success message
         setTimeout(() => {
           navigate("/login", {
             state: {
@@ -374,8 +374,8 @@ const VerificationPage = () => {
       if (isVerificationType) {
         await checkVerificationStatus();
       } else {
-        // Reset timer (5 minutes = 300 seconds)
-        setTimer(300);
+        // Reset timer (15 minutes = 900 seconds)
+        setTimer(900);
         setCanResend(false);
       }
 

@@ -35,7 +35,7 @@ router.post("/verify-email", async (req, res) => {
       return res.status(400).json({ message: "Invalid verification code" });
     }
 
-    // Check if code is expired (5 minutes)
+    // Check if code is expired (15 minutes)
     if (user.verificationCodeExpires < new Date()) {
       return res.status(400).json({
         message: "Verification code has expired. Please request a new code.",
@@ -102,9 +102,9 @@ router.post("/resend-verification", async (req, res) => {
         .json({ message: "Email already verified. Please login." });
     }
 
-    // Generate new verification code (5 minutes expiration)
+    // Generate new verification code (15 minutes expiration)
     const newVerificationCode = generateVerificationCode();
-    const newVerificationCodeExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const newVerificationCodeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
     // Update user with new code
     user.verificationCode = newVerificationCode;

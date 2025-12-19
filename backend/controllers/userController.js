@@ -10,9 +10,7 @@ const generateVerificationCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
 };
 
-// Defining admin email
-const ADMIN_EMAIL = "hirelinknp@gmail.com";
-// REGISTER USER - UPDATED to prevent re-registration during verification
+// REGISTER USER
 exports.registerUser = async (req, res) => {
   try {
     let { fullName, email, password, userType } = req.body;
@@ -21,7 +19,7 @@ exports.registerUser = async (req, res) => {
     fullName = (fullName || "").trim();
     email = (email || "").trim().toLowerCase();
 
-    console.log("Register endpoint hit (backend) with data:", {
+    console.log("Register endpoint hit with data:", {
       fullName,
       email,
       userType,
@@ -29,40 +27,25 @@ exports.registerUser = async (req, res) => {
 
     // Validate required fields
     if (!fullName || !email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
     }
 
     // Email format validation
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: "Please provide a valid email" });
-    }
-
-    // Prevent registration with admin email
-    if (email == ADMIN_EMAIL) {
-      return res
-        .status(400)
-        .json({ message: "Registration with this email is not allowed" });
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid email",
+      });
     }
 
     // Password strength validation
     if (password.length < 8) {
-      return res
-        .status(400)
-        .json({ message: "Password must be at least 8 characters long" });
-    }
-    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password)) {
       return res.status(400).json({
-        message: "Password must contain upper and lower case letters",
-      });
-    }
-    if (!/[0-9]/.test(password)) {
-      return res
-        .status(400)
-        .json({ message: "Password must contain at least one number" });
-    }
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-      return res.status(400).json({
-        message: "Password must contain at least one special character",
+        success: false,
+        message: "Password must be at least 8 characters long",
       });
     }
 
@@ -78,75 +61,43 @@ exports.registerUser = async (req, res) => {
     if (existingUser) {
       if (existingUser.isVerified) {
         return res.status(400).json({
+          success: false,
           message: "Email already exists and is verified. Please login.",
           emailExists: true,
           isVerified: true,
         });
       } else {
-        // User exists but is not verified
-        const currentTime = new Date();
+        // User exists but is not verified - update with new data
+        const verificationCode = generateVerificationCode();
+        const verificationCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
 
-        // Check if verification code is still valid (not expired)
-        if (
-          existingUser.verificationCode &&
-          existingUser.verificationCodeExpires > currentTime
-        ) {
-          // Code is still valid - don't send new one, just inform user
-          const timeLeftMinutes = Math.ceil(
-            (existingUser.verificationCodeExpires - currentTime) / (1000 * 60)
-          );
+        existingUser.fullName = fullName;
+        existingUser.password = password; // Will be hashed by pre-save hook
+        existingUser.role = role;
+        existingUser.verificationCode = verificationCode;
+        existingUser.verificationCodeExpires = verificationCodeExpires;
+        await existingUser.save();
 
-          return res.status(400).json({
-            message: `Email already registered but not verified. Verification code sent to ${existingUser.email} is still valid for ${timeLeftMinutes} minutes. Please check your email or go to verification page.`,
-            emailExists: true,
-            isVerified: false,
-            hasActiveCode: true,
+        // Send verification email
+        await sendVerificationEmail(email, verificationCode);
+
+        return res.status(200).json({
+          success: true,
+          message: "Verification code sent to your email.",
+          user: {
+            id: existingUser._id,
             email: existingUser.email,
-            timeLeftMinutes: timeLeftMinutes,
-          });
-        } else {
-          // Code expired - send new verification code
-          const verificationCode = generateVerificationCode();
-          const verificationCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
-
-          // Update user with new details and code
-          existingUser.fullName = fullName;
-          existingUser.password = password;
-          existingUser.role = role;
-          existingUser.verificationCode = verificationCode;
-          existingUser.verificationCodeExpires = verificationCodeExpires;
-          await existingUser.save();
-
-          // Send verification email
-          const emailSent = await sendVerificationEmail(
-            email,
-            verificationCode
-          );
-
-          if (!emailSent) {
-            return res.status(500).json({
-              message: "Failed to send verification email. Please try again.",
-            });
-          }
-
-          return res.status(200).json({
-            message: "Verification code expired. New code sent to your email.",
-            user: {
-              id: existingUser._id,
-              email: existingUser.email,
-            },
-            requiresVerification: true,
-            codeExpired: true,
-          });
-        }
+          },
+          requiresVerification: true,
+        });
       }
     }
 
-    // Generate verification code (5 minutes expiration)
+    // Generate verification code (15 minutes expiration)
     const verificationCode = generateVerificationCode();
-    const verificationCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
+    const verificationCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
 
-    // Create new user with verification data
+    // Create new user
     const newUser = new User({
       fullName,
       email,
@@ -160,17 +111,10 @@ exports.registerUser = async (req, res) => {
     await newUser.save();
 
     // Send verification email
-    const emailSent = await sendVerificationEmail(email, verificationCode);
-
-    if (!emailSent) {
-      // If email fails to send, delete the user and return error
-      await User.findByIdAndDelete(newUser._id);
-      return res.status(500).json({
-        message: "Failed to send verification email. Please try again.",
-      });
-    }
+    await sendVerificationEmail(email, verificationCode);
 
     res.status(201).json({
+      success: true,
       message: "Registration successful! Verification code sent to your email.",
       user: {
         id: newUser._id,
@@ -181,8 +125,9 @@ exports.registerUser = async (req, res) => {
       requiresVerification: true,
     });
   } catch (error) {
-    console.error("Registration Error (backend):", error.message);
+    console.error("Registration Error:", error.message);
     res.status(500).json({
+      success: false,
       message: "Server error",
       error: error.message,
     });
@@ -198,11 +143,10 @@ exports.loginUser = async (req, res) => {
     const normalizedEmail = (email || "").trim().toLowerCase();
     const trimmedPassword = (password || "").trim();
 
-    console.log("Login attempt for:", normalizedEmail);
-
     // Validate required fields
     if (!normalizedEmail || !trimmedPassword) {
       return res.status(400).json({
+        success: false,
         message: "Email and password are required",
       });
     }
@@ -210,6 +154,7 @@ exports.loginUser = async (req, res) => {
     // Email format validation
     if (!emailRegex.test(normalizedEmail)) {
       return res.status(400).json({
+        success: false,
         message: "Please provide a valid email address",
       });
     }
@@ -219,46 +164,43 @@ exports.loginUser = async (req, res) => {
 
     if (!user) {
       return res.status(401).json({
+        success: false,
         message: "Invalid email or password",
       });
     }
 
-    // Admin: Skip verification check for admin users
-    if (user.role != "admin") {
-      // Check if user is verified
-      if (!user.isVerified) {
-        // If code is not expired, inform user to verify
-        if (
-          user.verificationCode &&
-          user.verificationCodeExpires > new Date()
-        ) {
-          const timeLeft = Math.ceil(
-            (user.verificationCodeExpires - new Date()) / 1000 / 60
-          );
-          return res.status(403).json({
-            message: `Please verify your email first. Verification code sent to ${user.email} is still valid for ${timeLeft} minutes.`,
-            requiresVerification: true,
-            email: user.email,
-            hasActiveCode: true,
-          });
-        } else {
-          // If code expired, send new one
-          const verificationCode = generateVerificationCode();
-          const verificationCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
+    // Check if user is verified
+    if (!user.isVerified) {
+      // If code is not expired, inform user to verify
+      if (user.verificationCode && user.verificationCodeExpires > new Date()) {
+        const timeLeft = Math.ceil(
+          (user.verificationCodeExpires - new Date()) / 1000 / 60
+        );
+        return res.status(403).json({
+          success: false,
+          message: `Please verify your email first. Verification code sent to ${user.email} is still valid for ${timeLeft} minutes.`,
+          requiresVerification: true,
+          email: user.email,
+          hasActiveCode: true,
+        });
+      } else {
+        // If code expired, send new one
+        const verificationCode = generateVerificationCode();
+        const verificationCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
 
-          user.verificationCode = verificationCode;
-          user.verificationCodeExpires = verificationCodeExpires;
-          await user.save();
+        user.verificationCode = verificationCode;
+        user.verificationCodeExpires = verificationCodeExpires;
+        await user.save();
 
-          await sendVerificationEmail(user.email, verificationCode);
+        await sendVerificationEmail(user.email, verificationCode);
 
-          return res.status(403).json({
-            message: "Verification code expired. New code sent to your email.",
-            requiresVerification: true,
-            email: user.email,
-            codeExpired: true,
-          });
-        }
+        return res.status(403).json({
+          success: false,
+          message: "Verification code expired. New code sent to your email.",
+          requiresVerification: true,
+          email: user.email,
+          codeExpired: true,
+        });
       }
     }
 
@@ -270,6 +212,7 @@ exports.loginUser = async (req, res) => {
 
     if (!isPasswordValid) {
       return res.status(401).json({
+        success: false,
         message: "Invalid email or password",
       });
     }
@@ -277,20 +220,38 @@ exports.loginUser = async (req, res) => {
     // Generate JWT token
     const token = generateToken(user._id);
 
+    // Get user data without sensitive information
+    const userData = await User.findById(user._id).select(
+      "-password -verificationCode -resetCode"
+    );
+
+    // Prepare user response with all needed data
+    const userResponse = {
+      id: userData._id,
+      fullName: userData.fullName,
+      email: userData.email,
+      role: userData.role,
+      phone: userData.phone || "",
+      address: userData.address || "",
+      currentJobTitle: userData.currentJobTitle || "",
+      profilePicture: userData.profilePicture || "",
+      connectionsCount: userData.connectionsCount || 0,
+      isVerified: userData.isVerified,
+      createdAt: userData.createdAt,
+      updatedAt: userData.updatedAt,
+    };
+
     // Return success response with token
     res.status(200).json({
+      success: true,
       message: "Login successful",
-      user: {
-        id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-      },
+      user: userResponse,
       token,
     });
   } catch (error) {
-    console.error("Login Error (backend):", error.message);
+    console.error("Login Error:", error.message);
     res.status(500).json({
+      success: false,
       message: "Server error during login",
       error: error.message,
     });

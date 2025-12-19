@@ -61,9 +61,9 @@ exports.requestPasswordReset = async (req, res) => {
       });
     }
 
-    // Generate reset code (5 minutes expiration)
+    // Generate reset code (15 minutes expiration)
     const resetCode = generateResetCode();
-    const resetCodeExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const resetCodeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
     // Update user with reset code
     user.resetCode = resetCode;
@@ -260,9 +260,9 @@ exports.resendResetCode = async (req, res) => {
       });
     }
 
-    // Generate new reset code (5 minutes expiration)
+    // Generate new reset code (15 minutes expiration)
     const resetCode = generateResetCode();
-    const resetCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
+    const resetCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
 
     // Update user with new reset code
     user.resetCode = resetCode;

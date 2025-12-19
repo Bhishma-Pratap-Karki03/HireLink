@@ -25,7 +25,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Handle location state messages (e.g., from verification page)
+  // Handle location state messages 
   useEffect(() => {
     if (location.state?.message) {
       setStatusMessage(location.state.message);
@@ -35,6 +35,36 @@ const Login = () => {
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      // User is already logged in, redirect based on role
+      const userDataStr = localStorage.getItem("userData");
+      if (userDataStr) {
+        try {
+          const userData = JSON.parse(userDataStr);
+          redirectBasedOnRole(userData);
+        } catch (error) {
+          console.error("Error parsing user data:", error);
+        }
+      }
+    }
+  }, []);
+
+  const redirectBasedOnRole = (userData: any) => {
+    // Check if this is the admin email
+    const isAdminEmail = userData.email === "hirelinknp@gmail.com";
+
+    if (isAdminEmail) {
+      window.location.href = "/admin-dashboard";
+    } else if (userData.role === "recruiter") {
+      window.location.href = "/recruiter-home";
+    } else {
+      window.location.href = "/candidate-home";
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const { name, value } = e.target;
@@ -89,7 +119,7 @@ const Login = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: formData.email,
+          email: formData.email.trim(),
           password: formData.password,
         }),
       });
@@ -122,20 +152,23 @@ const Login = () => {
       // Store token and user data in localStorage
       if (data.token) {
         localStorage.setItem("authToken", data.token);
+
+        // Store complete user data from backend response
         localStorage.setItem("userData", JSON.stringify(data.user));
 
-        //Check if this is the admin email
-        const isAdminEmail = data.user.email === "hirelinknp@gmail.com";
+        // Clear any old profile picture data from localStorage
+        localStorage.removeItem("profilePictureBase64");
+        localStorage.removeItem("profilePictureFileName");
+
+        // Clear the form
+        setFormData({
+          email: "",
+          password: "",
+        });
 
         // Simple redirect based on user role
         setTimeout(() => {
-          if (isAdminEmail) {
-            window.location.href = "/admin-dashboard";
-          } else if (data.user.role === "recruiter") {
-            window.location.href = "/recruiter-home";
-          } else {
-            window.location.href = "/candidate-home";
-          }
+          redirectBasedOnRole(data.user);
         }, 500);
       }
     } catch (error) {
@@ -195,6 +228,7 @@ const Login = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -207,6 +241,7 @@ const Login = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   required
+                  disabled={isSubmitting}
                 />
               </div>
             </div>

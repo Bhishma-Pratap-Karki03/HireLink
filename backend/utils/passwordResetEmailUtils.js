@@ -35,7 +35,7 @@ const sendPasswordResetEmail = async (email, resetCode) => {
           </div>
           
           <p>Enter this code on the password reset page to continue.</p>
-          <p><strong>This code will expire in 5 minutes.</strong></p>
+          <p><strong>This code will expire in 15 minutes.</strong></p>
           
           <p>If you didn't request a password reset, please ignore this email or contact support if you have concerns.</p>
           

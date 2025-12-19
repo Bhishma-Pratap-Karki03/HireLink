@@ -135,33 +135,39 @@ const NewPassword = () => {
     <>
       <Navbar />
 
-      <section id="section-header">
-        <div className="header-container">
+      <section id="new-password-header" className="new-password-header-section">
+        <div className="new-password-header-container">
           {/* Decorative Element Top Right */}
-          <img src={decorRight} className="decor-right" alt="decoration" />
+          <img
+            src={decorRight}
+            className="new-password-decor-right"
+            alt="decoration"
+          />
 
           {/* Header Content */}
-          <div className="header-content">
-            <h1 className="header-title">Reset Password</h1>
-            <div className="header-subtitle-wrapper">
-              <span className="header-subtitle">Set New Password</span>
+          <div className="new-password-header-content">
+            <h1 className="new-password-header-title">Reset Password</h1>
+            <div className="new-password-header-subtitle-wrapper">
+              <span className="new-password-header-subtitle">
+                Set New Password
+              </span>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="section-main">
-        <div className="main-container">
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">Set New Password</h2>
-              <div className="separator">
-                <div className="line-gray"></div>
-                <div className="line-blue"></div>
+      <section id="new-password-main" className="new-password-main-section">
+        <div className="new-password-main-container">
+          <div className="new-password-card">
+            <div className="new-password-card-header">
+              <h2 className="new-password-card-title">Set New Password</h2>
+              <div className="new-password-separator">
+                <div className="new-password-line-gray"></div>
+                <div className="new-password-line-blue"></div>
               </div>
             </div>
 
-            <p className="card-description">
+            <p className="new-password-card-description">
               {email
                 ? `Enter your new password for ${email}`
                 : "Enter your new password"}
@@ -169,23 +175,25 @@ const NewPassword = () => {
 
             {/* Initial message from location state */}
             {initialMessage && !statusMessage && (
-              <div className={`status-message success`}>{initialMessage}</div>
+              <div className={`new-password-status-message success`}>
+                {initialMessage}
+              </div>
             )}
 
             {/* Status Message */}
             {statusMessage && (
-              <div className={`status-message ${statusType}`}>
+              <div className={`new-password-status-message ${statusType}`}>
                 {statusMessage}
               </div>
             )}
 
-            <form className="reset-form" onSubmit={handleSubmit}>
-              <div className="input-group">
+            <form className="new-password-form" onSubmit={handleSubmit}>
+              <div className="new-password-input-group">
                 <input
                   type="password"
                   name="password"
                   placeholder="New Password"
-                  className="form-input"
+                  className="new-password-form-input"
                   value={formData.password}
                   onChange={handleInputChange}
                   required
@@ -193,12 +201,12 @@ const NewPassword = () => {
                 />
               </div>
 
-              <div className="input-group">
+              <div className="new-password-input-group">
                 <input
                   type="password"
                   name="confirmPassword"
                   placeholder="Confirm New Password"
-                  className="form-input"
+                  className="new-password-form-input"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   required
@@ -206,13 +214,17 @@ const NewPassword = () => {
                 />
               </div>
 
-              <button type="submit" className="btn-verify" disabled={isLoading}>
+              <button
+                type="submit"
+                className="new-password-btn-verify"
+                disabled={isLoading}
+              >
                 {isLoading ? "Resetting..." : "Reset Password"}
               </button>
             </form>
 
-            <div className="card-footer">
-              <Link to="/login" className="link-back">
+            <div className="new-password-card-footer">
+              <Link to="/login" className="new-password-link-back">
                 Back to Login Page
               </Link>
             </div>

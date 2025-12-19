@@ -1,14 +1,19 @@
 const jwt = require("jsonwebtoken");
 
-const generateToken = (userId, expiresIn = "7d") => {
-  return jwt.sign({ id: userId }, process.env.AUTH_SECRET_KEY, {
-    expiresIn: expiresIn,
-  });
+const generateToken = (userId) => {
+  return jwt.sign(
+    { id: userId },
+    process.env.JWT_SECRET || "your-secret-key-change-in-production",
+    { expiresIn: "30d" }
+  );
 };
 
 const verifyToken = (token) => {
   try {
-    return jwt.verify(token, process.env.AUTH_SECRET_KEY);
+    return jwt.verify(
+      token,
+      process.env.JWT_SECRET || "your-secret-key-change-in-production"
+    );
   } catch (error) {
     return null;
   }

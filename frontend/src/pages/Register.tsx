@@ -158,7 +158,7 @@ const Register = () => {
           setShowVerificationLink(true);
           setExistingUserEmail(data.email);
 
-          // Redirect to verification page after 3 seconds
+          // Redirect to verification
           setTimeout(() => {
             navigate("/verify-email", {
               state: {
@@ -178,7 +178,7 @@ const Register = () => {
           );
           setStatusType("success");
 
-          // Redirect to verification page after 2 seconds
+          // Redirect to verification page
           setTimeout(() => {
             navigate("/verify-email", {
               state: {

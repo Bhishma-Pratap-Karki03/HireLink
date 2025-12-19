@@ -35,7 +35,7 @@ const sendVerificationEmail = async (email, verificationCode) => {
           </div>
           
           <p>Enter this code on the verification page to complete your registration.</p>
-          <p><strong>This code will expire in 5 minutes.</strong></p> <!-- CHANGED: 5 minutes -->
+          <p><strong>This code will expire in 15 minutes.</strong></p> <!-- CHANGED: 15 minutes -->
           
           <p>If you didn't create an account with ${appName}, please ignore this email.</p>
           

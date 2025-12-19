@@ -7,6 +7,7 @@ import NewPassword from "./pages/NewPassword";
 import RecruiterHomePage from "./pages/RecruiterHomePage";
 import CandidateHomePage from "./pages/CandidateHomePage";
 import AdminHomePage from "./pages/AdminHomePage";
+import CandidateProfilePage from "./pages/CandidateProfilePage";
 import "./App.css";
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
         <Route path="/recruiter-home" element={<RecruiterHomePage />} />
         <Route path="/candidate-home" element={<CandidateHomePage />} />
         <Route path="/admin-dashboard" element={<AdminHomePage />} />
+        <Route path="/candidate-profile" element={<CandidateProfilePage />} />
       </Routes>
     </Router>
   );

@@ -1,0 +1,457 @@
+/* Candidate Profile Page Styles */
+body {
+  font-family: "Inter", sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #eff3f7;
+  color: #0f283c;
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Dashboard Container */
+.candidate-dashboard-container {
+  display: flex;
+  background-color: #eff3f7;
+  min-height: 100vh;
+}
+
+/* Main Content */
+.candidate-main-content {
+  flex-grow: 1;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+.candidate-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.candidate-page-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0f283c;
+  margin: 0;
+}
+
+.candidate-notification-btn img {
+  width: 32px;
+  height: 32px;
+}
+
+.candidate-content-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Cards */
+.candidate-card {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.candidate-profile-card {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 40px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.candidate-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.candidate-card-header h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  color: #000000;
+}
+
+.candidate-actions {
+  display: flex;
+  gap: 20px;
+}
+
+.candidate-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #0068ce;
+}
+
+.candidate-description-text {
+  color: #656565;
+  line-height: 1.5;
+  margin: 0;
+  font-size: 16px;
+}
+
+.candidate-description-text-project {
+  color: #656565;
+  line-height: 1.5;
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Profile Card Specifics */
+.candidate-profile-main {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.candidate-profile-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.candidate-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.candidate-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.candidate-profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.candidate-profile-name-row h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #0f283c;
+}
+
+.candidate-badge-public {
+  background-color: #f2f9ee;
+  color: #276b4f;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.candidate-profile-connections {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.candidate-blue-text {
+  color: #0068ce;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Info Grid */
+.candidate-info-grid {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.candidate-info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.candidate-icon-box {
+  width: 40px;
+  height: 40px;
+  background-color: #edecff;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.candidate-info-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.candidate-label {
+  color: #656565;
+  font-size: 12px;
+}
+
+.candidate-value {
+  color: #000000;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* Tags */
+.candidate-tags {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.candidate-tag {
+  border: 1px solid #2481fb;
+  border-radius: 20px;
+  padding: 12px;
+  color: #0f283c;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* Certifications */
+.candidate-cert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.candidate-cert-item h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  color: #000000;
+  font-weight: 600;
+}
+
+.candidate-sub-text {
+  color: #363636;
+  margin: 0 0 8px 0;
+  font-size: 12px;
+}
+
+.candidate-meta-text {
+  color: #8c8c8c;
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.candidate-show-credential-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #0068ce;
+  border-radius: 20px;
+  padding: 8px 12px;
+  color: #565656;
+  font-size: 12px;
+  margin-top: 10px;
+  width: fit-content;
+  transition: all 0.2s;
+}
+
+.candidate-show-credential-btn:hover {
+  background-color: #f0f8ff;
+  border-color: #0056b3;
+}
+
+/* Project */
+.candidate-project-item {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.candidate-project-img {
+  width: 180px;
+  height: 180px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.candidate-project-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.candidate-project-details h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #000000;
+  font-weight: 600;
+}
+
+.candidate-date-range {
+  color: #565656;
+  font-size: 12px;
+  margin: 0;
+}
+
+/* Edit Button */
+.candidate-edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.candidate-edit-btn:hover {
+  background-color: #f0f8ff;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .candidate-dashboard-container {
+    flex-direction: column;
+  }
+
+  .candidate-main-content {
+    padding: 20px;
+  }
+
+  .candidate-card,
+  .candidate-profile-card {
+    padding: 20px;
+  }
+
+  .candidate-profile-card {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .candidate-profile-main {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .candidate-profile-avatar {
+    align-self: center;
+  }
+
+  .candidate-info-grid {
+    flex-direction: column;
+  }
+
+  .candidate-project-item {
+    flex-direction: column;
+  }
+
+  .candidate-project-img {
+    width: 100%;
+    height: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .candidate-main-content {
+    padding: 15px;
+  }
+
+  .candidate-page-header h1 {
+    font-size: 24px;
+  }
+
+  .candidate-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .candidate-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+}
+
+.error-container {
+  color: #dc2626;
+}
+
+.retry-button {
+  margin-top: 16px;
+  padding: 8px 16px;
+  background-color: #0068ce;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.retry-button:hover {
+  background-color: #0056b3;
+}
+
+/* Formatting for display values */
+.candidate-value {
+  word-break: break-word;
+}
+
+/* Ensure proper modal z-index */
+.modal-overlay,
+.personal-info-modal-overlay {
+  z-index: 1000;
+}
