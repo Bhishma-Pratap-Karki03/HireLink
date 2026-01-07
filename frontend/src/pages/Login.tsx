@@ -25,7 +25,25 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Handle location state messages 
+  // Check if user is already logged in - REDIRECT TO APPROPRIATE HOME PAGE
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    const userDataStr = localStorage.getItem("userData");
+
+    if (token && userDataStr) {
+      try {
+        const userData = JSON.parse(userDataStr);
+        redirectBasedOnRole(userData);
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        // Clear invalid data
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("userData");
+      }
+    }
+  }, []);
+
+  // Handle location state messages
   useEffect(() => {
     if (location.state?.message) {
       setStatusMessage(location.state.message);
@@ -36,33 +54,16 @@ const Login = () => {
     }
   }, [location.state]);
 
-  // Check if user is already logged in
-  useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      // User is already logged in, redirect based on role
-      const userDataStr = localStorage.getItem("userData");
-      if (userDataStr) {
-        try {
-          const userData = JSON.parse(userDataStr);
-          redirectBasedOnRole(userData);
-        } catch (error) {
-          console.error("Error parsing user data:", error);
-        }
-      }
-    }
-  }, []);
-
   const redirectBasedOnRole = (userData: any) => {
     // Check if this is the admin email
     const isAdminEmail = userData.email === "hirelinknp@gmail.com";
 
     if (isAdminEmail) {
-      window.location.href = "/admin-dashboard";
+      navigate("/admin-home");
     } else if (userData.role === "recruiter") {
-      window.location.href = "/recruiter-home";
+      navigate("/recruiter-home");
     } else {
-      window.location.href = "/candidate-home";
+      navigate("/candidate-home");
     }
   };
 
@@ -166,7 +167,7 @@ const Login = () => {
           password: "",
         });
 
-        // Simple redirect based on user role
+        // Redirect based on user role TO HOME PAGES
         setTimeout(() => {
           redirectBasedOnRole(data.user);
         }, 500);

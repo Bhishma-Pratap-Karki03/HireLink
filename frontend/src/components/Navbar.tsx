@@ -39,7 +39,6 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
   const [isMobileUserDropdownOpen, setIsMobileUserDropdownOpen] =
     useState(false);
   const [profileImage, setProfileImage] = useState<string>(defaultAvatar);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const mobileUserDropdownRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
@@ -70,6 +69,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
         setUserData(data.user);
         setIsAuthenticated(true);
 
+        // Set user name - prioritize fullName, fallback to email
         if (data.user.fullName) {
           setUserName(data.user.fullName);
         } else if (data.user.email) {
@@ -81,20 +81,13 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
         // Set profile picture from database
         if (data.user.profilePicture && data.user.profilePicture !== "") {
           if (data.user.profilePicture.startsWith("http")) {
-            // Add cache-busting timestamp to prevent caching
-            const separator = data.user.profilePicture.includes("?")
-              ? "&"
-              : "?";
-            setProfileImage(
-              `${data.user.profilePicture}${separator}t=${Date.now()}`
-            );
+            setProfileImage(data.user.profilePicture);
           } else {
-            // Add cache-busting timestamp to prevent caching
-            setProfileImage(
-              `http://localhost:5000${data.user.profilePicture}?t=${Date.now()}`
-            );
+            // Handle recruiter profile pictures (same as candidates)
+            setProfileImage(`http://localhost:5000${data.user.profilePicture}`);
           }
         } else {
+          // Use default avatar for recruiters without profile picture
           setProfileImage(defaultAvatar);
         }
 
@@ -127,19 +120,19 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
   useEffect(() => {
     fetchUserData();
 
-    // Set up interval to refresh user data periodically (every 2 minutes)
+    // Set up interval to refresh user data (increased to 5 minutes to prevent overload)
     const intervalId = setInterval(() => {
       const token = localStorage.getItem("authToken");
       if (token) {
         fetchUserData();
       }
-    }, 120000);
+    }, 300000); // 5 minutes
 
     return () => clearInterval(intervalId);
-  }, [refreshTrigger]);
+  }, []); // Empty dependency array - FIXED: prevents infinite loop
 
+  // Check authentication on initial load
   useEffect(() => {
-    // Check authentication on initial load
     const token = localStorage.getItem("authToken");
     if (token) {
       fetchUserData();
@@ -242,9 +235,9 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
       if (userData.role === "admin") {
         navigate("/admin-dashboard");
       } else if (userData.role === "recruiter") {
-        navigate("/recruiter-home");
+        navigate("/recruiter-dashboard");
       } else {
-        navigate("/candidate-home");
+        navigate("/candidate-dashboard");
       }
     }
     closeMobileMenu();
@@ -473,7 +466,23 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
   return (
     <header className="site-header">
       <div className="container header-container">
-        <Link to="/" className="logo-link">
+        <Link
+          to={isAuthenticated ? "/" : "/login"}
+          className="logo-link"
+          onClick={(e) => {
+            if (isAuthenticated) {
+              e.preventDefault();
+              // Navigate to appropriate home page
+              if (userData?.role === "admin") {
+                navigate("/admin-home");
+              } else if (userData?.role === "recruiter") {
+                navigate("/recruiter-home");
+              } else {
+                navigate("/candidate-home");
+              }
+            }
+          }}
+        >
           <img src={logoImg} alt="HireLink Logo" className="logo-img" />
         </Link>
         <nav className="main-navigation">

@@ -6,6 +6,8 @@ const userRoutes = require("./routes/userRoutes");
 const verificationRoutes = require("./routes/verificationRoutes");
 const passwordRoutes = require("./routes/passwordRoutes");
 const profileRoutes = require("./routes/profileRoutes");
+const resumeRoutes = require("./routes/resumeRoutes");
+const projectRoutes = require("./routes/projectRoutes");
 
 // CORS configuration
 app.use(
@@ -27,6 +29,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/verify", verificationRoutes);
 app.use("/api/password", passwordRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/resume", resumeRoutes);
+app.use("/api/project", projectRoutes);
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({

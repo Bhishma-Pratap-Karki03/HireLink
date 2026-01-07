@@ -1,93 +1,40 @@
-const User = require("../models/userModel");
-const bcrypt = require("bcrypt");
-const { generateToken, verifyToken } = require("../utils/tokenUtils");
-const {
-  sendPasswordResetEmail,
-  sendPasswordChangedEmail,
-} = require("../utils/passwordResetEmailUtils");
+// Change Password Controller handles password reset HTTP requests
+// Now uses Password Service for business logic
 
-// Basic email regex for format checking
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const passwordService = require("../services/passwordService");
 
-const generateResetCode = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
-};
-
-// Define admin email
-const ADMIN_EMAIL = "hirelinknp@gmail.com";
-
-// REQUEST PASSWORD RESET (Allows admin to change password also)
+// Handle password reset request
 exports.requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body;
 
-    // Validate input
-    if (!email || typeof email !== "string") {
-      return res.status(400).json({
-        message: "Email is required",
-      });
-    }
+    // Call the password service to handle reset request
+    const result = await passwordService.requestPasswordReset(email);
 
-    const normalizedEmail = email.trim().toLowerCase();
-
-    // Email format validation
-    if (!emailRegex.test(normalizedEmail)) {
-      return res.status(400).json({
-        message: "Please provide a valid email address",
-      });
-    }
-
-    // Find user by email
-    const user = await User.findOne({ email: normalizedEmail });
-
-    // For security reasons, don't reveal if user exists or not
-    if (!user) {
-      return res.status(200).json({
-        message:
-          "If an account exists with this email, a password reset code will be sent.",
-        success: true,
-        email: normalizedEmail,
-      });
-    }
-
-    const isAdminEmail = normalizedEmail === ADMIN_EMAIL;
-
-    // For non admin users, check if email is verified
-    if (!isAdminEmail && !user.isVerified) {
-      return res.status(403).json({
-        message: "Please verify your email first before resetting password.",
-        requiresVerification: true,
-        email: user.email,
-      });
-    }
-
-    // Generate reset code (15 minutes expiration)
-    const resetCode = generateResetCode();
-    const resetCodeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-
-    // Update user with reset code
-    user.resetCode = resetCode;
-    user.resetCodeExpires = resetCodeExpires;
-    await user.save();
-
-    // Send password reset email using utility
-    const emailSent = await sendPasswordResetEmail(normalizedEmail, resetCode);
-
-    if (!emailSent) {
-      return res.status(500).json({
-        message: "Failed to send reset email. Please try again.",
-        success: false,
-      });
-    }
-
-    res.status(200).json({
-      message: "Password reset code sent to your email.",
-      success: true,
-      email: normalizedEmail,
-      expiresAt: resetCodeExpires,
-    });
+    // Return the result from service
+    res.status(200).json(result);
   } catch (error) {
     console.error("Password reset request error:", error);
+
+    // Handle specific error cases
+
+    // Handle verification required error
+    if (error.name === "VerificationRequired") {
+      return res.status(403).json({
+        message: error.message,
+        requiresVerification: error.requiresVerification,
+        email: error.email,
+      });
+    }
+
+    // Handle validation errors
+    if (error.message.includes("required") || error.message.includes("valid")) {
+      return res.status(400).json({
+        message: error.message,
+      });
+    }
+
+    // Handle any other unexpected errors
     res.status(500).json({
       message: "Server error during password reset request",
       error: error.message,
@@ -95,60 +42,47 @@ exports.requestPasswordReset = async (req, res) => {
   }
 };
 
-// VERIFY RESET CODE
+// Handle reset code verification
 exports.verifyResetCode = async (req, res) => {
   try {
     const { email, code } = req.body;
 
-    // Validate input
-    if (!email || !code) {
-      return res.status(400).json({
-        message: "Email and reset code are required",
-      });
-    }
+    // Call the password service to verify the reset code
+    const result = await passwordService.verifyResetCode(email, code);
 
-    const normalizedEmail = email.trim().toLowerCase();
-
-    // Find user by email
-    const user = await User.findOne({ email: normalizedEmail });
-
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
-    }
-
-    // Check if reset code exists and matches
-    if (!user.resetCode || user.resetCode !== code) {
-      return res.status(400).json({
-        message: "Invalid reset code",
-      });
-    }
-
-    // Check if reset code is expired
-    if (!user.resetCodeExpires || user.resetCodeExpires < new Date()) {
-      return res.status(400).json({
-        message: "Reset code has expired. Please request a new one.",
-        codeExpired: true,
-      });
-    }
-
-    // Generate a temporary token for password reset (valid for 15 minutes)
-    const resetToken = generateToken(user._id, "15m");
-
-    // Clear reset code immediately after verification
-    user.resetCode = null;
-    user.resetCodeExpires = null;
-    await user.save();
-
-    res.status(200).json({
-      message: "Reset code verified successfully",
-      success: true,
-      resetToken,
-      email: user.email,
-    });
+    // Return success response
+    res.status(200).json(result);
   } catch (error) {
     console.error("Reset code verification error:", error);
+
+    // Handle specific error cases
+
+    // Handle expired code error
+    if (error.name === "CodeExpired") {
+      return res.status(400).json({
+        message: error.message,
+        codeExpired: error.codeExpired,
+      });
+    }
+
+    // Handle missing fields or user not found
+    if (
+      error.message.includes("required") ||
+      error.message.includes("not found")
+    ) {
+      return res.status(400).json({
+        message: error.message,
+      });
+    }
+
+    // Handle invalid reset code
+    if (error.message.includes("Invalid reset code")) {
+      return res.status(400).json({
+        message: error.message,
+      });
+    }
+
+    // Handle any other unexpected errors
     res.status(500).json({
       message: "Server error during reset code verification",
       error: error.message,
@@ -156,78 +90,40 @@ exports.verifyResetCode = async (req, res) => {
   }
 };
 
-// RESET PASSWORD
+// Handle password reset with new password
 exports.resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
-    // Validate input
-    if (!token || !newPassword) {
-      return res.status(400).json({
-        message: "Token and new password are required",
-      });
-    }
+    // Call the password service to reset the password
+    const result = await passwordService.resetPassword(token, newPassword);
 
-    // Verify token
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return res.status(401).json({
-        message: "Invalid or expired reset token",
-      });
-    }
-
-    // Find user by ID
-    const user = await User.findById(decoded.id);
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
-    }
-
-    // Password strength validation (same as registration)
-    if (newPassword.length < 8) {
-      return res.status(400).json({
-        message: "Password must be at least 8 characters long",
-      });
-    }
-    if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword)) {
-      return res.status(400).json({
-        message: "Password must contain upper and lower case letters",
-      });
-    }
-    if (!/[0-9]/.test(newPassword)) {
-      return res.status(400).json({
-        message: "Password must contain at least one number",
-      });
-    }
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)) {
-      return res.status(400).json({
-        message: "Password must contain at least one special character",
-      });
-    }
-
-    // Check if new password is same as old password
-    const isSamePassword = await bcrypt.compare(newPassword, user.password);
-    if (isSamePassword) {
-      return res.status(400).json({
-        message: "New password cannot be the same as the old password",
-      });
-    }
-
-    // Update password (will be hashed by pre-save hook)
-    user.password = newPassword;
-    await user.save();
-
-    // Send password changed confirmation email using utility
-    await sendPasswordChangedEmail(user.email, user.fullName);
-
-    res.status(200).json({
-      message:
-        "Password reset successful! You can now login with your new password.",
-      success: true,
-    });
+    // Return success response
+    res.status(200).json(result);
   } catch (error) {
     console.error("Password reset error:", error);
+
+    // Handle specific error cases
+
+    // Handle invalid or expired token
+    if (error.message.includes("Invalid or expired")) {
+      return res.status(401).json({
+        message: error.message,
+      });
+    }
+
+    // Handle validation errors (password requirements, same password)
+    if (
+      error.message.includes("required") ||
+      error.message.includes("must be") ||
+      error.message.includes("cannot be the same")
+    ) {
+      return res.status(400).json({
+        message: error.message,
+      });
+    }
+
+    // Handle any other unexpected errors
     res.status(500).json({
       message: "Server error during password reset",
       error: error.message,
@@ -235,57 +131,27 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-// RESEND RESET CODE
+// Handle resend reset code request
 exports.resendResetCode = async (req, res) => {
   try {
     const { email } = req.body;
 
-    if (!email) {
-      return res.status(400).json({
-        message: "Email is required",
-      });
-    }
+    // Call the password service to resend reset code
+    const result = await passwordService.resendResetCode(email);
 
-    const normalizedEmail = email.trim().toLowerCase();
-
-    // Find user by email
-    const user = await User.findOne({ email: normalizedEmail });
-
-    if (!user) {
-      // For security, don't reveal if user exists
-      return res.status(200).json({
-        message:
-          "If an account exists with this email, a new reset code will be sent.",
-        success: true,
-      });
-    }
-
-    // Generate new reset code (15 minutes expiration)
-    const resetCode = generateResetCode();
-    const resetCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
-
-    // Update user with new reset code
-    user.resetCode = resetCode;
-    user.resetCodeExpires = resetCodeExpires;
-    await user.save();
-
-    // Send new reset email using utility
-    const emailSent = await sendPasswordResetEmail(normalizedEmail, resetCode);
-
-    if (!emailSent) {
-      return res.status(500).json({
-        message: "Failed to resend reset code. Please try again.",
-        success: false,
-      });
-    }
-
-    res.status(200).json({
-      message: "New reset code sent to your email.",
-      success: true,
-      expiresAt: resetCodeExpires,
-    });
+    // Return success response
+    res.status(200).json(result);
   } catch (error) {
     console.error("Resend reset code error:", error);
+
+    // Handle missing email error
+    if (error.message.includes("required")) {
+      return res.status(400).json({
+        message: error.message,
+      });
+    }
+
+    // Handle any other unexpected errors
     res.status(500).json({
       message: "Server error",
       error: error.message,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -36,6 +36,37 @@ const Register = () => {
   const [showVerificationLink, setShowVerificationLink] = useState(false);
   const [existingUserEmail, setExistingUserEmail] = useState<string>("");
   const navigate = useNavigate();
+
+  // Check if user is already logged in - REDIRECT TO APPROPRIATE HOME PAGE
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    const userDataStr = localStorage.getItem("userData");
+
+    if (token && userDataStr) {
+      try {
+        const userData = JSON.parse(userDataStr);
+        redirectBasedOnRole(userData);
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        // Clear invalid data
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("userData");
+      }
+    }
+  }, []);
+
+  const redirectBasedOnRole = (userData: any) => {
+    // Check if this is the admin email
+    const isAdminEmail = userData.email === "hirelinknp@gmail.com";
+
+    if (isAdminEmail) {
+      navigate("/admin-home");
+    } else if (userData.role === "recruiter") {
+      navigate("/recruiter-home");
+    } else {
+      navigate("/candidate-home");
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;

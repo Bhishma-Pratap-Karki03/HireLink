@@ -1,0 +1,148 @@
+/* Recruiter Top Bar */
+.recruiter-top-bar {
+  height: 84px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  border-bottom: 1px solid #dcdcdc;
+  width: 100%;
+}
+
+.recruiter-search-container {
+  display: flex;
+  align-items: center;
+  background: #f8fafb;
+  border: 1px solid #ffffff;
+  border-radius: 12px;
+  padding: 13px 15px;
+  width: 406px;
+  gap: 12px;
+}
+
+.recruiter-search-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.recruiter-search-input {
+  border: none;
+  background: transparent;
+  flex-grow: 1;
+  outline: none;
+  color: #0f283c;
+  font-size: 14px;
+  font-family: "Montserrat", sans-serif;
+}
+
+.recruiter-search-input::placeholder {
+  color: #8c8c8c;
+}
+
+.recruiter-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.recruiter-btn-primary {
+  background: #2481fb;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.recruiter-btn-primary:hover {
+  background: #1a6fd8;
+}
+
+.recruiter-btn-primary img {
+  width: 16px;
+  height: 16px;
+}
+
+.recruiter-icon-group {
+  display: flex;
+  gap: 22px;
+}
+
+.recruiter-icon-btn {
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.recruiter-icon-btn:hover {
+  transform: scale(1.1);
+}
+
+.recruiter-icon-btn img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .recruiter-search-container {
+    width: 300px;
+  }
+}
+
+@media (max-width: 992px) {
+  .recruiter-top-bar {
+    padding: 0 20px;
+    height: 70px;
+  }
+
+  .recruiter-search-container {
+    width: 250px;
+    padding: 10px 12px;
+  }
+
+  .recruiter-btn-primary span {
+    display: none;
+  }
+
+  .recruiter-btn-primary {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .recruiter-top-bar {
+    flex-direction: column;
+    height: auto;
+    padding: 15px 20px;
+    gap: 15px;
+  }
+
+  .recruiter-search-container {
+    width: 100%;
+  }
+
+  .recruiter-top-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .recruiter-icon-group {
+    gap: 15px;
+  }
+}
