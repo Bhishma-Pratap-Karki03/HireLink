@@ -2,9 +2,9 @@ import React from "react";
 import "../../styles/RecruiterTopBar.css";
 
 // Import images
-import searchIcon from "../../images/Recruiter Profile Page Images/6_301.svg";
-import plusIcon from "../../images/Recruiter Profile Page Images/6_281.svg";
-import notificationsIcon from "../../images/Recruiter Profile Page Images/6_296.svg";
+import searchIcon from "../../images/Recruiter Profile Page Images/search icon.svg";
+import plusIcon from "../../images/Recruiter Profile Page Images/plus icon.svg";
+import notificationsIcon from "../../images/Recruiter Profile Page Images/notification icon.svg";
 
 interface RecruiterTopBarProps {
   onPostJob?: () => void;
