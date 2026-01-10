@@ -16,7 +16,11 @@ import CandidateProfilePage from "./pages/candidatepages/CandidateProfilePage";
 import RecruiterDashboard from "./pages/recruiterpages/RecruiterDashboard";
 import CandidateDashboard from "./pages/candidatepages/CandidateDashboard";
 import RecruiterProfilePage from "./pages/recruiterpages/RecruiterProfilePage";
+import AdminProfilePage from "./pages/adminpages/AdminProfilePage";
+import AdminDashboard from "./pages/adminpages/AdminDashboard";
 import NotFoundPage from "./pages/NotFoundPage";
+import EmployersPage from "./pages/EmployersPage";
+import EmployerDetailsPage from "./pages/EmployerDetailsPage";
 import "./App.css";
 
 // Protected Route Component
@@ -148,6 +152,10 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<NewPassword />} />
 
+        {/* Employers Page - Public access */}
+        <Route path="/employers" element={<EmployersPage />} />
+        <Route path="/employer/:id" element={<EmployerDetailsPage />} />
+
         {/* HOME PAGES - Where users land after login */}
         <Route
           path="/recruiter-home"
@@ -195,7 +203,7 @@ function App() {
           path="/admin-dashboard"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminHomePage />
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />
@@ -221,15 +229,83 @@ function App() {
           path="/admin-profile"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ADMIN PAGES - Match the sidebar navigation paths */}
+        <Route
+          path="/admin/manage-users"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
               <div style={{ padding: "20px" }}>
-                <h1>Admin Profile Page</h1>
-                <p>This page is under construction</p>
+                <h1>Manage Users</h1>
+                <p>User management page coming soon</p>
+                <p>
+                  This page will allow you to view, edit, and manage all users
+                  in the system.
+                </p>
+              </div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/messages"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <div style={{ padding: "20px" }}>
+                <h1>Messages</h1>
+                <p>Messages page coming soon</p>
+                <p>
+                  This page will show all system messages and notifications.
+                </p>
+              </div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <div style={{ padding: "20px" }}>
+                <h1>Reports</h1>
+                <p>Reports page coming soon</p>
+                <p>
+                  This page will provide analytics and reports about platform
+                  usage.
+                </p>
+              </div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/settings"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <div style={{ padding: "20px" }}>
+                <h1>Admin Settings</h1>
+                <p>Admin settings page coming soon</p>
+                <p>This page will allow you to configure system settings.</p>
               </div>
             </ProtectedRoute>
           }
         />
 
-        {/* Placeholder routes for recruiter pages */}
+        {/* Additional admin pages for consistency */}
+        <Route
+          path="/admin/jobs"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <div style={{ padding: "20px" }}>
+                <h1>Manage Jobs</h1>
+                <p>Job management page coming soon</p>
+              </div>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* RECRUITER PAGES */}
         <Route
           path="/recruiter/post-job"
           element={
@@ -264,7 +340,7 @@ function App() {
           }
         />
         <Route
-          path="/recruiter/saved"
+          path="/recruiter/saved-candidates"
           element={
             <ProtectedRoute allowedRoles={["recruiter"]}>
               <div style={{ padding: "20px" }}>
@@ -285,8 +361,41 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/recruiter/job-postings"
+          element={
+            <ProtectedRoute allowedRoles={["recruiter"]}>
+              <div style={{ padding: "20px" }}>
+                <h1>Job Postings</h1>
+                <p>Job postings page coming soon</p>
+              </div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recruiter/messages"
+          element={
+            <ProtectedRoute allowedRoles={["recruiter"]}>
+              <div style={{ padding: "20px" }}>
+                <h1>Messages</h1>
+                <p>Messages page coming soon</p>
+              </div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recruiter/scanner"
+          element={
+            <ProtectedRoute allowedRoles={["recruiter"]}>
+              <div style={{ padding: "20px" }}>
+                <h1>Scanner</h1>
+                <p>Scanner page coming soon</p>
+              </div>
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Placeholder routes for candidate pages */}
+        {/* CANDIDATE PAGES */}
         <Route
           path="/candidate/resume"
           element={

@@ -1,0 +1,120 @@
+/* Admin Dashboard Styles */
+.admin-dashboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.admin-welcome-message {
+  background-color: #ffffff;
+  border: 1px solid #dcdcdc;
+  border-radius: 20px;
+  padding: 60px 40px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.admin-welcome-message h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f283c;
+  margin: 0 0 16px 0;
+  font-family: "Montserrat", sans-serif;
+}
+
+.admin-welcome-message p {
+  color: #6c86c2;
+  font-size: 16px;
+  margin: 0;
+  font-family: "Montserrat", sans-serif;
+}
+
+.admin-dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.admin-stat-card {
+  background: #ffffff;
+  border: 1px solid #dcdcdc;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.admin-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.admin-stat-card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #6c86c2;
+  margin: 0;
+  font-family: "Montserrat", sans-serif;
+}
+
+.admin-stat-number {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0f283c;
+  margin: 0;
+  font-family: "Montserrat", sans-serif;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .admin-dashboard-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-welcome-message {
+    padding: 40px 20px;
+  }
+
+  .admin-welcome-message h2 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-welcome-message {
+    padding: 30px 20px;
+  }
+
+  .admin-stat-card {
+    padding: 20px;
+  }
+
+  .admin-stat-number {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 576px) {
+  .admin-welcome-message h2 {
+    font-size: 22px;
+  }
+
+  .admin-welcome-message p {
+    font-size: 14px;
+  }
+
+  .admin-stat-card {
+    padding: 16px;
+  }
+
+  .admin-stat-number {
+    font-size: 24px;
+  }
+}

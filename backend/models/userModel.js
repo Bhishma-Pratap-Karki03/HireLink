@@ -1,6 +1,29 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
+const workspaceImageSchema = new mongoose.Schema({
+  imageUrl: {
+    type: String,
+    required: true,
+  },
+  fileName: {
+    type: String,
+    required: true,
+  },
+  fileSize: {
+    type: Number,
+    required: true,
+  },
+  uploadedAt: {
+    type: Date,
+    default: Date.now,
+  },
+  order: {
+    type: Number,
+    default: 0,
+  },
+});
+
 const experienceSchema = new mongoose.Schema({
   jobTitle: {
     type: String,
@@ -326,6 +349,8 @@ const userSchema = new mongoose.Schema(
       default: "candidate",
     },
 
+    workspaceImages: [workspaceImageSchema],
+
     phone: {
       type: String,
       default: "",
@@ -337,6 +362,16 @@ const userSchema = new mongoose.Schema(
     },
 
     about: {
+      type: String,
+      default: "",
+    },
+
+    companySize: {
+      type: String,
+      default: "",
+    },
+
+    foundedYear: {
       type: String,
       default: "",
     },
@@ -383,6 +418,26 @@ const userSchema = new mongoose.Schema(
     resumeFileSize: {
       type: Number,
       default: 0,
+    },
+
+    websiteUrl: {
+      type: String,
+      default: "",
+    },
+
+    linkedinUrl: {
+      type: String,
+      default: "",
+    },
+
+    instagramUrl: {
+      type: String,
+      default: "",
+    },
+
+    facebookUrl: {
+      type: String,
+      default: "",
     },
 
     resetCode: {

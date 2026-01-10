@@ -8,11 +8,27 @@ const passwordRoutes = require("./routes/passwordRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 const resumeRoutes = require("./routes/resumeRoutes");
 const projectRoutes = require("./routes/projectRoutes");
+const workspaceRoutes = require("./routes/workspaceRoutes");
+const errorHandler = require("./middleware/errorHandler");
+const employerRoutes = require("./routes/employerRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 
 // CORS configuration
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(",")
+  : ["http://localhost:5173"];
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
@@ -31,6 +47,9 @@ app.use("/api/password", passwordRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/resume", resumeRoutes);
 app.use("/api/project", projectRoutes);
+app.use("/api/workspace", workspaceRoutes);
+app.use("/api/employers", employerRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -44,7 +63,11 @@ app.use("/api/*", (req, res) => {
   res.status(404).json({
     success: false,
     message: "API endpoint not found",
+    code: "NOT_FOUND",
   });
 });
+
+// Global error handler middleware (must be last)
+app.use(errorHandler);
 
 module.exports = app;

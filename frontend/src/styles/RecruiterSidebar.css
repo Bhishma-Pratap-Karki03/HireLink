@@ -13,8 +13,8 @@
 }
 
 .recruiter-logo {
-  width: 140px;
-  height: 100px;
+  width: 160px;
+  height: 80px;
   object-fit: contain;
 }
 
@@ -23,6 +23,8 @@
   display: flex;
   justify-content: center;
   width: 100%;
+  margin-top: 10px;
+  margin-bottom: 20px;
 }
 
 .recruiter-user-summary {
@@ -30,37 +32,65 @@
   flex-direction: column;
   align-items: center;
   margin-bottom: 40px;
+  padding: 0 20px;
+  width: 100%;
 }
 
+/* Avatar Container - Clean design */
 .recruiter-avatar-container {
   position: relative;
-  width: 120px;
-  height: 120px;
-  margin-bottom: 16px;
-  border-radius: 50%;
+  width: 150px;
+  height: 150px;
+  margin-bottom: 20px;
   overflow: hidden;
-  background-color: #f0f0f0;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border: 3px solid #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: transparent;
 }
 
+/* Recruiter logo container - no borders, no background */
+.recruiter-logo-container {
+  width: 160px; /* Wider for rectangular logos */
+  height: 120px;
+}
+
+/* Candidate avatar container - circular */
+.candidate-avatar-container {
+  border-radius: 50%;
+  width: 120px;
+  height: 120px;
+}
+
+/* Avatar images */
 .recruiter-user-avatar {
   width: 100%;
   height: 100%;
+  display: block;
+}
+
+/* Recruiter logo styling - shows full logo */
+.recruiter-logo {
+  object-fit: contain;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Candidate avatar styling - circular */
+.candidate-avatar {
   object-fit: cover;
   border-radius: 50%;
-  display: block;
 }
 
 .recruiter-user-name {
   font-size: 20px;
   font-weight: 700;
-  margin: 0 0 16px 0;
+  margin: 10px 0 8px 0;
   color: #0f283c;
+  text-align: center;
+  width: 100%;
+  word-wrap: break-word;
 }
 
 .recruiter-user-job-title {
@@ -68,12 +98,16 @@
   color: #656565;
   margin: 0 0 16px 0;
   font-weight: 500;
+  text-align: center;
+  width: 100%;
 }
 
 .recruiter-connections {
   display: flex;
   align-items: center;
   gap: 8px;
+  justify-content: center;
+  width: 100%;
 }
 
 .recruiter-connections-avatars img {
@@ -89,17 +123,17 @@
 
 .recruiter-sidebar-nav {
   width: 100%;
-  padding: 0 30px;
+  padding: 0 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .recruiter-nav-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 18px;
+  padding: 14px 16px;
   border-radius: 12px;
   color: #0f283c;
   font-weight: 500;
@@ -139,11 +173,21 @@
     width: 100%;
     height: auto;
     position: relative;
-    padding: 20px;
+    padding: 15px;
+  }
+
+  .recruiter-logo {
+    width: 140px;
+    height: 70px;
   }
 
   .recruiter-avatar-container {
-    width: 100px;
+    width: 120px;
+    height: 120px;
+  }
+
+  .recruiter-logo-container {
+    width: 140px;
     height: 100px;
   }
 
@@ -151,10 +195,42 @@
     flex-direction: row;
     overflow-x: auto;
     padding-bottom: 10px;
+    gap: 5px;
   }
 
   .recruiter-nav-item {
-    padding: 12px;
+    padding: 10px 12px;
     white-space: nowrap;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .recruiter-sidebar {
+    padding: 10px;
+  }
+
+  .recruiter-logo {
+    width: 120px;
+    height: 60px;
+  }
+
+  .recruiter-avatar-container {
+    width: 100px;
+    height: 100px;
+  }
+
+  .recruiter-logo-container {
+    width: 120px;
+    height: 80px;
+  }
+
+  .recruiter-user-name {
+    font-size: 18px;
+  }
+
+  .recruiter-nav-item {
+    font-size: 13px;
+    padding: 8px 10px;
   }
 }

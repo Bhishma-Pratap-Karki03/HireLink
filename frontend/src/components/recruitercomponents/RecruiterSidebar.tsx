@@ -20,7 +20,7 @@ interface UserData {
   email: string;
   role: string;
   profilePicture?: string;
-  currentJobTitle?: string;
+  // Remove currentJobTitle from interface if not needed elsewhere
 }
 
 interface NavItem {
@@ -133,6 +133,9 @@ const RecruiterSidebar: React.FC<RecruiterSidebarProps> = ({
     };
   }, [navigate]);
 
+  // Determine if user is recruiter
+  const isRecruiter = userData?.role === "recruiter";
+
   // Recruiter navigation items
   const navItems: NavItem[] = [
     {
@@ -217,20 +220,28 @@ const RecruiterSidebar: React.FC<RecruiterSidebarProps> = ({
       </div>
 
       <div className="recruiter-user-summary">
-        <div className="recruiter-avatar-container">
+        <div
+          className={`recruiter-avatar-container ${
+            isRecruiter
+              ? "recruiter-logo-container"
+              : "candidate-avatar-container"
+          }`}
+        >
           <img
             src={profileImage}
-            alt={`${userName}'s profile`}
-            className="recruiter-user-avatar"
+            alt={`${userName}'s company logo`}
+            className={`recruiter-user-avatar ${
+              isRecruiter ? "recruiter-logo" : "candidate-avatar"
+            }`}
             onError={(e) => {
               e.currentTarget.src = defaultAvatar;
             }}
           />
         </div>
         <h3 className="recruiter-user-name">{userName}</h3>
-        {userData?.currentJobTitle && (
-          <p className="recruiter-user-job-title">{userData.currentJobTitle}</p>
-        )}
+
+        {/* REMOVED currentJobTitle display */}
+
         {/* Show connections count for recruiters */}
         {userData?.role === "recruiter" && (
           <div className="recruiter-connections">

@@ -1,201 +1,116 @@
-// profileRoutes.js - Complete file with all routes
-
+// routes/profileRoutes.js - FIXED VERSION
 const express = require("express");
 const router = express.Router();
+const { protect } = require("../middleware/authMiddleware");
+const profileController = require("../controllers/profileController");
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs");
 
-// Import the profile controller
-const profileController = require("../controllers/profileController");
-const { protect } = require("../middleware/authMiddleware");
-
-// Configure multer for file uploads (profile pictures)
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    // Create temp folder for uploads
-    const uploadDir = path.join(__dirname, "../public/uploads/profiles/temp");
-
-    // Create the temp directory if it doesn't exist
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    // Generate a unique filename with the original extension
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, `profile-${uniqueSuffix}${ext}`);
-  },
-});
-
-// File filter to accept only image files
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = [
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "image/webp",
-    "image/gif",
-  ];
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    req.fileValidationError =
-      "Only image files are allowed (JPG, JPEG, PNG, WEBP, GIF)";
-    cb(new Error("Only image files are allowed"), false);
-  }
-};
-
+// Create simple multer middleware inline
 const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB file size limit
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      const uploadPath = path.join(
+        __dirname,
+        "..",
+        "public",
+        "uploads",
+        "profiles",
+        "temp"
+      );
+      cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, "profile-" + uniqueSuffix + ext);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase()
+    );
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
+    }
   },
 });
 
-// Error handling middleware for multer uploads
-const handleMulterError = (error, req, res, next) => {
-  if (error instanceof multer.MulterError) {
-    if (error.code === "LIMIT_FILE_SIZE") {
-      return res.status(400).json({
-        success: false,
-        message: "File size too large. Maximum size is 5MB",
-      });
-    }
-    return res.status(400).json({
-      success: false,
-      message: error.message,
-    });
-  }
-  if (error && error.message) {
-    // Handle fileFilter errors
-    if (error.message.includes("Only image files are allowed")) {
-      return res.status(400).json({
-        success: false,
-        message: error.message,
-      });
-    }
-  }
-  next(error);
-};
+// Public routes
+router.get("/user/:userId", profileController.getUserProfile);
 
 // Protected routes (require authentication)
-// GET /api/profile/me - Get current user's profile
 router.get("/me", protect, profileController.getMyProfile);
-
-// PUT /api/profile/update - Update user's profile information
-router.put("/update", protect, profileController.updateProfile);
-
-// PUT /api/profile/upload-picture - Upload profile picture
-router.put(
-  "/upload-picture",
+router.put("/me", protect, profileController.updateProfile);
+router.post(
+  "/me/picture",
   protect,
   upload.single("profilePicture"),
-  handleMulterError,
-  (req, res, next) => {
-    // Handle file validation errors
-    if (req.fileValidationError) {
-      return res.status(400).json({
-        success: false,
-        message: req.fileValidationError,
-      });
-    }
-    next();
-  },
   profileController.uploadProfilePicture
 );
+router.delete("/me/picture", protect, profileController.removeProfilePicture);
 
-// DELETE /api/profile/remove-picture - Remove profile picture
-router.delete(
-  "/remove-picture",
-  protect,
-  profileController.removeProfilePicture
-);
-
-// Experience management routes
-// POST /api/profile/experience - Add new experience
-router.post("/experience", protect, profileController.addExperience);
-
-// PUT /api/profile/experience/:experienceId - Update experience
+// Experience routes
+router.post("/me/experience", protect, profileController.addExperience);
 router.put(
-  "/experience/:experienceId",
+  "/me/experience/:experienceId",
   protect,
   profileController.updateExperience
 );
-
-// DELETE /api/profile/experience/:experienceId - Remove experience
 router.delete(
-  "/experience/:experienceId",
+  "/me/experience/:experienceId",
   protect,
   profileController.removeExperience
 );
 
-// Education management routes
-// POST /api/profile/education - Add new education
-router.post("/education", protect, profileController.addEducation);
-
-// PUT /api/profile/education/:educationId - Update education
+// Education routes
+router.post("/me/education", protect, profileController.addEducation);
 router.put(
-  "/education/:educationId",
+  "/me/education/:educationId",
   protect,
   profileController.updateEducation
 );
-
-// DELETE /api/profile/education/:educationId - Remove education
 router.delete(
-  "/education/:educationId",
+  "/me/education/:educationId",
   protect,
   profileController.removeEducation
 );
 
-// Skill management routes - MAKE SURE THESE ARE CORRECT
-// POST /api/profile/skill - Add new skill
-router.post("/skill", protect, profileController.addSkill); // LINE 157
+// Skill routes
+router.post("/me/skills", protect, profileController.addSkill);
+router.put("/me/skills/:skillId", protect, profileController.updateSkill);
+router.delete("/me/skills/:skillId", protect, profileController.removeSkill);
 
-// PUT /api/profile/skill/:skillId - Update skill
-router.put("/skill/:skillId", protect, profileController.updateSkill);
-
-// DELETE /api/profile/skill/:skillId - Remove skill
-router.delete("/skill/:skillId", protect, profileController.removeSkill);
-
-// Language management routes
-// POST /api/profile/language - Add new language
-router.post("/language", protect, profileController.addLanguage);
-
-// PUT /api/profile/language/:languageId - Update language
-router.put("/language/:languageId", protect, profileController.updateLanguage);
-
-// DELETE /api/profile/language/:languageId - Remove language
+// Language routes
+router.post("/me/languages", protect, profileController.addLanguage);
+router.put(
+  "/me/languages/:languageId",
+  protect,
+  profileController.updateLanguage
+);
 router.delete(
-  "/language/:languageId",
+  "/me/languages/:languageId",
   protect,
   profileController.removeLanguage
 );
 
-// Certification management routes
-// POST /api/profile/certification - Add new certification
-router.post("/certification", protect, profileController.addCertification);
-
-// PUT /api/profile/certification/:certificationId - Update certification
+// Certification routes
+router.post("/me/certifications", protect, profileController.addCertification);
 router.put(
-  "/certification/:certificationId",
+  "/me/certifications/:certificationId",
   protect,
   profileController.updateCertification
 );
-
-// DELETE /api/profile/certification/:certificationId - Remove certification
 router.delete(
-  "/certification/:certificationId",
+  "/me/certifications/:certificationId",
   protect,
   profileController.removeCertification
 );
-
-// Public route (no authentication required)
-// GET /api/profile/:userId - Get public profile of any user
-router.get("/:userId", profileController.getUserProfile);
 
 module.exports = router;

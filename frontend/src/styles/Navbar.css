@@ -1,3 +1,4 @@
+/* Navbar Styles */
 .site-header {
   background-color: #ffffff;
   box-shadow: 0px 1px 4px 0px rgba(0, 0, 0, 0.12);
@@ -43,8 +44,8 @@
 }
 
 .site-header .logo-img {
-  width: 120px;
-  height: 80px;
+  width: 140px;
+  height: 60px;
   object-fit: contain;
 }
 
@@ -290,21 +291,46 @@
   background-color: #f5f5f5;
 }
 
+/* Avatar Wrapper - Clean design without borders */
 .site-header .avatar-wrapper {
   width: 54px;
   height: 54px;
-  border-radius: 50%;
   overflow: hidden;
-  border: 2px solid #9979f6;
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: transparent;
 }
 
+/* Candidate avatar - circular */
+.avatar-wrapper.candidate-avatar {
+  border-radius: 50%;
+}
+
+/* Recruiter avatar - adjusts to logo shape */
+.avatar-wrapper.recruiter-avatar {
+  width: 70px; /* Wider for rectangular logos */
+  height: 54px;
+  border-radius: 8px;
+}
+
+/* Avatar image styling */
 .site-header .avatar-image {
   width: 100%;
   height: 100%;
+  display: block;
+}
+
+/* Candidate images use cover */
+.avatar-wrapper.candidate-avatar .avatar-image {
   object-fit: cover;
+}
+
+/* Recruiter logos use contain to show full logo */
+.avatar-wrapper.recruiter-avatar .avatar-image {
+  object-fit: contain;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .site-header .user-name {
@@ -414,6 +440,46 @@
   background-color: #f8f8f8;
 }
 
+/* Mobile avatar wrapper */
+.mobile-user-profile .avatar-wrapper {
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+}
+
+/* Mobile candidate avatar */
+.mobile-user-profile .avatar-wrapper.candidate-avatar {
+  border-radius: 50%;
+}
+
+/* Mobile recruiter avatar - larger for rectangular logos */
+.mobile-user-profile .avatar-wrapper.recruiter-avatar {
+  width: 55px;
+  height: 44px;
+  border-radius: 6px;
+}
+
+/* Mobile avatar images */
+.mobile-user-profile .avatar-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.mobile-user-profile .avatar-wrapper.candidate-avatar .avatar-image {
+  object-fit: cover;
+}
+
+.mobile-user-profile .avatar-wrapper.recruiter-avatar .avatar-image {
+  object-fit: contain;
+  max-width: 100%;
+  max-height: 100%;
+}
+
 .mobile-user-name {
   font-size: 16px;
   color: #0f283c;
@@ -515,8 +581,8 @@
   }
 
   .site-header .logo-img {
-    width: 100px;
-    height: 60px;
+    width: 120px;
+    height: 100px;
   }
 
   .site-header .header-container,
@@ -535,8 +601,18 @@
     height: 44px;
   }
 
-  .mobile-menu-list .mobile-user-profile .avatar-wrapper {
+  .avatar-wrapper.recruiter-avatar {
+    width: 55px;
+    height: 44px;
+  }
+
+  .mobile-user-profile .avatar-wrapper {
     width: 40px;
+    height: 40px;
+  }
+
+  .mobile-user-profile .avatar-wrapper.recruiter-avatar {
+    width: 50px;
     height: 40px;
   }
 }

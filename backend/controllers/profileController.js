@@ -50,6 +50,14 @@ exports.updateProfile = async (req, res) => {
       });
     }
 
+    // Handle founded year validation error
+    if (error.message.includes("valid founded year")) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
     // Handle any other unexpected errors
     res.status(500).json({
       success: false,

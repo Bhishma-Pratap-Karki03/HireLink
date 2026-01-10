@@ -1,10 +1,14 @@
-// projectController.js
-const User = require("../models/userModel");
+// Project Controller handles project HTTP requests
+// Uses Project Service for business logic
+
+const projectService = require("../services/projectService");
 const path = require("path");
 const fs = require("fs");
 
 // Add project to user profile
-exports.addProject = async (req, res) => {
+exports.addProject = async (req, res, next) => {
+  let tempFileCleaned = false;
+
   try {
     const {
       projectTitle,
@@ -16,83 +20,18 @@ exports.addProject = async (req, res) => {
       technologies,
     } = req.body;
 
-    // Validate required fields
-    if (!projectTitle || !projectTitle.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Project title is required",
-      });
-    }
-
-    if (!startDate) {
-      return res.status(400).json({
-        success: false,
-        message: "Start date is required",
-      });
-    }
-
-    // Validate dates
-    const start = new Date(startDate);
-    if (isNaN(start.getTime())) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid start date",
-      });
-    }
-
-    let end = null;
-    if (endDate && !isOngoing) {
-      end = new Date(endDate);
-      if (isNaN(end.getTime())) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid end date",
-        });
-      }
-      if (end < start) {
-        return res.status(400).json({
-          success: false,
-          message: "End date cannot be before start date",
-        });
-      }
-    }
-
-    const user = await User.findById(req.user.id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    // Parse technologies if provided
-    let technologiesArray = [];
-    if (technologies) {
-      if (typeof technologies === "string") {
-        technologiesArray = technologies
-          .split(",")
-          .map((tech) => tech.trim())
-          .filter((tech) => tech !== "");
-      } else if (Array.isArray(technologies)) {
-        technologiesArray = technologies
-          .map((tech) => tech.trim())
-          .filter((tech) => tech !== "");
-      }
-    }
-
-    // Create new project object
-    const newProject = {
-      projectTitle: projectTitle.trim(),
-      projectDescription: projectDescription || "",
-      startDate: start,
-      endDate: isOngoing ? null : end,
-      isOngoing: !!isOngoing,
-      projectUrl: projectUrl ? projectUrl.trim() : "",
-      technologies: technologiesArray,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    // Prepare project data
+    const projectData = {
+      projectTitle,
+      projectDescription,
+      startDate,
+      endDate,
+      isOngoing,
+      projectUrl,
+      technologies,
     };
+
+    let fileData = null;
 
     // Handle cover image if uploaded
     if (req.file) {
@@ -116,36 +55,42 @@ exports.addProject = async (req, res) => {
       const tempPath = req.file.path;
       const targetPath = path.join(targetDir, req.file.filename);
 
-      if (fs.existsSync(tempPath)) {
-        fs.renameSync(tempPath, targetPath);
-        console.log("Project cover image moved to:", targetPath);
-
-        // Create relative URL
-        const coverImageUrl = `/uploads/projects/${roleFolder}/${req.file.filename}`;
-
-        newProject.coverImage = coverImageUrl;
-        newProject.coverImageFileName = req.file.originalname;
-        newProject.coverImageFileSize = req.file.size;
+      if (!fs.existsSync(tempPath)) {
+        return res.status(500).json({
+          success: false,
+          message: "Uploaded file not found",
+          code: "FILE_NOT_FOUND",
+        });
       }
+
+      // Move the file
+      fs.renameSync(tempPath, targetPath);
+      tempFileCleaned = true;
+
+      // Create relative URL
+      const coverImageUrl = `/uploads/projects/${roleFolder}/${req.file.filename}`;
+
+      fileData = {
+        coverImageUrl,
+        fileName: req.file.originalname,
+        fileSize: req.file.size,
+      };
     }
 
-    // Add to user's projects array
-    user.projects.push(newProject);
-    await user.save();
+    // Call service to handle business logic
+    const result = await projectService.addProject(
+      req.user.id,
+      projectData,
+      fileData
+    );
 
-    // Get the added project with its ID
-    const addedProject = user.projects[user.projects.length - 1];
-
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      message: "Project added successfully",
-      project: addedProject,
+      ...result,
     });
   } catch (error) {
-    console.error("Add project error:", error);
-
     // Clean up uploaded file if error occurs
-    if (req.file && req.file.path) {
+    if (req.file && req.file.path && !tempFileCleaned) {
       try {
         if (fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
@@ -155,16 +100,14 @@ exports.addProject = async (req, res) => {
       }
     }
 
-    return res.status(500).json({
-      success: false,
-      message: "Server error adding project",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Update project in user profile
-exports.updateProject = async (req, res) => {
+exports.updateProject = async (req, res, next) => {
+  let tempFileCleaned = false;
+
   try {
     const {
       projectTitle,
@@ -176,113 +119,21 @@ exports.updateProject = async (req, res) => {
       technologies,
     } = req.body;
 
-    const user = await User.findById(req.user.id);
+    // Prepare project data
+    const projectData = {
+      projectTitle,
+      projectDescription,
+      startDate,
+      endDate,
+      isOngoing,
+      projectUrl,
+      technologies,
+    };
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    // Find the project to update
-    const project = user.projects.id(req.params.projectId);
-
-    if (!project) {
-      return res.status(404).json({
-        success: false,
-        message: "Project not found",
-      });
-    }
-
-    // Validate dates if provided
-    if (startDate) {
-      const start = new Date(startDate);
-      if (isNaN(start.getTime())) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid start date",
-        });
-      }
-      project.startDate = start;
-    }
-
-    if (endDate && !isOngoing) {
-      const end = new Date(endDate);
-      if (isNaN(end.getTime())) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid end date",
-        });
-      }
-      if (end < project.startDate) {
-        return res.status(400).json({
-          success: false,
-          message: "End date cannot be before start date",
-        });
-      }
-      project.endDate = end;
-    } else if (isOngoing) {
-      project.endDate = null;
-    }
-
-    // Update fields if provided
-    if (projectTitle !== undefined) {
-      if (!projectTitle.trim()) {
-        return res.status(400).json({
-          success: false,
-          message: "Project title cannot be empty",
-        });
-      }
-      project.projectTitle = projectTitle.trim();
-    }
-
-    if (projectDescription !== undefined) {
-      project.projectDescription = projectDescription || "";
-    }
-
-    if (isOngoing !== undefined) {
-      project.isOngoing = isOngoing;
-      if (isOngoing) {
-        project.endDate = null;
-      }
-    }
-
-    if (projectUrl !== undefined) {
-      project.projectUrl = projectUrl ? projectUrl.trim() : "";
-    }
-
-    if (technologies !== undefined) {
-      let technologiesArray = [];
-      if (typeof technologies === "string") {
-        technologiesArray = technologies
-          .split(",")
-          .map((tech) => tech.trim())
-          .filter((tech) => tech !== "");
-      } else if (Array.isArray(technologies)) {
-        technologiesArray = technologies
-          .map((tech) => tech.trim())
-          .filter((tech) => tech !== "");
-      }
-      project.technologies = technologiesArray;
-    }
+    let fileData = null;
 
     // Handle cover image update if new file is uploaded
     if (req.file) {
-      // Delete old cover image if it exists
-      if (project.coverImage && project.coverImage !== "") {
-        const oldImagePath = path.join(
-          __dirname,
-          "..",
-          "public",
-          project.coverImage
-        );
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
-          console.log("Deleted old project cover image:", oldImagePath);
-        }
-      }
-
       // Move new file from temp to project images folder
       const roleFolder = "CandidateProjects";
       const targetDir = path.join(
@@ -303,32 +154,43 @@ exports.updateProject = async (req, res) => {
       const tempPath = req.file.path;
       const targetPath = path.join(targetDir, req.file.filename);
 
-      if (fs.existsSync(tempPath)) {
-        fs.renameSync(tempPath, targetPath);
-        console.log("Project cover image updated to:", targetPath);
-
-        // Create relative URL
-        const coverImageUrl = `/uploads/projects/${roleFolder}/${req.file.filename}`;
-
-        project.coverImage = coverImageUrl;
-        project.coverImageFileName = req.file.originalname;
-        project.coverImageFileSize = req.file.size;
+      if (!fs.existsSync(tempPath)) {
+        return res.status(500).json({
+          success: false,
+          message: "Uploaded file not found",
+          code: "FILE_NOT_FOUND",
+        });
       }
+
+      // Move the file
+      fs.renameSync(tempPath, targetPath);
+      tempFileCleaned = true;
+
+      // Create relative URL
+      const coverImageUrl = `/uploads/projects/${roleFolder}/${req.file.filename}`;
+
+      fileData = {
+        coverImageUrl,
+        fileName: req.file.originalname,
+        fileSize: req.file.size,
+      };
     }
 
-    project.updatedAt = new Date();
-    await user.save();
+    // Call service to handle business logic
+    const result = await projectService.updateProject(
+      req.user.id,
+      req.params.projectId,
+      projectData,
+      fileData
+    );
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      message: "Project updated successfully",
-      project: project,
+      ...result,
     });
   } catch (error) {
-    console.error("Update project error:", error);
-
     // Clean up uploaded file if error occurs
-    if (req.file && req.file.path) {
+    if (req.file && req.file.path && !tempFileCleaned) {
       try {
         if (fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
@@ -338,64 +200,23 @@ exports.updateProject = async (req, res) => {
       }
     }
 
-    return res.status(500).json({
-      success: false,
-      message: "Server error updating project",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 // Remove project from user profile
-exports.removeProject = async (req, res) => {
+exports.removeProject = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
+    const result = await projectService.removeProject(
+      req.user.id,
+      req.params.projectId
+    );
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    // Find the project to remove
-    const project = user.projects.id(req.params.projectId);
-
-    if (!project) {
-      return res.status(404).json({
-        success: false,
-        message: "Project not found",
-      });
-    }
-
-    // Delete the cover image file if it exists
-    if (project.coverImage && project.coverImage !== "") {
-      const imagePath = path.join(
-        __dirname,
-        "..",
-        "public",
-        project.coverImage
-      );
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-        console.log("Deleted project cover image:", imagePath);
-      }
-    }
-
-    // Remove the project
-    project.remove();
-    await user.save();
-
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      message: "Project removed successfully",
+      ...result,
     });
   } catch (error) {
-    console.error("Remove project error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error removing project",
-      error: error.message,
-    });
+    next(error);
   }
 };

@@ -69,6 +69,35 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
         setUserData(data.user);
         setIsAuthenticated(true);
 
+        // IMPORTANT: Check if this is the admin email and update role
+        const isAdminEmail = data.user.email === "hirelinknp@gmail.com";
+        if (isAdminEmail) {
+          // Update userData with admin role
+          const updatedUserData = {
+            ...data.user,
+            role: "admin", // Force admin role for admin email
+          };
+          setUserData(updatedUserData);
+
+          // Update localStorage with admin role
+          const minimalUserData = {
+            id: data.user.id,
+            fullName: data.user.fullName,
+            email: data.user.email,
+            role: "admin", // Store as admin
+          };
+          localStorage.setItem("userData", JSON.stringify(minimalUserData));
+        } else {
+          // For non-admin users
+          const minimalUserData = {
+            id: data.user.id,
+            fullName: data.user.fullName,
+            email: data.user.email,
+            role: data.user.role,
+          };
+          localStorage.setItem("userData", JSON.stringify(minimalUserData));
+        }
+
         // Set user name - prioritize fullName, fallback to email
         if (data.user.fullName) {
           setUserName(data.user.fullName);
@@ -83,22 +112,12 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
           if (data.user.profilePicture.startsWith("http")) {
             setProfileImage(data.user.profilePicture);
           } else {
-            // Handle recruiter profile pictures (same as candidates)
             setProfileImage(`http://localhost:5000${data.user.profilePicture}`);
           }
         } else {
-          // Use default avatar for recruiters without profile picture
+          // Use default avatar for users without profile picture
           setProfileImage(defaultAvatar);
         }
-
-        // Update localStorage with user data (minimal)
-        const minimalUserData = {
-          id: data.user.id,
-          fullName: data.user.fullName,
-          email: data.user.email,
-          role: data.user.role,
-        };
-        localStorage.setItem("userData", JSON.stringify(minimalUserData));
       } else if (response.status === 401) {
         // Token expired or invalid
         localStorage.removeItem("authToken");
@@ -156,6 +175,9 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
       window.removeEventListener("profileUpdated", handleProfileUpdate);
     };
   }, []);
+
+  // Check if user is admin by email
+  const isAdminUser = userData?.email === "hirelinknp@gmail.com";
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -230,15 +252,19 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
   };
 
   const handleDashboardClick = () => {
-    // Navigate to appropriate dashboard/home based on user role
+    // Navigate to appropriate dashboard based on user role
     if (userData) {
-      if (userData.role === "admin") {
+      // Check if admin by email (primary check)
+      if (isAdminUser) {
         navigate("/admin-dashboard");
       } else if (userData.role === "recruiter") {
         navigate("/recruiter-dashboard");
       } else {
         navigate("/candidate-dashboard");
       }
+    } else {
+      // Fallback to candidate dashboard if no user data
+      navigate("/candidate-dashboard");
     }
     closeMobileMenu();
     setIsUserMenuOpen(false);
@@ -248,23 +274,31 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
   const handleProfileClick = () => {
     // Navigate to profile page based on role
     if (userData) {
-      if (userData.role === "candidate") {
+      // Check if admin by email (primary check)
+      if (isAdminUser) {
+        navigate("/admin-profile");
+      } else if (userData.role === "candidate") {
         navigate("/candidate-profile");
       } else if (userData.role === "recruiter") {
         navigate("/recruiter-profile");
-      } else {
-        navigate("/admin-profile");
       }
+    } else {
+      // Fallback to candidate profile if no user data
+      navigate("/candidate-profile");
     }
     setIsUserMenuOpen(false);
     setIsMobileUserDropdownOpen(false);
     closeMobileMenu();
   };
 
+  // Determine if user is recruiter
+  const isRecruiter = userData?.role === "recruiter";
+  const isCandidate = userData?.role === "candidate";
+
   // Render authenticated actions - only for candidate role
   const renderAuthenticatedActions = () => {
     // Only show notification/bookmark for candidates (not for admin or recruiters)
-    const showCandidateIcons = userData?.role === "candidate";
+    const showCandidateIcons = isCandidate && !isAdminUser;
 
     return (
       <>
@@ -284,7 +318,11 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
             onClick={toggleUserMenu}
             style={{ cursor: "pointer" }}
           >
-            <div className="avatar-wrapper">
+            <div
+              className={`avatar-wrapper ${
+                isRecruiter ? "recruiter-avatar" : "candidate-avatar"
+              }`}
+            >
               <img
                 src={profileImage}
                 alt={userName}
@@ -348,7 +386,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
 
   // Render mobile authenticated actions with dropdown
   const renderMobileAuthenticatedActions = () => {
-    const showCandidateIcons = userData?.role === "candidate";
+    const showCandidateIcons = isCandidate && !isAdminUser;
 
     return (
       <>
@@ -385,7 +423,11 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
               className="mobile-user-profile"
               onClick={toggleMobileUserDropdown}
             >
-              <div className="avatar-wrapper">
+              <div
+                className={`avatar-wrapper ${
+                  isRecruiter ? "recruiter-avatar" : "candidate-avatar"
+                }`}
+              >
                 <img
                   src={profileImage}
                   alt={userName}
@@ -473,12 +515,15 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
             if (isAuthenticated) {
               e.preventDefault();
               // Navigate to appropriate home page
-              if (userData?.role === "admin") {
-                navigate("/admin-home");
-              } else if (userData?.role === "recruiter") {
-                navigate("/recruiter-home");
-              } else {
-                navigate("/candidate-home");
+              if (userData) {
+                // Check if admin by email (primary check)
+                if (isAdminUser) {
+                  navigate("/admin-home");
+                } else if (userData.role === "recruiter") {
+                  navigate("/recruiter-home");
+                } else {
+                  navigate("/candidate-home");
+                }
               }
             }
           }}
@@ -498,7 +543,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
               </a>
             </li>
             <li>
-              <a href="#">
+              <a href="/employers">
                 Employers <img src={dropdownArrow} alt="dropdown arrow" />
               </a>
             </li>
@@ -551,7 +596,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
             </a>
           </li>
           <li>
-            <a href="#" onClick={closeMobileMenu}>
+            <a href="/employers" onClick={closeMobileMenu}>
               Employers <img src={dropdownArrow} alt="dropdown arrow" />
             </a>
           </li>

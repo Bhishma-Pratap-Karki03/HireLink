@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import Navbar from "../../components/Navbar";
 
 const AdminHomePage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    //Check if user is logged in and is admin email
+    // Check if user is logged in and is admin email
     const token = localStorage.getItem("authToken");
     const userDataStr = localStorage.getItem("userData");
 
@@ -36,19 +37,51 @@ const AdminHomePage = () => {
     }
   }, [navigate]);
 
+  const handleLogout = () => {
+    // Clear all authentication data
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userData");
+    localStorage.removeItem("profilePictureBase64");
+    localStorage.removeItem("profilePictureFileName");
+
+    // Redirect to login page
+    navigate("/login");
+
+    // Force page reload to clear all state
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
+  };
+
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Admin Home Page</h1>
-      <p>Welcome to your Home Page</p>
-      <button
-        onClick={() => {
-          localStorage.removeItem("authToken");
-          localStorage.removeItem("userData");
-          navigate("/login");
-        }}
-      >
-        Logout
-      </button>
+    <div>
+      {/* Navbar will automatically fetch user data from localStorage */}
+      <Navbar />
+
+      <div style={{ padding: "40px" }}>
+        <div className="admin-home-content">
+          <h1>Welcome to Admin Dashboard</h1>
+          <p>Manage the entire platform from here</p>
+
+          <div className="admin-home-actions">
+            <button
+              onClick={() => navigate("/admin-dashboard")}
+              className="admin-btn-primary"
+            >
+              Go to Dashboard
+            </button>
+            <button
+              onClick={() => navigate("/admin-profile")}
+              className="admin-btn-outline"
+            >
+              Edit Profile
+            </button>
+            <button onClick={handleLogout} className="admin-btn-logout">
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

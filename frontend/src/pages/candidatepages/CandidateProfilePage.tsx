@@ -509,8 +509,8 @@ const CandidateProfilePage = () => {
       setIsLoading(true);
 
       const url = skillData._id
-        ? `http://localhost:5000/api/profile/skill/${skillData._id}`
-        : "http://localhost:5000/api/profile/skill";
+        ? `http://localhost:5000/api/profile/me/skills/${skillData._id}`
+        : "http://localhost:5000/api/profile/me/skills";
 
       const method = skillData._id ? "PUT" : "POST";
 
@@ -554,7 +554,7 @@ const CandidateProfilePage = () => {
       setIsLoading(true);
 
       const response = await fetch(
-        `http://localhost:5000/api/profile/skill/${skillId}`,
+        `http://localhost:5000/api/profile/me/skills/${skillId}`,
         {
           method: "DELETE",
           headers: {
@@ -603,7 +603,7 @@ const CandidateProfilePage = () => {
         data.currentJobTitle.trim() !== ""
       ) {
         const updateResponse = await fetch(
-          "http://localhost:5000/api/profile/update",
+          "http://localhost:5000/api/profile/me", // CHANGED FROM /update to /me
           {
             method: "PUT",
             headers: {
@@ -637,9 +637,9 @@ const CandidateProfilePage = () => {
           );
 
           const response = await fetch(
-            "http://localhost:5000/api/profile/upload-picture",
+            "http://localhost:5000/api/profile/me/picture", // CHANGED FROM /upload-picture to /me/picture
             {
-              method: "PUT",
+              method: "POST", // CHANGED FROM PUT to POST
               headers: {
                 Authorization: `Bearer ${token}`,
               },
@@ -658,7 +658,7 @@ const CandidateProfilePage = () => {
         } else {
           // Remove profile picture via backend
           const response = await fetch(
-            "http://localhost:5000/api/profile/remove-picture",
+            "http://localhost:5000/api/profile/me/picture", // CHANGED FROM /remove-picture to /me/picture
             {
               method: "DELETE",
               headers: {
@@ -709,8 +709,8 @@ const CandidateProfilePage = () => {
       setIsLoading(true);
 
       const url = certificationData._id
-        ? `http://localhost:5000/api/profile/certification/${certificationData._id}`
-        : "http://localhost:5000/api/profile/certification";
+        ? `http://localhost:5000/api/profile/me/certifications/${certificationData._id}`
+        : "http://localhost:5000/api/profile/me/certifications";
 
       const method = certificationData._id ? "PUT" : "POST";
 
@@ -752,7 +752,7 @@ const CandidateProfilePage = () => {
       setIsLoading(true);
 
       const response = await fetch(
-        `http://localhost:5000/api/profile/certification/${certificationId}`,
+        `http://localhost:5000/api/profile/me/certifications/${certificationId}`,
         {
           method: "DELETE",
           headers: {
@@ -806,7 +806,7 @@ const CandidateProfilePage = () => {
     try {
       setIsLoading(true);
 
-      const response = await fetch("http://localhost:5000/api/profile/update", {
+      const response = await fetch("http://localhost:5000/api/profile/me", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -854,7 +854,7 @@ const CandidateProfilePage = () => {
     try {
       setIsLoading(true);
 
-      const response = await fetch("http://localhost:5000/api/profile/update", {
+      const response = await fetch("http://localhost:5000/api/profile/me", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -985,8 +985,8 @@ const CandidateProfilePage = () => {
       setIsLoading(true);
 
       const url = experienceData._id
-        ? `http://localhost:5000/api/profile/experience/${experienceData._id}`
-        : "http://localhost:5000/api/profile/experience";
+        ? `http://localhost:5000/api/profile/me/experience/${experienceData._id}`
+        : "http://localhost:5000/api/profile/me/experience";
 
       const method = experienceData._id ? "PUT" : "POST";
 
@@ -1030,7 +1030,7 @@ const CandidateProfilePage = () => {
       setIsLoading(true);
 
       const response = await fetch(
-        `http://localhost:5000/api/profile/experience/${experienceId}`,
+        `http://localhost:5000/api/profile/me/experience/${experienceId}`,
         {
           method: "DELETE",
           headers: {
@@ -1082,8 +1082,8 @@ const CandidateProfilePage = () => {
       };
 
       const url = educationData._id
-        ? `http://localhost:5000/api/profile/education/${educationData._id}`
-        : "http://localhost:5000/api/profile/education";
+        ? `http://localhost:5000/api/profile/me/education/${educationData._id}`
+        : "http://localhost:5000/api/profile/me/education";
 
       const method = educationData._id ? "PUT" : "POST";
 
@@ -1127,7 +1127,7 @@ const CandidateProfilePage = () => {
       setIsLoading(true);
 
       const response = await fetch(
-        `http://localhost:5000/api/profile/education/${educationId}`,
+        `http://localhost:5000/api/profile/me/education/${educationId}`,
         {
           method: "DELETE",
           headers: {
@@ -1268,8 +1268,8 @@ const CandidateProfilePage = () => {
       setIsLoading(true);
 
       const url = languageData._id
-        ? `http://localhost:5000/api/profile/language/${languageData._id}`
-        : "http://localhost:5000/api/profile/language";
+        ? `http://localhost:5000/api/profile/me/languages/${languageData._id}`
+        : "http://localhost:5000/api/profile/me/languages";
 
       const method = languageData._id ? "PUT" : "POST";
 
@@ -1313,7 +1313,7 @@ const CandidateProfilePage = () => {
       setIsLoading(true);
 
       const response = await fetch(
-        `http://localhost:5000/api/profile/language/${languageId}`,
+        `http://localhost:5000/api/profile/me/languages/${languageId}`,
         {
           method: "DELETE",
           headers: {

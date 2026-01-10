@@ -4,7 +4,7 @@
 const userService = require("../services/userService");
 
 // Handle user registration request
-exports.registerUser = async (req, res) => {
+exports.registerUser = async (req, res, next) => {
   try {
     const { fullName, email, password, userType } = req.body;
 
@@ -26,7 +26,6 @@ exports.registerUser = async (req, res) => {
     console.error("Registration Error:", error.message);
 
     // Handle specific error cases with appropriate HTTP status codes
-
     // Handle email already exists error
     if (error.message.includes("already exists")) {
       return res.status(400).json({
@@ -34,6 +33,7 @@ exports.registerUser = async (req, res) => {
         message: error.message,
         emailExists: true,
         isVerified: error.message.includes("verified"),
+        code: "EMAIL_EXISTS",
       });
     }
 
@@ -42,20 +42,17 @@ exports.registerUser = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: error.message,
+        code: "VALIDATION_ERROR",
       });
     }
 
-    // Handle any other unexpected errors
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-      error: error.message,
-    });
+    // Pass other errors to error handler middleware
+    next(error);
   }
 };
 
 // Handle user login request
-exports.loginUser = async (req, res) => {
+exports.loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -71,9 +68,7 @@ exports.loginUser = async (req, res) => {
   } catch (error) {
     console.error("Login Error:", error.message);
 
-    // Handle specific error cases with appropriate HTTP status codes
-
-    // Handle verification required error
+    // Handle verification required error (special case that needs custom response)
     if (error.name === "VerificationRequired") {
       return res.status(403).json({
         success: false,
@@ -82,6 +77,7 @@ exports.loginUser = async (req, res) => {
         email: error.email,
         hasActiveCode: error.hasActiveCode,
         codeExpired: error.codeExpired,
+        code: "VERIFICATION_REQUIRED",
       });
     }
 
@@ -93,6 +89,7 @@ exports.loginUser = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: error.message,
+        code: "INVALID_CREDENTIALS",
       });
     }
 
@@ -101,14 +98,11 @@ exports.loginUser = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: error.message,
+        code: "VALIDATION_ERROR",
       });
     }
 
-    // Handle any other unexpected errors
-    res.status(500).json({
-      success: false,
-      message: "Server error during login",
-      error: error.message,
-    });
+    // Pass other errors to error handler middleware
+    next(error);
   }
 };

@@ -30,21 +30,39 @@ class ProfileService {
         resumeFileSize: user.resumeFileSize || 0,
         connectionsCount: user.connectionsCount || 0,
         isVerified: user.isVerified,
+        companySize: user.companySize || "",
+        foundedYear: user.foundedYear || "",
         experience: user.experience || [],
         education: user.education || [],
         skills: user.skills || [],
         certifications: user.certifications || [],
         languages: user.languages || [],
+        websiteUrl: user.websiteUrl || "",
+        linkedinUrl: user.linkedinUrl || "",
+        instagramUrl: user.instagramUrl || "",
+        facebookUrl: user.facebookUrl || "",
         projects: user.projects || [],
+        workspaceImages: user.workspaceImages || [],
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
     };
   }
 
-  // Update user's profile information
   async updateProfile(userId, updateData) {
-    const { currentJobTitle, phone, address, about } = updateData;
+    const {
+      fullName,
+      currentJobTitle,
+      phone,
+      address,
+      about,
+      companySize,
+      foundedYear,
+      websiteUrl,
+      linkedinUrl,
+      instagramUrl,
+      facebookUrl,
+    } = updateData;
 
     // Validate phone number format if provided
     if (phone && phone.trim() !== "") {
@@ -56,13 +74,47 @@ class ProfileService {
       }
     }
 
+    // Validate founded year if provided
+    if (foundedYear && foundedYear.trim() !== "") {
+      const yearNum = parseInt(foundedYear.trim());
+      const currentYear = new Date().getFullYear();
+
+      // Check if it's a valid number
+      if (isNaN(yearNum)) {
+        throw new Error("Please provide a valid year number");
+      }
+
+      // Check year range
+      if (yearNum < 1800 || yearNum > currentYear) {
+        throw new Error(
+          `Please provide a valid founded year between 1800 and ${currentYear}`
+        );
+      }
+    }
+
     // Prepare update object with only provided fields
     const updateFields = {};
+    if (fullName !== undefined) updateFields.fullName = fullName.trim();
     if (currentJobTitle !== undefined)
       updateFields.currentJobTitle = currentJobTitle.trim();
     if (phone !== undefined) updateFields.phone = phone.trim();
     if (address !== undefined) updateFields.address = address.trim();
     if (about !== undefined) updateFields.about = about.trim();
+    if (companySize !== undefined)
+      updateFields.companySize = companySize.trim();
+    if (foundedYear !== undefined)
+      updateFields.foundedYear = foundedYear.trim();
+
+    // Add website and social media fields
+    if (websiteUrl !== undefined) updateFields.websiteUrl = websiteUrl.trim();
+    if (linkedinUrl !== undefined)
+      updateFields.linkedinUrl = linkedinUrl.trim();
+    if (instagramUrl !== undefined)
+      updateFields.instagramUrl = instagramUrl.trim();
+    if (facebookUrl !== undefined)
+      updateFields.facebookUrl = facebookUrl.trim();
+
+    console.log("Updating profile with fields:", updateFields); // Debug log
 
     // Update user and return updated document
     const user = await User.findByIdAndUpdate(
@@ -84,6 +136,8 @@ class ProfileService {
         role: user.role,
         phone: user.phone || "",
         address: user.address || "",
+        companySize: user.companySize || "",
+        foundedYear: user.foundedYear || "",
         about: user.about || "",
         currentJobTitle: user.currentJobTitle || "",
         profilePicture: user.profilePicture || "",
@@ -137,14 +191,38 @@ class ProfileService {
   // Get public profile information for any user (for viewing other profiles)
   async getUserProfile(userId) {
     const user = await User.findById(userId).select(
-      "fullName email role currentJobTitle profilePicture"
+      "-password -verificationCode -resetCode -email -phone" // Remove sensitive data
     );
 
     if (!user) {
       throw new Error("User not found");
     }
 
-    return { user };
+    // Get full profile picture URL
+    let profilePictureUrl = "";
+    if (user.profilePicture && user.profilePicture !== "") {
+      if (user.profilePicture.startsWith("http")) {
+        profilePictureUrl = user.profilePicture;
+      } else {
+        profilePictureUrl = `${
+          process.env.BASE_URL || "http://localhost:5000"
+        }${user.profilePicture}`;
+      }
+    }
+
+    // Format the user data for public view
+    const publicUserData = {
+      id: user._id,
+      fullName: user.fullName,
+      role: user.role,
+      currentJobTitle: user.currentJobTitle || "",
+      profilePicture: profilePictureUrl,
+      about: user.about || "",
+      address: user.address || "",
+      // Add other public fields as needed
+    };
+
+    return { user: publicUserData };
   }
 
   // Add experience to user profile
