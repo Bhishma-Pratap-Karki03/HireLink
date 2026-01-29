@@ -200,7 +200,7 @@ const EmployerDetailsPage = () => {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (response.ok) {
@@ -220,7 +220,7 @@ const EmployerDetailsPage = () => {
     } catch (err: any) {
       console.error("Error fetching company details:", err);
       setError(
-        err.message || "Failed to load company details. Please try again."
+        err.message || "Failed to load company details. Please try again.",
       );
       setCompany(null);
     } finally {
@@ -243,7 +243,7 @@ const EmployerDetailsPage = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (response.ok) {
@@ -284,12 +284,13 @@ const EmployerDetailsPage = () => {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
+          // Only show published reviews
           setReviews(data.reviews || []);
           setAverageRating(data.averageRating || 0);
         }
@@ -353,7 +354,7 @@ const EmployerDetailsPage = () => {
       window.open(finalUrl, "_blank");
     } else {
       alert(
-        `${company?.name || "This company"} doesn't have a ${platform} profile`
+        `${company?.name || "This company"} doesn't have a ${platform} profile`,
       );
     }
   };
@@ -367,7 +368,7 @@ const EmployerDetailsPage = () => {
   };
 
   const handleImageError = (
-    e: React.SyntheticEvent<HTMLImageElement, Event>
+    e: React.SyntheticEvent<HTMLImageElement, Event>,
   ) => {
     e.currentTarget.src = defaultLogo;
   };
@@ -428,7 +429,7 @@ const EmployerDetailsPage = () => {
             title: newReview.title, // Optional title
             description: newReview.description,
           }),
-        }
+        },
       );
 
       const data = await response.json();
@@ -450,7 +451,7 @@ const EmployerDetailsPage = () => {
       ) {
         // User already has a review
         setReviewError(
-          "You have already submitted a review for this company. You can update your existing review."
+          "You have already submitted a review for this company. You can update your existing review.",
         );
         setExistingReview(null); // Reset existing review to trigger re-check
         checkExistingReview(); // Re-check for existing review
@@ -513,7 +514,7 @@ const EmployerDetailsPage = () => {
             title: newReview.title,
             description: newReview.description,
           }),
-        }
+        },
       );
 
       const data = await response.json();
@@ -571,7 +572,7 @@ const EmployerDetailsPage = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const data = await response.json();
@@ -614,7 +615,7 @@ const EmployerDetailsPage = () => {
   // Render stars for reviews
   const renderStars = (
     rating: number,
-    size: "small" | "medium" | "large" = "medium"
+    size: "small" | "medium" | "large" = "medium",
   ) => {
     const sizeClass = `employer-details-star-${size}`;
     const stars = [];
@@ -626,7 +627,7 @@ const EmployerDetailsPage = () => {
             src={starFilled}
             alt="star"
             className={`employer-details-star ${sizeClass}`}
-          />
+          />,
         );
       } else if (i === Math.ceil(rating) && rating % 1 !== 0) {
         stars.push(
@@ -635,7 +636,7 @@ const EmployerDetailsPage = () => {
             src={starHalf}
             alt="half star"
             className={`employer-details-star ${sizeClass}`}
-          />
+          />,
         );
       } else {
         stars.push(
@@ -644,7 +645,7 @@ const EmployerDetailsPage = () => {
             src={starEmpty}
             alt="empty star"
             className={`employer-details-star ${sizeClass}`}
-          />
+          />,
         );
       }
     }
@@ -890,8 +891,8 @@ const EmployerDetailsPage = () => {
                         {isCheckingReview
                           ? "Checking..."
                           : existingReview
-                          ? "Edit Your Review"
-                          : "Write a Review"}
+                            ? "Edit Your Review"
+                            : "Write a Review"}
                       </button>
                     ) : (
                       <button
@@ -918,7 +919,7 @@ const EmployerDetailsPage = () => {
                     !isPlaceholderText(existingReview.text) && (
                       <div className="employer-details-my-review">
                         <div className="employer-details-my-review-body"></div>
-                      </div> 
+                      </div>
                     )}
 
                   {/* All Reviews Section */}
@@ -929,7 +930,7 @@ const EmployerDetailsPage = () => {
                         {
                           reviews.filter(
                             (review) =>
-                              review.text && !isPlaceholderText(review.text)
+                              review.text && !isPlaceholderText(review.text),
                           ).length
                         }
                         )
@@ -950,7 +951,7 @@ const EmployerDetailsPage = () => {
                         {reviews
                           .filter(
                             (review) =>
-                              review.text && !isPlaceholderText(review.text)
+                              review.text && !isPlaceholderText(review.text),
                           )
                           .map((review) => (
                             <div
@@ -970,7 +971,7 @@ const EmployerDetailsPage = () => {
                                       onError={(e) => {
                                         e.currentTarget.style.display = "none";
                                         e.currentTarget.parentElement!.innerHTML = `<span>${review.reviewerName.charAt(
-                                          0
+                                          0,
                                         )}</span>`;
                                       }}
                                     />
@@ -1121,8 +1122,8 @@ const EmployerDetailsPage = () => {
                                   {submittingReview
                                     ? "Submitting..."
                                     : existingReview
-                                    ? "Update Review"
-                                    : "Submit Review"}
+                                      ? "Update Review"
+                                      : "Submit Review"}
                                 </button>
                                 {existingReview && (
                                   <>

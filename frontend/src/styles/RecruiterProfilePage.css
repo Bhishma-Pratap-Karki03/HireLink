@@ -441,6 +441,64 @@
   align-items: center;
   box-shadow: 2px 2px 16px rgba(0, 0, 0, 0.08);
 }
+.recruiter-profile-review-item.hidden {
+  opacity: 0.7;
+  border-color: #ffcc00;
+}
+
+.recruiter-profile-review-status {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.recruiter-profile-review-status.published {
+  background-color: #e7f7e7;
+  color: #2e7d32;
+}
+
+.recruiter-profile-review-status.hidden {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+/* Loading state for review actions */
+.recruiter-profile-btn-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments for reviews */
+@media (max-width: 768px) {
+  .recruiter-profile-reviews-header {
+    flex-direction: column;
+    gap: 20px;
+    align-items: flex-start;
+  }
+
+  .recruiter-profile-tabs {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .recruiter-profile-tab {
+    flex: 1;
+    text-align: center;
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .recruiter-profile-tab {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}
 
 .recruiter-profile-review-content {
   display: flex;
@@ -943,4 +1001,23 @@
 
 .recruiter-profile-more-images:hover {
   background: rgba(36, 129, 251, 0.2);
+}
+/* Reviews Loading State */
+.recruiter-profile-reviews-loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.recruiter-profile-no-reviews {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+  font-style: italic;
+}
+
+/* Tab Counts */
+.recruiter-profile-tab {
+  position: relative;
+  padding: 8px 16px;
 }

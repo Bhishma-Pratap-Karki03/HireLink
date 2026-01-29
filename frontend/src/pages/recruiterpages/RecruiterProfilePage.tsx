@@ -1,3 +1,4 @@
+// RecruiterProfilePage.tsx - Updated with dynamic reviews management
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import RecruiterSidebar from "../../components/recruitercomponents/RecruiterSidebar";
@@ -29,7 +30,7 @@ import facebookIcon from "../../images/Recruiter Profile Page Images/6_253.svg";
 import editIcon3 from "../../images/Recruiter Profile Page Images/6_344.svg";
 import editIcon4 from "../../images/Recruiter Profile Page Images/6_353.svg";
 import uploadGalleryIcon from "../../images/Recruiter Profile Page Images/6_274.svg";
-import starIcon from "../../images/Recruiter Profile Page Images/6_53.svg";
+import starIcon from "../../images/Recruiter Profile Page Images/6_55.svg";
 import starFilledIcon from "../../images/Recruiter Profile Page Images/6_55.svg";
 import avatar1 from "../../images/Recruiter Profile Page Images/6_67.svg";
 import avatar2 from "../../images/Recruiter Profile Page Images/6_104.svg";
@@ -50,6 +51,21 @@ interface WorkspaceImage {
   uploadedAt: string;
   order: number;
 }
+
+// Define Review Interface
+interface Review {
+  id: string;
+  rating: number;
+  text: string;
+  title: string;
+  reviewerName: string;
+  reviewerLocation: string;
+  reviewerRole: string;
+  date: string;
+  reviewerAvatar: string;
+  status: "published" | "hidden";
+}
+
 // Define User Profile Interface
 interface UserProfile {
   id: string;
@@ -89,6 +105,20 @@ const RecruiterProfilePage: React.FC = () => {
   const [isWorkspaceGalleryEditorOpen, setIsWorkspaceGalleryEditorOpen] =
     useState(false);
 
+  // State for reviews management
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewCounts, setReviewCounts] = useState({
+    all: 0,
+    published: 0,
+    hidden: 0,
+  });
+  const [activeTab, setActiveTab] = useState<"all" | "published" | "hidden">(
+    "all",
+  );
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [hasMoreReviews, setHasMoreReviews] = useState(true);
+
   // Fetch user profile data
   const fetchUserProfile = useCallback(async () => {
     try {
@@ -120,31 +150,6 @@ const RecruiterProfilePage: React.FC = () => {
       }
 
       const data = await response.json();
-
-      // DEBUG LOG: Check what data is coming from backend
-      console.log("Profile data from API:", data);
-      console.log("Company Size:", data.user?.companySize);
-      console.log("Founded Year:", data.user?.foundedYear);
-
-      // ADD THESE LOGS FOR WORKSPACE IMAGES
-      console.log("Workspace Images:", data.user?.workspaceImages);
-      console.log(
-        "Workspace Images count:",
-        data.user?.workspaceImages?.length
-      );
-      if (data.user?.workspaceImages) {
-        data.user.workspaceImages.forEach(
-          (img: WorkspaceImage, index: number) => {
-            console.log(`Image ${index}:`, {
-              id: img._id,
-              url: img.imageUrl,
-              fileName: img.fileName,
-              order: img.order,
-            });
-          }
-        );
-      }
-
       setUserProfile(data.user);
 
       // Update localStorage with user data
@@ -166,10 +171,167 @@ const RecruiterProfilePage: React.FC = () => {
     }
   }, [navigate]);
 
+  // Fetch reviews for the company
+  const fetchReviews = useCallback(
+    async (page = 1, tab = activeTab, reset = false) => {
+      if (!userProfile?.id) return;
+
+      try {
+        setIsLoadingReviews(true);
+        const token = localStorage.getItem("authToken");
+
+        const response = await fetch(
+          `http://localhost:5000/api/reviews/company/${userProfile.id}/manage?status=${tab}&page=${page}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          },
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          if (reset) {
+            setReviews(data.reviews || []);
+          } else {
+            setReviews((prev) => [...prev, ...(data.reviews || [])]);
+          }
+          setReviewCounts(data.counts || { all: 0, published: 0, hidden: 0 });
+          setHasMoreReviews((data.reviews || []).length > 0);
+        }
+      } catch (error) {
+        console.error("Error fetching reviews:", error);
+      } finally {
+        setIsLoadingReviews(false);
+      }
+    },
+    [userProfile?.id, activeTab],
+  );
+
+  // Handle tab change
+  const handleTabChange = (tab: "all" | "published" | "hidden") => {
+    setActiveTab(tab);
+    setReviewPage(1);
+    setHasMoreReviews(true);
+    fetchReviews(1, tab, true);
+  };
+
+  // Handle load more reviews
+  const handleLoadMoreReviews = () => {
+    const nextPage = reviewPage + 1;
+    setReviewPage(nextPage);
+    fetchReviews(nextPage, activeTab, false);
+  };
+
+  // Handle review status update (hide/show)
+  const handleUpdateReviewStatus = async (
+    reviewId: string,
+    status: "published" | "hidden",
+  ) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch(
+        `http://localhost:5000/api/reviews/${reviewId}/status`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status }),
+        },
+      );
+
+      if (response.ok) {
+        // Update local state
+        setReviews((prev) =>
+          prev.map((review) =>
+            review.id === reviewId ? { ...review, status } : review,
+          ),
+        );
+
+        // Update counts
+        setReviewCounts((prev) => {
+          const newCounts = { ...prev };
+          if (status === "published") {
+            newCounts.published += 1;
+            newCounts.hidden -= 1;
+          } else {
+            newCounts.published -= 1;
+            newCounts.hidden += 1;
+          }
+          return newCounts;
+        });
+
+        // Refresh reviews list
+        fetchReviews(1, activeTab, true);
+      } else {
+        console.error("Failed to update review status");
+      }
+    } catch (error) {
+      console.error("Error updating review status:", error);
+    }
+  };
+
+  // Handle review deletion
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!window.confirm("Are you sure you want to delete this review?")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch(
+        `http://localhost:5000/api/reviews/${reviewId}/manage`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (response.ok) {
+        // Remove from local state
+        setReviews((prev) => prev.filter((review) => review.id !== reviewId));
+
+        // Update counts
+        setReviewCounts((prev) => {
+          const deletedReview = reviews.find((r) => r.id === reviewId);
+          const newCounts = { ...prev };
+          newCounts.all -= 1;
+          if (deletedReview?.status === "published") {
+            newCounts.published -= 1;
+          } else {
+            newCounts.hidden -= 1;
+          }
+          return newCounts;
+        });
+
+        // Refresh reviews list
+        fetchReviews(1, activeTab, true);
+      } else {
+        console.error("Failed to delete review");
+      }
+    } catch (error) {
+      console.error("Error deleting review:", error);
+    }
+  };
+
   // Fetch profile on component mount and refresh
   useEffect(() => {
     fetchUserProfile();
   }, [fetchUserProfile, refreshTrigger]);
+
+  // Fetch reviews when user profile is loaded or tab changes
+  useEffect(() => {
+    if (userProfile?.id) {
+      fetchReviews(1, activeTab, true);
+    }
+  }, [userProfile?.id, activeTab, fetchReviews]);
 
   // Check authentication on mount
   useEffect(() => {
@@ -205,42 +367,39 @@ const RecruiterProfilePage: React.FC = () => {
 
     try {
       setIsLoading(true);
-      // Handle profile picture upload/removal
       if (data.imageFile !== undefined) {
         if (data.imageFile) {
-          // Upload new profile picture
           const formData = new FormData();
           formData.append("profilePicture", data.imageFile);
 
           const response = await fetch(
-            "http://localhost:5000/api/profile/me/picture", // CHANGED FROM /upload-picture to /me/picture
+            "http://localhost:5000/api/profile/me/picture",
             {
-              method: "POST", // CHANGED FROM PUT to POST
+              method: "POST",
               headers: {
                 Authorization: `Bearer ${token}`,
               },
               body: formData,
-            }
+            },
           );
 
           const responseData = await response.json();
 
           if (!response.ok) {
             throw new Error(
-              responseData.message || "Failed to upload profile picture"
+              responseData.message || "Failed to upload profile picture",
             );
           }
         } else {
-          // Remove profile picture
           const response = await fetch(
-            "http://localhost:5000/api/profile/me/picture", // CHANGED FROM /remove-picture to /me/picture
+            "http://localhost:5000/api/profile/me/picture",
             {
               method: "DELETE",
               headers: {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json",
               },
-            }
+            },
           );
 
           if (!response.ok) {
@@ -249,11 +408,8 @@ const RecruiterProfilePage: React.FC = () => {
         }
       }
 
-      // Refresh profile data
       await fetchUserProfile();
       setRefreshTrigger((prev) => prev + 1);
-
-      // Notify other components
       window.dispatchEvent(new CustomEvent("profileUpdated"));
     } catch (error) {
       console.error("Error saving profile:", error);
@@ -281,8 +437,6 @@ const RecruiterProfilePage: React.FC = () => {
     try {
       setIsLoading(true);
 
-      console.log("Saving company info:", data); // Debug log
-
       const response = await fetch("http://localhost:5000/api/profile/me", {
         method: "PUT",
         headers: {
@@ -298,22 +452,17 @@ const RecruiterProfilePage: React.FC = () => {
         }),
       });
 
-      const responseData = await response.json(); // Parse response JSON
+      const responseData = await response.json();
 
       if (!response.ok) {
-        console.error("API Error:", responseData); // Debug log
+        console.error("API Error:", responseData);
         throw new Error(
-          responseData.message || "Failed to update company information"
+          responseData.message || "Failed to update company information",
         );
       }
 
-      console.log("Update successful:", responseData); // Debug log
-
-      // Refresh profile data from database
       await fetchUserProfile();
       setRefreshTrigger((prev) => prev + 1);
-
-      // Notify other components
       window.dispatchEvent(new CustomEvent("profileUpdated"));
     } catch (error) {
       console.error("Error saving company information:", error);
@@ -339,8 +488,6 @@ const RecruiterProfilePage: React.FC = () => {
     try {
       setIsLoading(true);
 
-      console.log("Saving website info:", data);
-
       const response = await fetch("http://localhost:5000/api/profile/me", {
         method: "PUT",
         headers: {
@@ -360,17 +507,12 @@ const RecruiterProfilePage: React.FC = () => {
       if (!response.ok) {
         console.error("API Error:", responseData);
         throw new Error(
-          responseData.message || "Failed to update website information"
+          responseData.message || "Failed to update website information",
         );
       }
 
-      console.log("Update successful:", responseData);
-
-      // Refresh profile data
       await fetchUserProfile();
       setRefreshTrigger((prev) => prev + 1);
-
-      // Notify other components
       window.dispatchEvent(new CustomEvent("profileUpdated"));
     } catch (error) {
       console.error("Error saving website information:", error);
@@ -383,7 +525,6 @@ const RecruiterProfilePage: React.FC = () => {
   // Helper function to format URLs for display
   const formatUrlForDisplay = (url: string): string => {
     if (!url) return "";
-    // Remove protocol and www for cleaner display
     return url.replace(/^(https?:\/\/)?(www\.)?/, "");
   };
 
@@ -402,8 +543,6 @@ const RecruiterProfilePage: React.FC = () => {
     try {
       setIsLoading(true);
 
-      console.log("Saving company about:", aboutText);
-
       const response = await fetch("http://localhost:5000/api/profile/me", {
         method: "PUT",
         headers: {
@@ -420,17 +559,12 @@ const RecruiterProfilePage: React.FC = () => {
       if (!response.ok) {
         console.error("API Error:", responseData);
         throw new Error(
-          responseData.message || "Failed to update company description"
+          responseData.message || "Failed to update company description",
         );
       }
 
-      console.log("About company update successful:", responseData);
-
-      // Refresh profile data
       await fetchUserProfile();
       setRefreshTrigger((prev) => prev + 1);
-
-      // Notify other components
       window.dispatchEvent(new CustomEvent("profileUpdated"));
     } catch (error) {
       console.error("Error saving company description:", error);
@@ -464,7 +598,7 @@ const RecruiterProfilePage: React.FC = () => {
             headers: {
               Authorization: `Bearer ${token}`,
             },
-          }
+          },
         );
 
         if (!response.ok) {
@@ -486,7 +620,7 @@ const RecruiterProfilePage: React.FC = () => {
               Authorization: `Bearer ${token}`,
             },
             body: formData,
-          }
+          },
         );
 
         if (!response.ok) {
@@ -508,7 +642,7 @@ const RecruiterProfilePage: React.FC = () => {
             body: JSON.stringify({
               imageOrder: data.reorderedImageIds,
             }),
-          }
+          },
         );
 
         if (!response.ok) {
@@ -517,11 +651,8 @@ const RecruiterProfilePage: React.FC = () => {
         }
       }
 
-      // Refresh profile data
       await fetchUserProfile();
       setRefreshTrigger((prev) => prev + 1);
-
-      // Notify other components
       window.dispatchEvent(new CustomEvent("profileUpdated"));
     } catch (error) {
       console.error("Error saving workspace gallery:", error);
@@ -533,22 +664,16 @@ const RecruiterProfilePage: React.FC = () => {
 
   // Helper function to get workspace image URL
   const getWorkspaceImageUrl = (imageUrl: string) => {
-    console.log("Getting workspace image URL:", imageUrl); // Debug log
-
     if (!imageUrl) {
-      console.log("No image URL provided");
       return "";
     }
 
-    // Handle different URL formats
     let finalUrl = imageUrl;
 
-    // If URL doesn't start with /uploads, prepend it
     if (!imageUrl.startsWith("/uploads") && !imageUrl.startsWith("http")) {
       finalUrl = `/uploads/workspaceimages/${imageUrl}`;
     }
 
-    // If URL starts with /uploads but not with full path
     if (
       imageUrl.startsWith("/uploads/") &&
       !imageUrl.includes("workspaceimages")
@@ -556,9 +681,7 @@ const RecruiterProfilePage: React.FC = () => {
       finalUrl = `/uploads/workspaceimages/${imageUrl.split("/").pop()}`;
     }
 
-    const fullUrl = `http://localhost:5000${finalUrl}?t=${Date.now()}`;
-    console.log("Final workspace image URL:", fullUrl);
-    return fullUrl;
+    return `http://localhost:5000${finalUrl}?t=${Date.now()}`;
   };
 
   // Helper function to safely render HTML content
@@ -614,6 +737,21 @@ const RecruiterProfilePage: React.FC = () => {
     setIsProfilePictureEditorOpen(true);
   };
 
+  // Render stars for reviews
+  const renderStars = (rating: number) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <img
+          key={i}
+          src={i <= rating ? starFilledIcon : starIcon}
+          alt="star"
+        />,
+      );
+    }
+    return stars;
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -651,7 +789,7 @@ const RecruiterProfilePage: React.FC = () => {
                 </p>
               </div>
 
-              {/* Logo Card - UPDATED WITH PROFILE PICTURE FUNCTIONALITY */}
+              {/* Logo Card */}
               <div className="recruiter-profile-card recruiter-profile-logo-card">
                 <div
                   className="recruiter-profile-logo-placeholder"
@@ -942,21 +1080,13 @@ const RecruiterProfilePage: React.FC = () => {
                     <div className="recruiter-profile-gallery-grid">
                       {userProfile?.workspaceImages &&
                       userProfile.workspaceImages.length > 0 ? (
-                        // Sort images by order
                         [...userProfile.workspaceImages]
                           .sort((a, b) => a.order - b.order)
-                          .slice(0, 4) // Show only first 4 in preview
+                          .slice(0, 4)
                           .map((image, index) => {
                             const imageUrl = getWorkspaceImageUrl(
-                              image.imageUrl
+                              image.imageUrl,
                             );
-                            console.log(`Rendering workspace image ${index}:`, {
-                              id: image._id,
-                              originalUrl: image.imageUrl,
-                              finalUrl: imageUrl,
-                              order: image.order,
-                            });
-
                             return (
                               <div
                                 key={image._id}
@@ -973,7 +1103,7 @@ const RecruiterProfilePage: React.FC = () => {
                                         imageUrl,
                                         originalUrl: image.imageUrl,
                                         error: e,
-                                      }
+                                      },
                                     );
                                     e.currentTarget.src = `https://via.placeholder.com/300x200?text=Workspace+${
                                       index + 1
@@ -986,7 +1116,7 @@ const RecruiterProfilePage: React.FC = () => {
                                     console.log(
                                       `Successfully loaded workspace image ${
                                         index + 1
-                                      }`
+                                      }`,
                                     )
                                   }
                                 />
@@ -994,7 +1124,6 @@ const RecruiterProfilePage: React.FC = () => {
                             );
                           })
                       ) : (
-                        // Show empty placeholders if no images
                         <>
                           <div
                             className="recruiter-profile-upload-box"
@@ -1042,182 +1171,131 @@ const RecruiterProfilePage: React.FC = () => {
                 <div className="recruiter-profile-reviews-header">
                   <h3>Company Reviews Management</h3>
                   <div className="recruiter-profile-tabs">
-                    <button className="recruiter-profile-tab active">
-                      All Reviews
+                    <button
+                      className={`recruiter-profile-tab ${
+                        activeTab === "all" ? "active" : ""
+                      }`}
+                      onClick={() => handleTabChange("all")}
+                    >
+                      All Reviews ({reviewCounts.all})
                     </button>
-                    <button className="recruiter-profile-tab">Published</button>
-                    <button className="recruiter-profile-tab">Hidden</button>
-                    <button className="recruiter-profile-tab">Flagged</button>
+                    <button
+                      className={`recruiter-profile-tab ${
+                        activeTab === "published" ? "active" : ""
+                      }`}
+                      onClick={() => handleTabChange("published")}
+                    >
+                      Published ({reviewCounts.published})
+                    </button>
+                    <button
+                      className={`recruiter-profile-tab ${
+                        activeTab === "hidden" ? "active" : ""
+                      }`}
+                      onClick={() => handleTabChange("hidden")}
+                    >
+                      Hidden ({reviewCounts.hidden})
+                    </button>
                   </div>
                 </div>
 
-                <div className="recruiter-profile-reviews-list">
-                  {/* Review 1 */}
-                  <div className="recruiter-profile-review-item">
-                    <div className="recruiter-profile-review-content">
-                      <div className="recruiter-profile-review-meta">
-                        <div className="recruiter-profile-stars">
-                          <img src={starFilledIcon} alt="star" />
-                          <img src={starFilledIcon} alt="star" />
-                          <img src={starFilledIcon} alt="star" />
-                          <img src={starFilledIcon} alt="star" />
-                          <img src={starIcon} alt="star" />
-                          <span className="recruiter-profile-rating-text">
-                            4 out of 5
-                          </span>
-                        </div>
-                        <span className="recruiter-profile-review-date">
-                          Posted on October 12, 2025
-                        </span>
-                      </div>
-                      <p className="recruiter-profile-review-text">
-                        Lorem ipsum dolor sit amet, consectetur adipisicing
-                        elit. Debitis illum fuga eveniet. Deleniti asperiores,
-                        commodi quae ipsum quas est itaque, ipsa, dolore beatae
-                        voluptates nemo blanditiis iste eius officia Lorem ipsum
-                        dolor sit..
-                      </p>
-                      <div className="recruiter-profile-reviewer-info">
-                        <img
-                          src={avatar1}
-                          alt="Avatar"
-                          className="recruiter-profile-avatar"
-                        />
-                        <div className="recruiter-profile-reviewer-details">
-                          <span className="recruiter-profile-reviewer-name">
-                            Rashaed Kargel
-                          </span>
-                          <span className="recruiter-profile-reviewer-role">
-                            Senior Product Designer
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="recruiter-profile-review-actions">
-                      <button className="recruiter-profile-btn-action">
-                        <img src={hideIcon} alt="Hide" />
-                        <span>Hide Review</span>
-                      </button>
-                      <button className="recruiter-profile-btn-action danger">
-                        <img src={deleteIcon} alt="Delete" />
-                        <span>Delete Review</span>
-                      </button>
-                    </div>
+                {isLoadingReviews ? (
+                  <div className="recruiter-profile-reviews-loading">
+                    <p>Loading reviews...</p>
                   </div>
-
-                  {/* Review 2 */}
-                  <div className="recruiter-profile-review-item">
-                    <div className="recruiter-profile-review-content">
-                      <div className="recruiter-profile-review-meta">
-                        <div className="recruiter-profile-stars">
-                          <img src={starFilledIcon} alt="star" />
-                          <img src={starFilledIcon} alt="star" />
-                          <img src={starFilledIcon} alt="star" />
-                          <img src={starFilledIcon} alt="star" />
-                          <img src={starFilledIcon} alt="star" />
-                          <span className="recruiter-profile-rating-text">
-                            5 out of 5
-                          </span>
-                        </div>
-                        <span className="recruiter-profile-review-date">
-                          Posted on October 12, 2025
-                        </span>
-                      </div>
-                      <p className="recruiter-profile-review-text">
-                        Lorem ipsum dolor sit amet, consectetur adipisicing
-                        elit. Debitis illum fuga eveniet. Deleniti asperiores,
-                        commodi quae ipsum quas est itaque, ipsa, dolore beatae
-                        voluptates nemo blanditiis iste eius officia Lorem ipsum
-                        dolor sit..
-                      </p>
-                      <div className="recruiter-profile-reviewer-info">
-                        <img
-                          src={avatar2}
-                          alt="Avatar"
-                          className="recruiter-profile-avatar"
-                        />
-                        <div className="recruiter-profile-reviewer-details">
-                          <span className="recruiter-profile-reviewer-name">
-                            Rashaed Kargel
-                          </span>
-                          <span className="recruiter-profile-reviewer-role">
-                            Photographer
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="recruiter-profile-review-actions">
-                      <button className="recruiter-profile-btn-action success">
-                        <img src={showIcon} alt="Show" />
-                        <span>Show Review</span>
-                      </button>
-                      <button className="recruiter-profile-btn-action danger">
-                        <img src={deleteIcon} alt="Delete" />
-                        <span>Delete Review</span>
-                      </button>
-                    </div>
+                ) : reviews.length === 0 ? (
+                  <div className="recruiter-profile-no-reviews">
+                    <p>No reviews found.</p>
                   </div>
-
-                  {/* Review 3 */}
-                  <div className="recruiter-profile-review-item">
-                    <div className="recruiter-profile-review-content">
-                      <div className="recruiter-profile-review-meta">
-                        <div className="recruiter-profile-stars">
-                          <img src={starFilledIcon} alt="star" />
-                          <img src={starFilledIcon} alt="star" />
-                          <img src={starFilledIcon} alt="star" />
-                          <img src={starFilledIcon} alt="star" />
-                          <img src={starIcon} alt="star" />
-                          <span className="recruiter-profile-rating-text">
-                            4 out of 5
-                          </span>
+                ) : (
+                  <div className="recruiter-profile-reviews-list">
+                    {reviews.map((review) => (
+                      <div
+                        key={review.id}
+                        className="recruiter-profile-review-item"
+                      >
+                        <div className="recruiter-profile-review-content">
+                          <div className="recruiter-profile-review-meta">
+                            <div className="recruiter-profile-stars">
+                              {renderStars(review.rating)}
+                              <span className="recruiter-profile-rating-text">
+                                {review.rating} out of 5
+                              </span>
+                            </div>
+                            <span className="recruiter-profile-review-date">
+                              Posted on {review.date}
+                            </span>
+                          </div>
+                          <p className="recruiter-profile-review-text">
+                            {review.text}
+                          </p>
+                          <div className="recruiter-profile-reviewer-info">
+                            <img
+                              src={review.reviewerAvatar || defaultAvatar}
+                              alt="Avatar"
+                              className="recruiter-profile-avatar"
+                              onError={(e) => {
+                                e.currentTarget.src = defaultAvatar;
+                              }}
+                            />
+                            <div className="recruiter-profile-reviewer-details">
+                              <span className="recruiter-profile-reviewer-name">
+                                {review.reviewerName}
+                              </span>
+                              <span className="recruiter-profile-reviewer-role">
+                                {review.reviewerRole}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <span className="recruiter-profile-review-date">
-                          Posted on October 12, 2025
-                        </span>
-                      </div>
-                      <p className="recruiter-profile-review-text">
-                        Lorem ipsum dolor sit amet, consectetur adipisicing
-                        elit. Debitis illum fuga eveniet. Deleniti asperiores,
-                        commodi quae ipsum quas est itaque, ipsa, dolore beatae
-                        voluptates nemo blanditiis iste eius officia Lorem ipsum
-                        dolor sit..
-                      </p>
-                      <div className="recruiter-profile-reviewer-info">
-                        <img
-                          src={avatar3}
-                          alt="Avatar"
-                          className="recruiter-profile-avatar"
-                        />
-                        <div className="recruiter-profile-reviewer-details">
-                          <span className="recruiter-profile-reviewer-name">
-                            Rashaed Kargel
-                          </span>
-                          <span className="recruiter-profile-reviewer-role">
-                            HR Manager
-                          </span>
+                        <div className="recruiter-profile-review-actions">
+                          {review.status === "published" ? (
+                            <button
+                              className="recruiter-profile-btn-action"
+                              onClick={() =>
+                                handleUpdateReviewStatus(review.id, "hidden")
+                              }
+                            >
+                              <img src={hideIcon} alt="Hide" />
+                              <span>Hide Review</span>
+                            </button>
+                          ) : (
+                            <button
+                              className="recruiter-profile-btn-action success"
+                              onClick={() =>
+                                handleUpdateReviewStatus(review.id, "published")
+                              }
+                            >
+                              <img src={showIcon} alt="Show" />
+                              <span>Show Review</span>
+                            </button>
+                          )}
+                          <button
+                            className="recruiter-profile-btn-action danger"
+                            onClick={() => handleDeleteReview(review.id)}
+                          >
+                            <img src={deleteIcon} alt="Delete" />
+                            <span>Delete Review</span>
+                          </button>
                         </div>
                       </div>
-                    </div>
-                    <div className="recruiter-profile-review-actions">
-                      <button className="recruiter-profile-btn-action">
-                        <img src={hideIcon} alt="Hide" />
-                        <span>Hide Review</span>
-                      </button>
-                      <button className="recruiter-profile-btn-action danger">
-                        <img src={deleteIcon} alt="Delete" />
-                        <span>Delete Review</span>
-                      </button>
-                    </div>
+                    ))}
                   </div>
-                </div>
+                )}
 
-                <div className="recruiter-profile-load-more">
-                  <button className="recruiter-profile-btn-load-more">
-                    <span>Load More Reviews</span>
-                    <img src={loadMoreIcon} alt="Arrow" />
-                  </button>
-                </div>
+                {hasMoreReviews && reviews.length > 0 && (
+                  <div className="recruiter-profile-load-more">
+                    <button
+                      className="recruiter-profile-btn-load-more"
+                      onClick={handleLoadMoreReviews}
+                      disabled={isLoadingReviews}
+                    >
+                      <span>
+                        {isLoadingReviews ? "Loading..." : "Load More Reviews"}
+                      </span>
+                      <img src={loadMoreIcon} alt="Arrow" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -1,4 +1,4 @@
-// reviewModel.js
+// reviewModel.js - Updated with proper pagination
 const mongoose = require("mongoose");
 
 const reviewSchema = new mongoose.Schema(
@@ -48,6 +48,15 @@ const reviewSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    status: {
+      type: String,
+      enum: ["published", "hidden"],
+      default: "published",
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -59,7 +68,7 @@ const reviewSchema = new mongoose.Schema(
         return ret;
       },
     },
-  }
+  },
 );
 
 // Create a compound index to prevent multiple reviews from same user for same company
@@ -67,6 +76,7 @@ reviewSchema.index({ companyId: 1, userId: 1 }, { unique: true });
 
 // Create a compound index for efficient queries
 reviewSchema.index({ companyId: 1, isApproved: 1, createdAt: -1 });
+reviewSchema.index({ companyId: 1, status: 1, createdAt: -1 });
 
 const Review = mongoose.model("Review", reviewSchema);
 

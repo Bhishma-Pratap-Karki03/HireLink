@@ -1,9 +1,9 @@
-// reviewController.js - Update to include all required functions
+// reviewController.js - Updated with proper exports
 const Review = require("../models/reviewModel");
 const User = require("../models/userModel");
 
-// Get all reviews for a company
-exports.getCompanyReviews = async (req, res, next) => {
+// Get all reviews for a company (public)
+const getCompanyReviews = async (req, res, next) => {
   try {
     const { companyId } = req.params;
 
@@ -16,10 +16,11 @@ exports.getCompanyReviews = async (req, res, next) => {
       });
     }
 
-    // Get all approved reviews for this company
+    // Get all published and not deleted reviews for this company
     const reviews = await Review.find({
       companyId,
-      isApproved: true,
+      status: "published",
+      isDeleted: false,
     })
       .populate("userId", "fullName profilePicture address currentJobTitle")
       .sort({ createdAt: -1 });
@@ -29,7 +30,7 @@ exports.getCompanyReviews = async (req, res, next) => {
     if (reviews.length > 0) {
       const totalRating = reviews.reduce(
         (sum, review) => sum + review.rating,
-        0
+        0,
       );
       averageRating = totalRating / reviews.length;
     }
@@ -53,6 +54,7 @@ exports.getCompanyReviews = async (req, res, next) => {
           ? review.userId.profilePicture
           : `http://localhost:5000${review.userId.profilePicture}`
         : "",
+      status: review.status,
     }));
 
     res.status(200).json({
@@ -71,8 +73,208 @@ exports.getCompanyReviews = async (req, res, next) => {
   }
 };
 
+// Get company reviews for recruiter (with status filtering)
+const getCompanyReviewsForRecruiter = async (req, res, next) => {
+  try {
+    const { companyId } = req.params;
+    const { status } = req.query; // "all", "published", "hidden"
+    const userId = req.user.id;
+
+    // Check if user is the recruiter of this company
+    const company = await User.findOne({
+      _id: companyId,
+      _id: userId,
+      role: "recruiter",
+    });
+
+    if (!company) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to manage reviews for this company",
+      });
+    }
+
+    // Build query based on status
+    const query = {
+      companyId,
+      isDeleted: false,
+    };
+
+    if (status && status !== "all") {
+      query.status = status;
+    }
+
+    // Get reviews based on query
+    const reviews = await Review.find(query)
+      .populate("userId", "fullName profilePicture address currentJobTitle")
+      .sort({ createdAt: -1 });
+
+    // Format reviews for response
+    const formattedReviews = reviews.map((review) => ({
+      id: review._id,
+      rating: review.rating,
+      text: review.description,
+      title: review.title || "",
+      reviewerName: review.userId.fullName,
+      reviewerLocation: review.userId.address || "Unknown",
+      reviewerRole: review.reviewerRole || review.userId.currentJobTitle || "",
+      date: new Date(review.createdAt).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+      reviewerAvatar: review.userId.profilePicture
+        ? review.userId.profilePicture.startsWith("http")
+          ? review.userId.profilePicture
+          : `http://localhost:5000${review.userId.profilePicture}`
+        : "",
+      status: review.status,
+    }));
+
+    // Get counts for each status
+    const totalReviews = await Review.countDocuments({
+      companyId,
+      isDeleted: false,
+    });
+    const publishedReviews = await Review.countDocuments({
+      companyId,
+      status: "published",
+      isDeleted: false,
+    });
+    const hiddenReviews = await Review.countDocuments({
+      companyId,
+      status: "hidden",
+      isDeleted: false,
+    });
+
+    res.status(200).json({
+      success: true,
+      reviews: formattedReviews,
+      counts: {
+        all: totalReviews,
+        published: publishedReviews,
+        hidden: hiddenReviews,
+      },
+    });
+  } catch (error) {
+    console.error("Get recruiter reviews error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error fetching reviews",
+      error: error.message,
+    });
+  }
+};
+
+// Recruiter: Update review status (hide/show)
+const updateReviewStatus = async (req, res, next) => {
+  try {
+    const { reviewId } = req.params;
+    const { status } = req.body; // "published" or "hidden"
+    const userId = req.user.id;
+
+    // Validate status
+    if (!["published", "hidden"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Must be 'published' or 'hidden'",
+      });
+    }
+
+    // Find the review
+    const review = await Review.findById(reviewId);
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: "Review not found",
+      });
+    }
+
+    // Check if user is the recruiter of this company
+    const company = await User.findOne({
+      _id: review.companyId,
+      _id: userId,
+      role: "recruiter",
+    });
+
+    if (!company) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to update this review",
+      });
+    }
+
+    // Update review status
+    review.status = status;
+    await review.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Review ${status === "hidden" ? "hidden" : "published"} successfully`,
+      review: {
+        id: review._id,
+        status: review.status,
+      },
+    });
+  } catch (error) {
+    console.error("Update review status error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error updating review status",
+      error: error.message,
+    });
+  }
+};
+
+// Recruiter: Delete review (soft delete)
+const deleteReviewByRecruiter = async (req, res, next) => {
+  try {
+    const { reviewId } = req.params;
+    const userId = req.user.id;
+
+    // Find the review
+    const review = await Review.findById(reviewId);
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: "Review not found",
+      });
+    }
+
+    // Check if user is the recruiter of this company
+    const company = await User.findOne({
+      _id: review.companyId,
+      _id: userId,
+      role: "recruiter",
+    });
+
+    if (!company) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to delete this review",
+      });
+    }
+
+    // Soft delete the review
+    review.isDeleted = true;
+    await review.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Review deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete review error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error deleting review",
+      error: error.message,
+    });
+  }
+};
+
 // Submit a review
-exports.submitReview = async (req, res, next) => {
+const submitReview = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const { rating, title, description, reviewerRole } = req.body;
@@ -100,6 +302,7 @@ exports.submitReview = async (req, res, next) => {
     const existingReview = await Review.findOne({
       companyId,
       userId,
+      isDeleted: false,
     });
 
     if (existingReview) {
@@ -138,7 +341,9 @@ exports.submitReview = async (req, res, next) => {
       reviewerName: user.fullName,
       reviewerLocation: user.address || "",
       reviewerRole: reviewerRole || user.currentJobTitle || "",
+      status: "published", // Default to published
       isApproved: true,
+      isDeleted: false,
     });
 
     await newReview.save();
@@ -146,7 +351,7 @@ exports.submitReview = async (req, res, next) => {
     // Get the created review with populated user data
     const savedReview = await Review.findById(newReview._id).populate(
       "userId",
-      "fullName profilePicture address currentJobTitle"
+      "fullName profilePicture address currentJobTitle",
     );
 
     res.status(201).json({
@@ -170,6 +375,7 @@ exports.submitReview = async (req, res, next) => {
             ? savedReview.userId.profilePicture
             : `http://localhost:5000${savedReview.userId.profilePicture}`
           : "",
+        status: savedReview.status,
       },
     });
   } catch (error) {
@@ -183,15 +389,16 @@ exports.submitReview = async (req, res, next) => {
 };
 
 // Get user's review for a company
-exports.getMyReview = async (req, res, next) => {
+const getMyReview = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const userId = req.user.id;
 
-    const review = await Review.findOne({ companyId, userId }).populate(
-      "userId",
-      "fullName profilePicture address currentJobTitle"
-    );
+    const review = await Review.findOne({
+      companyId,
+      userId,
+      isDeleted: false,
+    }).populate("userId", "fullName profilePicture address currentJobTitle");
 
     if (!review) {
       return res.status(404).json({
@@ -220,6 +427,7 @@ exports.getMyReview = async (req, res, next) => {
             ? review.userId.profilePicture
             : `http://localhost:5000${review.userId.profilePicture}`
           : "",
+        status: review.status,
       },
     });
   } catch (error) {
@@ -233,14 +441,18 @@ exports.getMyReview = async (req, res, next) => {
 };
 
 // Update a review
-exports.updateReview = async (req, res, next) => {
+const updateReview = async (req, res, next) => {
   try {
     const { reviewId } = req.params;
     const { rating, title, description, reviewerRole } = req.body;
     const userId = req.user.id;
 
     // Find the review
-    const review = await Review.findOne({ _id: reviewId, userId });
+    const review = await Review.findOne({
+      _id: reviewId,
+      userId,
+      isDeleted: false,
+    });
 
     if (!review) {
       return res.status(404).json({
@@ -276,7 +488,7 @@ exports.updateReview = async (req, res, next) => {
     // Get updated review with populated user data
     const updatedReview = await Review.findById(review._id).populate(
       "userId",
-      "fullName profilePicture address currentJobTitle"
+      "fullName profilePicture address currentJobTitle",
     );
 
     res.status(200).json({
@@ -300,6 +512,7 @@ exports.updateReview = async (req, res, next) => {
             ? updatedReview.userId.profilePicture
             : `http://localhost:5000${updatedReview.userId.profilePicture}`
           : "",
+        status: updatedReview.status,
       },
     });
   } catch (error) {
@@ -312,13 +525,17 @@ exports.updateReview = async (req, res, next) => {
   }
 };
 
-// Delete a review
-exports.deleteReview = async (req, res, next) => {
+// Delete a review by user
+const deleteReview = async (req, res, next) => {
   try {
     const { reviewId } = req.params;
     const userId = req.user.id;
 
-    const review = await Review.findOneAndDelete({ _id: reviewId, userId });
+    const review = await Review.findOneAndDelete({
+      _id: reviewId,
+      userId,
+      isDeleted: false,
+    });
 
     if (!review) {
       return res.status(404).json({
@@ -339,4 +556,16 @@ exports.deleteReview = async (req, res, next) => {
       error: error.message,
     });
   }
+};
+
+// Export all functions
+module.exports = {
+  getCompanyReviews,
+  getCompanyReviewsForRecruiter,
+  updateReviewStatus,
+  deleteReviewByRecruiter,
+  submitReview,
+  getMyReview,
+  updateReview,
+  deleteReview,
 };
