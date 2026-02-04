@@ -43,11 +43,11 @@ const EmployersPage = () => {
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({
-    companyName: true,
-    location: true,
-    companyStatus: true,
-    category: true,
-    team: true,
+    companyName: false,
+    location: false,
+    companyStatus: false,
+    category: false,
+    team: false,
   });
   const navigate = useNavigate();
 
@@ -70,7 +70,18 @@ const EmployersPage = () => {
   const [savedCompanies, setSavedCompanies] = useState<Record<string, boolean>>(
     {}
   );
-  const [sortBy, setSortBy] = useState("newest");
+  const [sortBy, setSortBy] = useState("");
+  const [page, setPage] = useState(1);
+  const perPage = 20;
+
+  const [searchCompanyName, setSearchCompanyName] = useState("");
+  const [searchLocation, setSearchLocation] = useState("");
+  const [searchCategory, setSearchCategory] = useState("");
+  const [appliedFilters, setAppliedFilters] = useState({
+    companyName: "",
+    location: "",
+    category: "",
+  });
 
   // State for companies data from backend
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -146,6 +157,70 @@ const EmployersPage = () => {
       [item]: !prev[item],
     }));
   };
+
+  const applyFilters = () => {
+    setAppliedFilters({
+      companyName: searchCompanyName.trim(),
+      location: searchLocation.trim(),
+      category: searchCategory.trim(),
+    });
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    setSearchCompanyName("");
+    setSearchLocation("");
+    setSearchCategory("");
+    setAppliedFilters({
+      companyName: "",
+      location: "",
+      category: "",
+    });
+    setSortBy("");
+    setPage(1);
+  };
+
+  const filteredCompanies = companies.filter((company) => {
+    const nameMatch = appliedFilters.companyName
+      ? company.name
+          .toLowerCase()
+          .includes(appliedFilters.companyName.toLowerCase())
+      : true;
+    const locationMatch = appliedFilters.location
+      ? company.location
+          .toLowerCase()
+          .includes(appliedFilters.location.toLowerCase())
+      : true;
+    const categoryMatch = appliedFilters.category
+      ? `${company.companySize || ""} ${company.websiteUrl || ""}`
+          .toLowerCase()
+          .includes(appliedFilters.category.toLowerCase())
+      : true;
+    return nameMatch && locationMatch && categoryMatch;
+  });
+
+  const sortedCompanies = [...filteredCompanies].sort((a, b) => {
+    if (!sortBy) return 0;
+    if (sortBy === "alphabetical") {
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === "highest") {
+      return b.vacancies - a.vacancies;
+    }
+    if (sortBy === "lowest") {
+      return a.vacancies - b.vacancies;
+    }
+    if (sortBy === "oldest") {
+      return a.id.localeCompare(b.id);
+    }
+    return 0;
+  });
+
+  const totalPages = Math.max(Math.ceil(sortedCompanies.length / perPage), 1);
+  const paginatedCompanies = sortedCompanies.slice(
+    (page - 1) * perPage,
+    page * perPage,
+  );
 
   const toggleSaveCompany = (id: string) => {
     setSavedCompanies((prev) => ({
@@ -240,7 +315,12 @@ const EmployersPage = () => {
               {expandedSections.companyName && (
                 <div className="employerspublic-input-wrapper">
                   <img src={searchIcon} alt="Search" />
-                  <input type="text" placeholder="Company Name" />
+                  <input
+                    type="text"
+                    placeholder="Company Name"
+                    value={searchCompanyName}
+                    onChange={(e) => setSearchCompanyName(e.target.value)}
+                  />
                 </div>
               )}
             </div>
@@ -264,7 +344,12 @@ const EmployersPage = () => {
               {expandedSections.location && (
                 <div className="employerspublic-input-wrapper">
                   <img src={locationIcon} alt="Location" />
-                  <input type="text" placeholder="Location" />
+                  <input
+                    type="text"
+                    placeholder="Location"
+                    value={searchLocation}
+                    onChange={(e) => setSearchLocation(e.target.value)}
+                  />
                 </div>
               )}
             </div>
@@ -372,7 +457,12 @@ const EmployersPage = () => {
                 <>
                   <div className="employerspublic-input-wrapper employerspublic-mb-4">
                     <img src={categoryIcon} alt="Category" />
-                    <input type="text" placeholder="Category" />
+                    <input
+                      type="text"
+                      placeholder="Category"
+                      value={searchCategory}
+                      onChange={(e) => setSearchCategory(e.target.value)}
+                    />
                   </div>
                   <div className="employerspublic-checkbox-list">
                     <label className="employerspublic-checkbox-item employerspublic-justify-between">
@@ -656,9 +746,20 @@ const EmployersPage = () => {
 
             <div className="employerspublic-divider"></div>
 
-            <button className="employerspublic-btn-apply-filter">
-              Apply Filter
-            </button>
+            <div className="employerspublic-filter-actions">
+              <button
+                className="employerspublic-btn-apply-filter"
+                onClick={applyFilters}
+              >
+                Apply Filter
+              </button>
+              <button
+                className="employerspublic-btn-clear-filter"
+                onClick={clearFilters}
+              >
+                Cancel Filter
+              </button>
+            </div>
           </aside>
 
           {/* Main Listing */}
@@ -667,15 +768,19 @@ const EmployersPage = () => {
               <span className="employerspublic-result-count">
                 {loading
                   ? "Loading companies..."
-                  : `All ${companies.length} company found`}
+                  : `All ${sortedCompanies.length} company found`}
               </span>
               <div className="employerspublic-sort-dropdown">
                 <span>Sort by: </span>
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
+                  onChange={(e) => {
+                    setSortBy(e.target.value);
+                    setPage(1);
+                  }}
                   className="employerspublic-sort-select"
                 >
+                  <option value="">Select</option>
                   {sortOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -709,8 +814,8 @@ const EmployersPage = () => {
             {!loading && !error && (
               <>
                 <div className="employerspublic-company-grid">
-                  {companies.length > 0 ? (
-                    companies.map((company) => (
+                  {paginatedCompanies.length > 0 ? (
+                    paginatedCompanies.map((company) => (
                       <article
                         key={company.id}
                         className="employerspublic-company-card"
@@ -786,30 +891,49 @@ const EmployersPage = () => {
 
                 <div className="employerspublic-pagination">
                   <div className="employerspublic-page-controls">
-                    <button className="employerspublic-page-nav employerspublic-prev">
+                    <button
+                      className="employerspublic-page-nav employerspublic-prev"
+                      onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                      disabled={page === 1}
+                    >
                       <img src={prevIcon} alt="Previous" />
                     </button>
                     <div className="employerspublic-page-numbers">
-                      <span className="employerspublic-page-num employerspublic-active">
-                        1
-                      </span>
-                      <span className="employerspublic-page-num">2</span>
-                      <span className="employerspublic-page-num">3</span>
-                      <span className="employerspublic-page-num">4</span>
-                      <span className="employerspublic-page-num">5</span>
-                      <span className="employerspublic-page-num employerspublic-dots">
-                        ...
-                      </span>
-                      <span className="employerspublic-page-num">6</span>
-                      <span className="employerspublic-page-num">7</span>
+                      {Array.from(
+                        { length: Math.min(totalPages, 7) },
+                        (_, index) => index + 1,
+                      ).map((pageNumber) => (
+                        <span
+                          key={pageNumber}
+                          className={`employerspublic-page-num ${
+                            pageNumber === page ? "employerspublic-active" : ""
+                          }`}
+                          onClick={() => setPage(pageNumber)}
+                          role="button"
+                        >
+                          {pageNumber}
+                        </span>
+                      ))}
+                      {totalPages > 7 && (
+                        <span className="employerspublic-page-num employerspublic-dots">
+                          ...
+                        </span>
+                      )}
                     </div>
-                    <button className="employerspublic-page-nav employerspublic-next">
+                    <button
+                      className="employerspublic-page-nav employerspublic-next"
+                      onClick={() =>
+                        setPage((prev) => Math.min(prev + 1, totalPages))
+                      }
+                      disabled={page === totalPages}
+                    >
                       <img src={nextIcon} alt="Next" />
                     </button>
                   </div>
                   <div className="employerspublic-page-info">
-                    Showing 1 to {Math.min(companies.length, 20)} of{" "}
-                    {companies.length}
+                    Showing {paginatedCompanies.length ? (page - 1) * perPage + 1 : 0} to{" "}
+                    {(page - 1) * perPage + paginatedCompanies.length} of{" "}
+                    {sortedCompanies.length}
                   </div>
                 </div>
               </>

@@ -11,6 +11,7 @@ import messagesIcon from "../../images/Admin Profile Page Images/4_109.svg";
 import usersIcon from "../../images/Admin Profile Page Images/4_103.svg";
 import settingsIcon from "../../images/Recruiter Profile Page Images/6_335.svg";
 import reportsIcon from "../../images/Admin Profile Page Images/4_105.svg";
+import assessmentsIcon from "../../images/Admin Profile Page Images/Quiz.svg";
 
 interface UserData {
   id: string;
@@ -73,11 +74,11 @@ const AdminSidebar: React.FC = () => {
               ? "&"
               : "?";
             setProfileImage(
-              `${data.user.profilePicture}${separator}t=${Date.now()}`
+              `${data.user.profilePicture}${separator}t=${Date.now()}`,
             );
           } else {
             setProfileImage(
-              `http://localhost:5000${data.user.profilePicture}?t=${Date.now()}`
+              `http://localhost:5000${data.user.profilePicture}?t=${Date.now()}`,
             );
           }
         } else {
@@ -155,6 +156,12 @@ const AdminSidebar: React.FC = () => {
       path: "/admin/reports",
       label: "Reports",
       icon: reportsIcon,
+    },
+    {
+      id: "assessments",
+      path: "/admin/assessments",
+      label: "Quiz/Assessment",
+      icon: assessmentsIcon,
     },
     {
       id: "settings",

@@ -16,11 +16,20 @@ import CandidateProfilePage from "./pages/candidatepages/CandidateProfilePage";
 import RecruiterDashboard from "./pages/recruiterpages/RecruiterDashboard";
 import CandidateDashboard from "./pages/candidatepages/CandidateDashboard";
 import RecruiterProfilePage from "./pages/recruiterpages/RecruiterProfilePage";
+import RecruiterJobPostPage from "./pages/recruiterpages/RecruiterJobPostPage";
 import AdminProfilePage from "./pages/adminpages/AdminProfilePage";
 import AdminDashboard from "./pages/adminpages/AdminDashboard";
 import NotFoundPage from "./pages/NotFoundPage";
 import EmployersPage from "./pages/EmployersPage";
 import EmployerDetailsPage from "./pages/EmployerDetailsPage";
+import JobListingPage from "./pages/JobListingPage";
+import JobDetailsPage from "./pages/JobDetailsPage";
+import AssessmentListingPage from "./pages/AssessmentListingPage";
+import AssessmentAttemptPage from "./pages/AssessmentAttemptPage";
+import AssessmentPreviewPage from "./pages/AssessmentPreviewPage";
+import AdminAssessmentCreatePage from "./pages/adminpages/AdminAssessmentCreatePage";
+import AdminAssessmentEditPage from "./pages/adminpages/AdminAssessmentEditPage";
+import AdminAssessmentsPage from "./pages/adminpages/AdminAssessmentsPage";
 import "./App.css";
 
 // Protected Route Component
@@ -155,6 +164,32 @@ function App() {
         {/* Employers Page - Public access */}
         <Route path="/employers" element={<EmployersPage />} />
         <Route path="/employer/:id" element={<EmployerDetailsPage />} />
+        <Route path="/jobs" element={<JobListingPage />} />
+        <Route path="/jobs/:id" element={<JobDetailsPage />} />
+        <Route
+          path="/assessments"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <AssessmentListingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/assessments/:assessmentId/attempts/:attemptId"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <AssessmentAttemptPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/assessments/:assessmentId/preview"
+          element={
+            <ProtectedRoute allowedRoles={["recruiter", "admin"]}>
+              <AssessmentPreviewPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* HOME PAGES - Where users land after login */}
         <Route
@@ -304,6 +339,30 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/assessments"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminAssessmentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/assessments/create"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminAssessmentCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/assessments/:id/edit"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminAssessmentEditPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* RECRUITER PAGES */}
         <Route
@@ -365,10 +424,7 @@ function App() {
           path="/recruiter/job-postings"
           element={
             <ProtectedRoute allowedRoles={["recruiter"]}>
-              <div style={{ padding: "20px" }}>
-                <h1>Job Postings</h1>
-                <p>Job postings page coming soon</p>
-              </div>
+              <RecruiterJobPostPage />
             </ProtectedRoute>
           }
         />

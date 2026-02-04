@@ -277,6 +277,31 @@
   background-color: #0056b3;
 }
 
+.employerspublic-filter-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.employerspublic-btn-clear-filter {
+  width: 100%;
+  background-color: #ffffff;
+  color: #0068ce;
+  padding: 12px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-align: center;
+  font-size: 14px;
+  border: 1px solid #0068ce;
+  cursor: pointer;
+  font-family: "Montserrat", sans-serif;
+  transition: background-color 0.2s;
+}
+
+.employerspublic-btn-clear-filter:hover {
+  background-color: #f2f6ff;
+}
+
 .employerspublic-mb-4 {
   margin-bottom: 16px;
 }
@@ -310,8 +335,10 @@
 }
 
 .employerspublic-sort-select {
-  border: none;
-  background: none;
+  border: 1px solid #d7e0ef;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 8px 34px 8px 12px;
   font-weight: 600;
   color: #1e2937;
   font-size: 14px;
@@ -321,8 +348,7 @@
 }
 
 .employerspublic-sort-dropdown img {
-  width: 12px;
-  height: 12px;
+  display: none;
 }
 
 .employerspublic-company-grid {
@@ -539,6 +565,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.employerspublic-page-nav:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .employerspublic-page-nav img {

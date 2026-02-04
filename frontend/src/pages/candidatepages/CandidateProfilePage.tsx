@@ -31,7 +31,6 @@ import addIcon3 from "../../images/Candidate Profile Page Images/264_2262.svg";
 import addIcon4 from "../../images/Candidate Profile Page Images/264_2271.svg";
 import editIcon2 from "../../images/Candidate Profile Page Images/264_2282.svg";
 import addIcon5 from "../../images/Candidate Profile Page Images/264_2364.svg";
-import editIcon3 from "../../images/Candidate Profile Page Images/264_2369.svg";
 import arrowIcon from "../../images/Candidate Profile Page Images/267_1325.svg";
 import addIcon6 from "../../images/Candidate Profile Page Images/267_1296.svg";
 import editIcon4 from "../../images/Candidate Profile Page Images/267_1301.svg";
@@ -39,6 +38,7 @@ import projectImage from "../../images/Candidate Profile Page Images/493a4569683
 import starIcon from "../../images/Candidate Profile Page Images/star-icon.svg";
 import emptyStarIcon from "../../images/Candidate Profile Page Images/empty-star-icon.png";
 import eyeIcon from "../../images/Candidate Profile Page Images/eye-icon.svg";
+import closeIcon from "../../images/Candidate Profile Page Images/corss icon.png";
 
 // Define Education interface locally to avoid import conflict
 interface Education {
@@ -101,6 +101,14 @@ interface Skill {
   updatedAt?: string;
 }
 
+type QuizResult = {
+  id: string;
+  title: string;
+  score: number;
+  total: number;
+  completedAt: string;
+};
+
 // Interface for Experience
 interface Experience {
   _id: string;
@@ -157,6 +165,12 @@ const CandidateProfilePage = () => {
 
   // State for user profile data
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
+  const [allQuizResults, setAllQuizResults] = useState<QuizResult[]>([]);
+  const [visibleQuizIds, setVisibleQuizIds] = useState<string[]>([]);
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
 
   // State for resume data
   const [resumeData, setResumeData] = useState<ResumeData>({
@@ -266,10 +280,62 @@ const CandidateProfilePage = () => {
     }
   }, [navigate]);
 
+  const fetchQuizResults = useCallback(async () => {
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      return;
+    }
+    try {
+      setQuizLoading(true);
+      const response = await fetch("http://localhost:5000/api/assessments/available", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return;
+      }
+      const results = (data.assessments || [])
+        .filter((item: any) => item.type === "quiz" && item.status === "submitted")
+        .map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          score: typeof item.latestScore === "number" ? item.latestScore : 0,
+          total: typeof item.quizTotal === "number" ? item.quizTotal : 0,
+          completedAt: item.latestSubmittedAt || "",
+        }))
+        .sort((a: any, b: any) => {
+          const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+          const bTime = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+          return bTime - aTime;
+        });
+
+      setAllQuizResults(results);
+      const stored = localStorage.getItem("candidateQuizVisibleIds");
+      const storedIds = stored ? JSON.parse(stored) : [];
+      const validStoredIds = Array.isArray(storedIds)
+        ? storedIds.filter((id: any) => results.some((r) => r.id === id))
+        : [];
+      const defaultIds = results.slice(0, 5).map((r) => r.id);
+      const idsToUse = validStoredIds.length > 0 ? validStoredIds : defaultIds;
+      setVisibleQuizIds(idsToUse);
+      setQuizResults(results.filter((r) => idsToUse.includes(r.id)).slice(0, 5));
+    } catch (error) {
+      console.error("Error fetching quiz results:", error);
+    } finally {
+      setQuizLoading(false);
+    }
+  }, []);
+
   // Fetch profile on component mount and when refreshTrigger changes
   useEffect(() => {
     fetchUserProfile();
   }, [fetchUserProfile, refreshTrigger]);
+
+  useEffect(() => {
+    fetchQuizResults();
+  }, [fetchQuizResults, refreshTrigger]);
 
   /**
    * Open profile picture editor modal
@@ -468,6 +534,35 @@ const CandidateProfilePage = () => {
       day: "numeric",
       year: "numeric",
     });
+  };
+
+  const formatQuizDate = (dateString: string): string => {
+    if (!dateString) return "Completed";
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return "Completed";
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const toggleQuizVisible = (id: string) => {
+    setVisibleQuizIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((item) => item !== id);
+      }
+      if (prev.length >= 5) {
+        return prev;
+      }
+      return [...prev, id];
+    });
+  };
+
+  const handleSaveQuizVisibility = () => {
+    const nextIds = visibleQuizIds.slice(0, 5);
+    localStorage.setItem("candidateQuizVisibleIds", JSON.stringify(nextIds));
+    setQuizResults(allQuizResults.filter((r) => nextIds.includes(r.id)).slice(0, 5));
+    setIsQuizModalOpen(false);
   };
 
   // Add function to format project date range display
@@ -1886,34 +1981,42 @@ const CandidateProfilePage = () => {
               <div className="candidate-card-header">
                 <h3>Quiz / Assessment</h3>
                 <div className="candidate-actions">
-                  <button className="candidate-eye-btn">
+                  <button
+                    className="candidate-eye-btn"
+                    onClick={() => setIsQuizModalOpen(true)}
+                    title="View all quiz results"
+                  >
                     <img src={eyeIcon} alt="View" />
                   </button>
-                  <button className="candidate-edit-btn">
-                    <img src={editIcon3} alt="Edit" />
-                  </button>
                 </div>
               </div>
-              <div className="candidate-quiz-list">
-                <div className="candidate-quiz-item">
-                  <div className="candidate-quiz-header">
-                    <h4>UX Design Logic</h4>
-                    <span className="candidate-quiz-score candidate-score-passed">
-                      92/100
-                    </span>
-                  </div>
-                  <p className="candidate-quiz-status">Passed Oct 2023</p>
+              <p className="candidate-description-text">
+                Showing up to 5 completed admin quizzes. Click the eye to
+                view all results and choose which 5 appear here.
+              </p>
+              {quizLoading ? (
+                <p className="candidate-description-text">Loading quiz results...</p>
+              ) : quizResults.length === 0 ? (
+                <p className="candidate-description-text">
+                  No completed quizzes yet. Complete a quiz to see your results.
+                </p>
+              ) : (
+                <div className="candidate-quiz-list">
+                  {quizResults.map((quiz) => (
+                    <div key={quiz.id} className="candidate-quiz-item">
+                      <div className="candidate-quiz-header">
+                        <h4>{quiz.title}</h4>
+                        <span className="candidate-quiz-score candidate-score-passed">
+                          {quiz.score}/{quiz.total}
+                        </span>
+                      </div>
+                      <p className="candidate-quiz-status">
+                        Completed {formatQuizDate(quiz.completedAt)}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-                <div className="candidate-quiz-item">
-                  <div className="candidate-quiz-header">
-                    <h4>UX Design Logic</h4>
-                    <span className="candidate-quiz-score candidate-score-passed">
-                      92/100
-                    </span>
-                  </div>
-                  <p className="candidate-quiz-status">Passed Oct 2023</p>
-                </div>
-              </div>
+              )}
             </article>
             {/* Languages Section */}
             <article className="candidate-card candidate-half-card">
@@ -1982,6 +2085,64 @@ const CandidateProfilePage = () => {
               )}
             </article>
           </div>
+          {isQuizModalOpen && (
+            <div className="candidate-quiz-modal-overlay">
+              <div className="candidate-quiz-modal">
+                <div className="candidate-quiz-modal-header">
+                  <div>
+                    <h3>Quiz Results</h3>
+                    <p>Select up to 5 quizzes to show on your profile.</p>
+                  </div>
+                  <button
+                    className="candidate-quiz-modal-close"
+                    onClick={() => setIsQuizModalOpen(false)}
+                  >
+                    <img src={closeIcon} alt="Close" />
+                  </button>
+                </div>
+
+                <div className="candidate-quiz-modal-list">
+                  {allQuizResults.length === 0 ? (
+                    <p className="candidate-description-text">
+                      No completed quizzes yet.
+                    </p>
+                  ) : (
+                    allQuizResults.map((quiz) => (
+                      <label key={quiz.id} className="candidate-quiz-modal-item">
+                        <input
+                          type="checkbox"
+                          checked={visibleQuizIds.includes(quiz.id)}
+                          onChange={() => toggleQuizVisible(quiz.id)}
+                        />
+                        <div className="candidate-quiz-modal-info">
+                          <span>{quiz.title}</span>
+                          <span className="candidate-quiz-modal-meta">
+                            {quiz.score}/{quiz.total} ? Completed {formatQuizDate(quiz.completedAt)}
+                          </span>
+                        </div>
+                      </label>
+                    ))
+                  )}
+                </div>
+
+                <div className="candidate-quiz-modal-actions">
+                  <button
+                    className="candidate-quiz-modal-secondary"
+                    onClick={() => setIsQuizModalOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="candidate-quiz-modal-primary"
+                    onClick={handleSaveQuizVisibility}
+                  >
+                    Save Selection
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Certifications Section */}
           <article className="candidate-card">
             <div className="candidate-card-header">

@@ -21,6 +21,11 @@ import foundedIcon from "../images/Employers Page Images/5_131.svg";
 // Job meta icons from HTML
 import jobLocationIcon from "../images/Employers Page Images/I5_270_1_3220.svg";
 import jobTimeIcon from "../images/Employers Page Images/I5_270_1_3225.svg";
+import jobCardLocationIcon from "../images/Job List Page Images/location.svg";
+import jobCardTypeIcon from "../images/Job List Page Images/job-type.svg";
+import jobCardWorkModeIcon from "../images/Job List Page Images/work-mode.svg";
+import jobCardBookmarkIcon from "../images/Recruiter Job Post Page Images/bookmarkIcon.svg";
+import jobCardShareIcon from "../images/Recruiter Job Post Page Images/shareFg.svg";
 
 // Share and save icons
 import shareIcon from "../images/Employers Page Images/I5_270_1_3212.svg";
@@ -74,7 +79,7 @@ interface Job {
   company: string;
   type: string;
   location: string;
-  workType: string;
+  workMode: string;
   logo: string;
 }
 
@@ -137,45 +142,9 @@ const EmployerDetailsPage = () => {
     console.log("isLoggedIn state changed:", isLoggedIn); // Debug log
   }, [isLoggedIn]);
 
-  // Mock jobs data
-  const [jobs] = useState<Job[]>([
-    {
-      id: "1",
-      title: "Sr. UX/UI Designer",
-      company: "Google",
-      type: "Remote",
-      location: "Kathmandu",
-      workType: "Full-Time",
-      logo: defaultLogo,
-    },
-    {
-      id: "2",
-      title: "Frontend Developer",
-      company: "Google",
-      type: "On-site",
-      location: "Kathmandu",
-      workType: "Full-Time",
-      logo: defaultLogo,
-    },
-    {
-      id: "3",
-      title: "Backend Developer",
-      company: "Google",
-      type: "Hybrid",
-      location: "Kathmandu",
-      workType: "Full-Time",
-      logo: defaultLogo,
-    },
-    {
-      id: "4",
-      title: "DevOps Engineer",
-      company: "Google",
-      type: "Remote",
-      location: "Kathmandu",
-      workType: "Full-Time",
-      logo: defaultLogo,
-    },
-  ]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
+  const [jobsError, setJobsError] = useState<string | null>(null);
 
   // Fetch user profile data
   const fetchUserProfileData = async () => {
@@ -225,6 +194,38 @@ const EmployerDetailsPage = () => {
       setCompany(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCompanyJobs = async () => {
+    if (!id) return;
+    try {
+      setJobsLoading(true);
+      setJobsError(null);
+      const response = await fetch(
+        `http://localhost:5000/api/jobs?recruiterId=${id}&sort=newest&limit=6`,
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to fetch openings");
+      }
+
+      const mappedJobs = (data.jobs || []).map((job: any) => ({
+        id: job.id || job._id,
+        title: job.jobTitle || "Untitled Role",
+        company: job.companyName || company?.name || "Company",
+        type: job.jobType || "Full-Time",
+        location: job.location || "Location",
+        workMode: job.workMode || "remote",
+        logo: resolveLogo(job.companyLogo || company?.logo),
+      }));
+
+      setJobs(mappedJobs);
+    } catch (err: any) {
+      setJobsError(err?.message || "Failed to load openings");
+      setJobs([]);
+    } finally {
+      setJobsLoading(false);
     }
   };
 
@@ -306,12 +307,27 @@ const EmployerDetailsPage = () => {
   useEffect(() => {
     if (id) {
       fetchCompanyDetails();
+      fetchCompanyJobs();
       fetchReviews();
     } else {
       setError("No company ID provided");
       setLoading(false);
     }
   }, [id, isReviewSubmitted]);
+
+  useEffect(() => {
+    if (company?.name) {
+      fetchCompanyJobs();
+    }
+  }, [company?.name]);
+
+  const formatWorkMode = (mode?: string) => {
+    if (!mode) return "Remote";
+    const normalized = mode.toLowerCase();
+    if (normalized === "on-site" || normalized === "onsite") return "On-site";
+    if (normalized === "hybrid") return "Hybrid";
+    return "Remote";
+  };
 
   // Check for existing review when logged in status changes
   useEffect(() => {
@@ -325,7 +341,7 @@ const EmployerDetailsPage = () => {
   };
 
   const handleViewDetails = (jobId: string) => {
-    console.log("View details for job:", jobId);
+    navigate(`/jobs/${jobId}`);
   };
 
   const handleApplyNow = (jobId: string) => {
@@ -371,6 +387,12 @@ const EmployerDetailsPage = () => {
     e: React.SyntheticEvent<HTMLImageElement, Event>,
   ) => {
     e.currentTarget.src = defaultLogo;
+  };
+
+  const resolveLogo = (logo?: string) => {
+    if (!logo) return defaultLogo;
+    if (logo.startsWith("http")) return logo;
+    return `http://localhost:5000${logo.startsWith("/") ? "" : "/"}${logo}`;
   };
 
   // Review form handlers
@@ -1385,67 +1407,73 @@ const EmployerDetailsPage = () => {
                 </button>
               </div>
 
-              <div className="employer-details-jobs-grid">
-                {jobs.map((job) => (
-                  <div key={job.id} className="employer-details-job-card">
-                    <div className="employer-details-job-card-top">
-                      <img
-                        src={job.logo}
-                        alt={job.company}
-                        className="employer-details-job-logo"
-                        onError={handleImageError}
-                      />
-                      <div className="employer-details-job-actions">
+              {jobsLoading && (
+                <div className="employer-details-jobs-state">
+                  Loading openings...
+                </div>
+              )}
+              {jobsError && !jobsLoading && (
+                <div className="employer-details-jobs-state">{jobsError}</div>
+              )}
+              {!jobsLoading && !jobsError && jobs.length === 0 && (
+                <div className="employer-details-jobs-state">
+                  No current openings for this company.
+                </div>
+              )}
+              {!jobsLoading && !jobsError && jobs.length > 0 && (
+                <div className="employer-details-jobs-grid employer-details-jobs-grid-compact">
+                  {jobs.map((job) => (
+                    <article key={job.id} className="joblist-card-item">
+                      <div className="joblist-card-top">
+                        <img
+                          src={job.logo}
+                          alt={job.company}
+                          className="joblist-company-logo"
+                          onError={handleImageError}
+                        />
+                        <div className="joblist-card-actions">
+                          <button className="joblist-icon-btn">
+                            <img src={jobCardBookmarkIcon} alt="Bookmark" />
+                          </button>
+                          <button className="joblist-icon-btn">
+                            <img src={jobCardShareIcon} alt="Share" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="joblist-card-company">{job.company}</div>
+                      <div className="joblist-card-meta">
+                        <img src={jobCardWorkModeIcon} alt="Work mode" />
+                        {formatWorkMode(job.workMode)}
+                      </div>
+                      <h3 className="joblist-card-title">{job.title}</h3>
+                      <div className="joblist-card-info">
+                        <span>
+                          <img src={jobCardLocationIcon} alt="Location" />
+                          {job.location}
+                        </span>
+                        <span>
+                          <img src={jobCardTypeIcon} alt="Job type" />
+                          {job.type}
+                        </span>
+                      </div>
+                      <div className="joblist-card-buttons">
                         <button
-                          className="employer-details-icon-circle"
-                          onClick={() => console.log("Save job:", job.id)}
+                          className="joblist-btn-outline"
+                          onClick={() => handleViewDetails(job.id)}
                         >
-                          <img src={saveIcon} alt="save" />
+                          View Details
                         </button>
                         <button
-                          className="employer-details-icon-circle"
-                          onClick={handleShare}
+                          className="joblist-btn-primary"
+                          onClick={() => handleApplyNow(job.id)}
                         >
-                          <img src={shareIcon} alt="share" />
+                          Apply Now
                         </button>
                       </div>
-                    </div>
-                    <div className="employer-details-job-info">
-                      <h3>{job.company}</h3>
-                      <span className="employer-details-job-type">
-                        {job.type}
-                      </span>
-                      <h4 className="employer-details-job-title">
-                        {job.title}
-                      </h4>
-                    </div>
-                    <div className="employer-details-job-meta">
-                      <div className="employer-details-meta-item">
-                        <img src={jobLocationIcon} alt="location" />
-                        <span>{job.location}</span>
-                      </div>
-                      <div className="employer-details-meta-item">
-                        <img src={jobTimeIcon} alt="work type" />
-                        <span>{job.workType}</span>
-                      </div>
-                    </div>
-                    <div className="employer-details-job-buttons">
-                      <button
-                        className="employer-details-btn-outline"
-                        onClick={() => handleViewDetails(job.id)}
-                      >
-                        View Details
-                      </button>
-                      <button
-                        className="employer-details-btn-primary"
-                        onClick={() => handleApplyNow(job.id)}
-                      >
-                        Apply Now
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    </article>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

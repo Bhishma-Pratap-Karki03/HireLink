@@ -2,6 +2,7 @@
 
 // Import the User model
 const User = require("../models/userModel");
+const JobPost = require("../models/jobPostModel");
 
 class EmployerService {
   // Get all recruiters for public employers page
@@ -27,6 +28,26 @@ class EmployerService {
         message: "No recruiters found",
       };
     }
+
+    const vacancyAgg = await JobPost.aggregate([
+      {
+        $match: {
+          status: "published",
+          isActive: true,
+        },
+      },
+      {
+        $group: {
+          _id: "$recruiterId",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const vacancyMap = vacancyAgg.reduce((acc, item) => {
+      acc[item._id.toString()] = item.count;
+      return acc;
+    }, {});
 
     // Format the recruiter data for public view
     const formattedRecruiters = recruiters.map((recruiter) => {
@@ -78,7 +99,7 @@ class EmployerService {
         about: recruiter.about || "",
         workspaceImages: workspaceImages,
         // Additional company info that might be useful
-        vacancies: 0, // For now, set vacancies to 0
+        vacancies: vacancyMap[recruiter._id.toString()] || 0,
         isFeatured: recruiter.companySize && recruiter.companySize !== "",
       };
     });

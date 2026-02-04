@@ -538,9 +538,9 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
               </a>
             </li>
             <li>
-              <a href="#">
+              <Link to="/jobs">
                 Browse Jobs <img src={dropdownArrow} alt="dropdown arrow" />
-              </a>
+              </Link>
             </li>
             <li>
               <a href="/employers">
@@ -552,6 +552,14 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
                 Candidates <img src={dropdownArrow} alt="dropdown arrow" />
               </a>
             </li>
+            {isCandidate && !isAdminUser && (
+              <li>
+                <Link to="/assessments">
+                  Quiz/Assessment{" "}
+                  <img src={dropdownArrow} alt="dropdown arrow" />
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
         <div className="header-actions">
@@ -591,9 +599,9 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
             </a>
           </li>
           <li>
-            <a href="#" onClick={closeMobileMenu}>
+            <Link to="/jobs" onClick={closeMobileMenu}>
               Browse Jobs <img src={dropdownArrow} alt="dropdown arrow" />
-            </a>
+            </Link>
           </li>
           <li>
             <a href="/employers" onClick={closeMobileMenu}>
@@ -605,6 +613,14 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
               Candidates <img src={dropdownArrow} alt="dropdown arrow" />
             </a>
           </li>
+          {isCandidate && !isAdminUser && (
+            <li>
+              <Link to="/assessments" onClick={closeMobileMenu}>
+                Quiz/Assessment{" "}
+                <img src={dropdownArrow} alt="dropdown arrow" />
+              </Link>
+            </li>
+          )}
 
           {isAuthenticated
             ? renderMobileAuthenticatedActions()
