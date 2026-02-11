@@ -191,7 +191,7 @@ class ProfileService {
   // Get public profile information for any user (for viewing other profiles)
   async getUserProfile(userId) {
     const user = await User.findById(userId).select(
-      "-password -verificationCode -resetCode -email -phone" // Remove sensitive data
+      "-password -verificationCode -resetCode -phone" // Remove sensitive data
     );
 
     if (!user) {
@@ -214,12 +214,21 @@ class ProfileService {
     const publicUserData = {
       id: user._id,
       fullName: user.fullName,
+      email: user.email,
       role: user.role,
       currentJobTitle: user.currentJobTitle || "",
       profilePicture: profilePictureUrl,
       about: user.about || "",
       address: user.address || "",
-      // Add other public fields as needed
+      resume: user.resume || "",
+      resumeFileName: user.resumeFileName || "",
+      resumeFileSize: user.resumeFileSize || 0,
+      skills: user.skills || [],
+      experience: user.experience || [],
+      education: user.education || [],
+      certifications: user.certifications || [],
+      languages: user.languages || [],
+      projects: user.projects || [],
     };
 
     return { user: publicUserData };

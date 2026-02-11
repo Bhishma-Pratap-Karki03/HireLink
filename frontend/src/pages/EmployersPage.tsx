@@ -21,6 +21,8 @@ import heroBgRight from "../images/Employers Page Images/8_197.svg";
 import heroCircle from "../images/Employers Page Images/8_205.svg";
 import heroIcon1 from "../images/Employers Page Images/8_208.svg";
 import heroIcon2 from "../images/Employers Page Images/8_209.svg";
+import connectIcon from "../images/Employers Page Images/connect-icon.png";
+import messageIcon from "../images/Employers Page Images/message-icon.png";
 
 // Import default logo for companies without logo
 import defaultLogo from "../images/Register Page Images/Default Profile.webp";
@@ -836,50 +838,49 @@ const EmployersPage = () => {
                             />
                           </div>
                         )}
-                        <div className="employerspublic-card-content">
-                          <div className="employerspublic-company-logo">
-                            <img
-                              src={company.logo}
-                              alt={company.name}
+                          <div className="employerspublic-card-content">
+                            <div className="employerspublic-company-logo">
+                              <img
+                                src={company.logo}
+                                alt={company.name}
                               onError={handleImageError}
                             />
                           </div>
                           <h3 className="employerspublic-company-name">
                             {company.name}
                           </h3>
-                          <p className="employerspublic-company-location">
-                            {company.location.split("\n").map((line, i) => (
-                              <span key={i}>
-                                {line}
-                                <br />
-                              </span>
-                            ))}
-                          </p>
-                        </div>
-                        <div className="employerspublic-card-footer">
-                          <div className="employerspublic-vacancy-tag">
-                            {company.vacancies} Vacancy
+                            <p className="employerspublic-company-location">
+                              {company.location.split("\n").map((line, i) => (
+                                <span key={i}>
+                                  {line}
+                                  <br />
+                                </span>
+                              ))}
+                            </p>
+                            <div className="employerspublic-vacancy-tag">
+                              {company.vacancies} Vacancy
+                            </div>
                           </div>
-                          <div className="employerspublic-card-divider"></div>
-                          <button
-                            className={`employerspublic-save-action ${
-                              savedCompanies[company.id] ? "saved" : ""
-                            }`}
-                            onClick={() => toggleSaveCompany(company.id)}
-                          >
-                            <img
-                              src={
-                                savedCompanies[company.id]
-                                  ? savedIcon
-                                  : saveIcon
-                              }
-                              alt="save"
-                            />
-                            <span>
-                              {savedCompanies[company.id] ? "Saved" : "Save"}
-                            </span>
-                          </button>
-                        </div>
+                          <div className="employerspublic-card-footer">
+                            <div className="employerspublic-contact-actions">
+                              <button
+                                type="button"
+                                className="employerspublic-contact-btn"
+                              title="Send connection request"
+                            >
+                              <img src={connectIcon} alt="Connect" />
+                              <span>Connect</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="employerspublic-contact-btn"
+                              title="Message"
+                              >
+                                <img src={messageIcon} alt="Message" />
+                                <span>Message</span>
+                              </button>
+                            </div>
+                          </div>
                       </article>
                     ))
                   ) : (

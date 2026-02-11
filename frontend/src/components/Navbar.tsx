@@ -548,9 +548,9 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
               </a>
             </li>
             <li>
-              <a href="#">
+              <Link to="/candidates">
                 Candidates <img src={dropdownArrow} alt="dropdown arrow" />
-              </a>
+              </Link>
             </li>
             {isCandidate && !isAdminUser && (
               <li>
@@ -609,9 +609,9 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
             </a>
           </li>
           <li>
-            <a href="#" onClick={closeMobileMenu}>
+            <Link to="/candidates" onClick={closeMobileMenu}>
               Candidates <img src={dropdownArrow} alt="dropdown arrow" />
-            </a>
+            </Link>
           </li>
           {isCandidate && !isAdminUser && (
             <li>

@@ -184,9 +184,46 @@ const checkFileValidation = (req, res, next) => {
   next();
 };
 
+
+/**
+ * Create multer instance for direct document uploads (no temp folder)
+ * @param {string} subdir - Subdirectory within uploads (e.g., "appliedresume")
+ * @param {number} maxSizeMB - Maximum file size in MB (default: 5)
+ * @returns {Object} Configured multer instance
+ */
+const createDirectDocumentUpload = (subdir, maxSizeMB = 5) => {
+  const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      const uploadDir = path.join(UPLOAD_BASE, subdir);
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      const ext = path.extname(file.originalname);
+      const sanitizedName = file.originalname
+        .replace(ext, "")
+        .replace(/[^a-zA-Z0-9]/g, "-")
+        .toLowerCase();
+      cb(null, `${subdir}-${sanitizedName}-${uniqueSuffix}${ext}`);
+    },
+  });
+
+  return multer({
+    storage,
+    fileFilter: createDocumentFilter(),
+    limits: {
+      fileSize: maxSizeMB * 1024 * 1024,
+    },
+  });
+};
+
 module.exports = {
   createImageUpload,
   createDocumentUpload,
+  createDirectDocumentUpload,
   handleMulterError,
   checkFileValidation,
   UPLOAD_BASE,

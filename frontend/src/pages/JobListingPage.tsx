@@ -20,6 +20,7 @@ import experienceIcon from "../images/Job List Page Images/experience.svg";
 import skillIcon from "../images/Job List Page Images/skills.svg";
 import promoIllustration from "../images/Job List Page Images/promo-illustration.svg";
 import bookmarkIcon from "../images/Recruiter Job Post Page Images/bookmarkIcon.svg";
+import savedBookmarkIcon from "../images/Recruiter Job Post Page Images/bookmarkFilled.svg";
 import shareIcon from "../images/Recruiter Job Post Page Images/shareFg.svg";
 import closeIcon from "../images/Candidate Profile Page Images/corss icon.png";
 import companyLogo from "../images/Recruiter Job Post Page Images/companyLogo.png";
@@ -120,6 +121,8 @@ const JobListingPage = () => {
   const [useCustomResume, setUseCustomResume] = useState(false);
   const [customResumeFile, setCustomResumeFile] = useState<File | null>(null);
   const [applyNote, setApplyNote] = useState("");
+  const [appliedJobs, setAppliedJobs] = useState<Record<string, boolean>>({});
+  const [savedJobs, setSavedJobs] = useState<Record<string, boolean>>({});
   const [confirmRequirements, setConfirmRequirements] = useState(false);
   const [confirmResume, setConfirmResume] = useState(false);
 
@@ -276,6 +279,48 @@ const JobListingPage = () => {
     setPage(1);
   };
 
+  const fetchAppliedStatuses = async (jobIds: string[]) => {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+    try {
+      const entries = await Promise.all(
+        jobIds.map(async (jobId) => {
+          const res = await fetch(
+            `http://localhost:5000/api/applications/status/${jobId}`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+          const data = await res.json();
+          return [jobId, Boolean(data.applied)];
+        }),
+      );
+      const map = Object.fromEntries(entries);
+      setAppliedJobs(map);
+    } catch {
+      // ignore
+    }
+  };
+
+  const fetchSavedStatuses = async (jobIds: string[]) => {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+    try {
+      const entries = await Promise.all(
+        jobIds.map(async (jobId) => {
+          const res = await fetch(
+            `http://localhost:5000/api/saved-jobs/status/${jobId}`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+          const data = await res.json();
+          return [jobId, Boolean(data.saved)];
+        }),
+      );
+      const map = Object.fromEntries(entries);
+      setSavedJobs(map);
+    } catch {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     const fetchJobs = async () => {
       try {
@@ -301,6 +346,8 @@ const JobListingPage = () => {
 
         setJobCards(mappedJobs);
         setTotalJobs(data.total || 0);
+        fetchAppliedStatuses(mappedJobs.map((j: JobCard) => j.id));
+        fetchSavedStatuses(mappedJobs.map((j: JobCard) => j.id));
       } catch (err: any) {
         setError(err?.message || "Something went wrong");
       } finally {
@@ -347,6 +394,7 @@ const JobListingPage = () => {
     skillIcon,
     promoIllustration,
     bookmarkIcon,
+    savedBookmarkIcon,
     shareIcon,
     companyLogo,
     brandSamsung,
@@ -404,7 +452,7 @@ const JobListingPage = () => {
       if (profileRes.ok) {
         setApplyProfileResume(profileData.user?.resume || "");
       }
-    } catch (err) {
+    } catch (err: any) {
       setApplyError("Unable to load application details.");
     } finally {
       setApplyLoading(false);
@@ -415,16 +463,77 @@ const JobListingPage = () => {
     setApplyModalOpen(false);
   };
 
-  const handleConfirmApply = () => {
+  const toggleSaveJob = async (jobId: string) => {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+    try {
+      const res = await fetch("http://localhost:5000/api/saved-jobs/toggle", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ jobId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSavedJobs((prev) => ({ ...prev, [jobId]: Boolean(data.saved) }));
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleConfirmApply = async () => {
     if (!confirmRequirements || !confirmResume) {
       setApplyError("Please confirm the requirements and resume review.");
       return;
     }
+    if (!applyJobId) {
+      setApplyError("Job ID missing.");
+      return;
+    }
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      setApplyError("Please log in to apply.");
+      return;
+    }
+
     setApplyError("");
-    setApplyMessage("Application submitted. Recruiter will be notified.");
-    setTimeout(() => {
-      setApplyModalOpen(false);
-    }, 1200);
+    try {
+      setApplyLoading(true);
+      const formData = new FormData();
+      formData.append("jobId", applyJobId);
+      formData.append("message", applyNote || "");
+      if (useCustomResume && customResumeFile) {
+        formData.append("resume", customResumeFile);
+      } else if (applyProfileResume) {
+        formData.append("resumeUrl", applyProfileResume);
+      }
+
+      const response = await fetch(
+        "http://localhost:5000/api/applications/apply",
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to apply");
+      }
+
+      setApplyMessage("Application submitted. Recruiter will be notified.");
+      setAppliedJobs((prev) => ({ ...prev, [applyJobId as string]: true }));
+      setTimeout(() => {
+        setApplyModalOpen(false);
+      }, 1200);
+    } catch (err: any) {
+      setApplyError(err?.message || "Failed to apply");
+    } finally {
+      setApplyLoading(false);
+    }
   };
 
   return (
@@ -984,9 +1093,21 @@ const JobListingPage = () => {
                       className="joblist-company-logo"
                     />
                     <div className="joblist-card-actions">
-                      <button className="joblist-icon-btn">
-                        <img src={images.bookmarkIcon} alt="Bookmark" />
-                      </button>
+                      {userRole === "candidate" && (
+                        <button
+                          className="joblist-icon-btn"
+                          onClick={() => toggleSaveJob(job.id)}
+                        >
+                        <img
+                          src={
+                            savedJobs[job.id]
+                              ? images.savedBookmarkIcon
+                              : images.bookmarkIcon
+                          }
+                          alt="Save"
+                        />
+                        </button>
+                      )}
                       <button className="joblist-icon-btn">
                         <img src={images.shareIcon} alt="Share" />
                       </button>
@@ -1015,13 +1136,15 @@ const JobListingPage = () => {
                     >
                       View Details
                     </button>
-                    <button
-                      className="joblist-btn-primary"
-                      onClick={() => openApplyModal(job.id)}
-                      disabled={userRole !== "candidate"}
-                    >
-                      Apply Now
-                    </button>
+                    {userRole === "candidate" && (
+                      <button
+                        className="joblist-btn-primary"
+                        onClick={() => openApplyModal(job.id)}
+                        disabled={appliedJobs[job.id]}
+                      >
+                        {appliedJobs[job.id] ? "Applied" : "Apply Now"}
+                      </button>
+                    )}
                   </div>
                 </article>
               ))}
@@ -1077,7 +1200,10 @@ const JobListingPage = () => {
             <div className="apply-modal-header">
               <div>
                 <h3>Confirm Application</h3>
-                <p>Review your resume and confirm the requirements before applying.</p>
+                <p>
+                  Review your resume and confirm the requirements before
+                  applying.
+                </p>
               </div>
               <button className="apply-modal-close" onClick={closeApplyModal}>
                 <img src={closeIcon} alt="Close" />
@@ -1089,7 +1215,9 @@ const JobListingPage = () => {
               <div className="apply-modal-body">
                 <div className="apply-modal-section">
                   <h4>{applyJobDetails.jobTitle}</h4>
-                  <p className="apply-modal-muted">{applyJobDetails.companyName}</p>
+                  <p className="apply-modal-muted">
+                    {applyJobDetails.companyName}
+                  </p>
                 </div>
 
                 <div className="apply-modal-section">
@@ -1112,19 +1240,26 @@ const JobListingPage = () => {
                       checked={useCustomResume}
                       onChange={(e) => setUseCustomResume(e.target.checked)}
                     />
-                    Use a different resume for this application (won't change your profile)
+                    Use a different resume for this application (won't change
+                    your profile)
                   </label>
                   {useCustomResume && (
                     <label className="apply-modal-upload">
                       <input
                         type="file"
                         onChange={(e) =>
-                          setCustomResumeFile(e.target.files ? e.target.files[0] : null)
+                          setCustomResumeFile(
+                            e.target.files ? e.target.files[0] : null,
+                          )
                         }
                       />
                       <div className="apply-modal-upload-inner">
-                        <span className="apply-modal-upload-title">Upload new resume</span>
-                        <span className="apply-modal-upload-subtitle">PDF or DOCX ? Max 5MB</span>
+                        <span className="apply-modal-upload-title">
+                          Upload new resume
+                        </span>
+                        <span className="apply-modal-upload-subtitle">
+                          PDF or DOCX ? Max 5MB
+                        </span>
                         {customResumeFile && (
                           <>
                             <span className="apply-modal-upload-file">
@@ -1135,8 +1270,13 @@ const JobListingPage = () => {
                               className="apply-modal-link apply-modal-preview-btn"
                               onClick={(e) => {
                                 e.preventDefault();
-                                const url = URL.createObjectURL(customResumeFile);
-                                window.open(url, "_blank", "noopener,noreferrer");
+                                const url =
+                                  URL.createObjectURL(customResumeFile);
+                                window.open(
+                                  url,
+                                  "_blank",
+                                  "noopener,noreferrer",
+                                );
                               }}
                             >
                               Preview selected resume
@@ -1195,11 +1335,18 @@ const JobListingPage = () => {
               </div>
             )}
 
-            {applyError && <div className="apply-modal-error">{applyError}</div>}
-            {applyMessage && <div className="apply-modal-success">{applyMessage}</div>}
+            {applyError && (
+              <div className="apply-modal-error">{applyError}</div>
+            )}
+            {applyMessage && (
+              <div className="apply-modal-success">{applyMessage}</div>
+            )}
 
             <div className="apply-modal-actions">
-              <button className="apply-modal-secondary" onClick={closeApplyModal}>
+              <button
+                className="apply-modal-secondary"
+                onClick={closeApplyModal}
+              >
                 Cancel
               </button>
               <button

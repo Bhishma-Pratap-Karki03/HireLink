@@ -317,8 +317,8 @@
 }
 
 .joblist-icon-btn {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   border: none;
   background: #edf4ff;
   border-radius: 50%;
@@ -594,4 +594,16 @@
   font-size: 14px;
   border: 1px solid #0068ce;
   cursor: pointer;
+}
+
+.joblist-applied-note {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.joblist-icon-btn img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }

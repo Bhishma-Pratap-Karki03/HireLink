@@ -36,26 +36,35 @@ const getCompanyReviews = async (req, res, next) => {
     }
 
     // Format reviews for response with proper profile picture URL
-    const formattedReviews = reviews.map((review) => ({
+    const formattedReviews = reviews.map((review) => {
+      const reviewer = review.userId;
+      const reviewerName = reviewer?.fullName || "Deleted User";
+      const reviewerLocation = reviewer?.address || "Unknown";
+      const reviewerRole =
+        review.reviewerRole || reviewer?.currentJobTitle || "";
+      const reviewerAvatar = reviewer?.profilePicture
+        ? reviewer.profilePicture.startsWith("http")
+          ? reviewer.profilePicture
+          : `http://localhost:5000${reviewer.profilePicture}`
+        : "";
+
+      return {
       id: review._id,
       rating: review.rating,
       text: review.description,
       title: review.title || "",
-      reviewerName: review.userId.fullName,
-      reviewerLocation: review.userId.address || "Unknown",
-      reviewerRole: review.reviewerRole || review.userId.currentJobTitle || "",
+      reviewerName,
+      reviewerLocation,
+      reviewerRole,
       date: new Date(review.createdAt).toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
       }),
-      reviewerAvatar: review.userId.profilePicture
-        ? review.userId.profilePicture.startsWith("http")
-          ? review.userId.profilePicture
-          : `http://localhost:5000${review.userId.profilePicture}`
-        : "",
+      reviewerAvatar,
       status: review.status,
-    }));
+      };
+    });
 
     res.status(200).json({
       success: true,
@@ -110,26 +119,35 @@ const getCompanyReviewsForRecruiter = async (req, res, next) => {
       .sort({ createdAt: -1 });
 
     // Format reviews for response
-    const formattedReviews = reviews.map((review) => ({
+    const formattedReviews = reviews.map((review) => {
+      const reviewer = review.userId;
+      const reviewerName = reviewer?.fullName || "Deleted User";
+      const reviewerLocation = reviewer?.address || "Unknown";
+      const reviewerRole =
+        review.reviewerRole || reviewer?.currentJobTitle || "";
+      const reviewerAvatar = reviewer?.profilePicture
+        ? reviewer.profilePicture.startsWith("http")
+          ? reviewer.profilePicture
+          : `http://localhost:5000${reviewer.profilePicture}`
+        : "";
+
+      return {
       id: review._id,
       rating: review.rating,
       text: review.description,
       title: review.title || "",
-      reviewerName: review.userId.fullName,
-      reviewerLocation: review.userId.address || "Unknown",
-      reviewerRole: review.reviewerRole || review.userId.currentJobTitle || "",
+      reviewerName,
+      reviewerLocation,
+      reviewerRole,
       date: new Date(review.createdAt).toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
       }),
-      reviewerAvatar: review.userId.profilePicture
-        ? review.userId.profilePicture.startsWith("http")
-          ? review.userId.profilePicture
-          : `http://localhost:5000${review.userId.profilePicture}`
-        : "",
+      reviewerAvatar,
       status: review.status,
-    }));
+      };
+    });
 
     // Get counts for each status
     const totalReviews = await Review.countDocuments({

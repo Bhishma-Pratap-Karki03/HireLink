@@ -124,6 +124,13 @@ a {
   transition: background-color 0.2s;
 }
 
+.candidate-add-btn img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  display: block;
+}
+
 .candidate-add-btn:hover {
   background-color: #f0f8ff;
 }
@@ -363,8 +370,9 @@ a {
 }
 
 .candidate-edit-btn img {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
   display: block;
 }
 
@@ -710,6 +718,19 @@ a {
   margin-left: 0;
   font-style: italic;
   color: #555;
+}
+
+/* Ensure Quill alignment classes are respected in rendered profile HTML */
+.candidate-description-text .ql-align-center {
+  text-align: center;
+}
+
+.candidate-description-text .ql-align-right {
+  text-align: right;
+}
+
+.candidate-description-text .ql-align-justify {
+  text-align: justify;
 }
 /* Resume Display Styles */
 .resume-display-container {

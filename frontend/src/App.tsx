@@ -15,14 +15,21 @@ import AdminHomePage from "./pages/adminpages/AdminHomePage";
 import CandidateProfilePage from "./pages/candidatepages/CandidateProfilePage";
 import RecruiterDashboard from "./pages/recruiterpages/RecruiterDashboard";
 import CandidateDashboard from "./pages/candidatepages/CandidateDashboard";
+import SavedJobsPage from "./pages/candidatepages/SavedJobsPage";
 import RecruiterProfilePage from "./pages/recruiterpages/RecruiterProfilePage";
 import RecruiterJobPostPage from "./pages/recruiterpages/RecruiterJobPostPage";
+import RecruiterJobPostingsListPage from "./pages/recruiterpages/RecruiterJobPostingsListPage";
+import RecruiterJobApplicantsPage from "./pages/recruiterpages/RecruiterJobApplicantsPage";
+import RecruiterScannerPage from "./pages/recruiterpages/RecruiterScannerPage";
+import RecruiterAtsRankingPage from "./pages/recruiterpages/RecruiterAtsRankingPage";
 import AdminProfilePage from "./pages/adminpages/AdminProfilePage";
 import AdminDashboard from "./pages/adminpages/AdminDashboard";
 import NotFoundPage from "./pages/NotFoundPage";
 import EmployersPage from "./pages/EmployersPage";
 import EmployerDetailsPage from "./pages/EmployerDetailsPage";
 import JobListingPage from "./pages/JobListingPage";
+import CandidatesPage from "./pages/CandidatesPage";
+import CandidateDetailsPage from "./pages/CandidateDetailsPage";
 import JobDetailsPage from "./pages/JobDetailsPage";
 import AssessmentListingPage from "./pages/AssessmentListingPage";
 import AssessmentAttemptPage from "./pages/AssessmentAttemptPage";
@@ -165,6 +172,8 @@ function App() {
         <Route path="/employers" element={<EmployersPage />} />
         <Route path="/employer/:id" element={<EmployerDetailsPage />} />
         <Route path="/jobs" element={<JobListingPage />} />
+        <Route path="/candidates" element={<CandidatesPage />} />
+        <Route path="/candidate/:id" element={<CandidateDetailsPage />} />
         <Route path="/jobs/:id" element={<JobDetailsPage />} />
         <Route
           path="/assessments"
@@ -369,10 +378,7 @@ function App() {
           path="/recruiter/post-job"
           element={
             <ProtectedRoute allowedRoles={["recruiter"]}>
-              <div style={{ padding: "20px" }}>
-                <h1>Post Job</h1>
-                <p>Post Job page coming soon</p>
-              </div>
+              <RecruiterJobPostPage />
             </ProtectedRoute>
           }
         />
@@ -387,17 +393,17 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/recruiter/applications"
-          element={
-            <ProtectedRoute allowedRoles={["recruiter"]}>
-              <div style={{ padding: "20px" }}>
-                <h1>Applications</h1>
-                <p>Applications page coming soon</p>
-              </div>
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/recruiter/applications"
+            element={
+              <ProtectedRoute allowedRoles={["recruiter"]}>
+                <div style={{ padding: "20px" }}>
+                  <h1>Applications</h1>
+                  <p>Applications page coming soon</p>
+                </div>
+              </ProtectedRoute>
+            }
+          />
         <Route
           path="/recruiter/saved-candidates"
           element={
@@ -424,7 +430,23 @@ function App() {
           path="/recruiter/job-postings"
           element={
             <ProtectedRoute allowedRoles={["recruiter"]}>
+              <RecruiterJobPostingsListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recruiter/job-postings/:id/edit"
+          element={
+            <ProtectedRoute allowedRoles={["recruiter"]}>
               <RecruiterJobPostPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recruiter/job-postings/:id/applicants"
+          element={
+            <ProtectedRoute allowedRoles={["recruiter"]}>
+              <RecruiterJobApplicantsPage />
             </ProtectedRoute>
           }
         />
@@ -443,10 +465,15 @@ function App() {
           path="/recruiter/scanner"
           element={
             <ProtectedRoute allowedRoles={["recruiter"]}>
-              <div style={{ padding: "20px" }}>
-                <h1>Scanner</h1>
-                <p>Scanner page coming soon</p>
-              </div>
+              <RecruiterScannerPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recruiter/scanner/:jobId/ranking"
+          element={
+            <ProtectedRoute allowedRoles={["recruiter"]}>
+              <RecruiterAtsRankingPage />
             </ProtectedRoute>
           }
         />
@@ -474,25 +501,22 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/candidate/job-alerts"
-          element={
-            <ProtectedRoute allowedRoles={["candidate"]}>
-              <div style={{ padding: "20px" }}>
-                <h1>Job Alerts</h1>
-                <p>Job alerts page coming soon</p>
-              </div>
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/candidate/job-alerts"
+            element={
+              <ProtectedRoute allowedRoles={["candidate"]}>
+                <div style={{ padding: "20px" }}>
+                  <h1>Job Alerts</h1>
+                  <p>Job alerts page coming soon</p>
+                </div>
+              </ProtectedRoute>
+            }
+          />
         <Route
           path="/candidate/saved-jobs"
           element={
             <ProtectedRoute allowedRoles={["candidate"]}>
-              <div style={{ padding: "20px" }}>
-                <h1>Saved Jobs</h1>
-                <p>Saved jobs page coming soon</p>
-              </div>
+              <SavedJobsPage />
             </ProtectedRoute>
           }
         />

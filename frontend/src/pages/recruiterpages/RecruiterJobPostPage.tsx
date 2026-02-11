@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import RecruiterSidebar from "../../components/recruitercomponents/RecruiterSidebar";
 import RecruiterTopBar from "../../components/recruitercomponents/RecruiterTopBar";
 import "../../styles/RecruiterJobPostPage.css";
@@ -64,6 +64,8 @@ type AssessmentForm = {
 
 const RecruiterJobPostPage: React.FC = () => {
   const navigate = useNavigate();
+  const { id: jobIdParam } = useParams();
+  const isEditMode = Boolean(jobIdParam);
   const [workMode, setWorkMode] = useState("remote");
   const [gender, setGender] = useState("both");
   const [formData, setFormData] = useState({
@@ -184,6 +186,73 @@ const RecruiterJobPostPage: React.FC = () => {
 
   const isFormComplete = missingFields.length === 0;
   const shouldShowSuccess = hasPosted || submitSuccess !== "";
+
+  useEffect(() => {
+    const loadJobForEdit = async () => {
+      if (!isEditMode || !jobIdParam) return;
+      try {
+        const res = await fetch(`http://localhost:5000/api/jobs/${jobIdParam}`);
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.message || "Failed to load job");
+        }
+        const job = data.job;
+        setFormData({
+          jobTitle: job.jobTitle || "",
+          contactEmail: job.companyEmail || "",
+          department: job.department || "",
+          location: job.location || "",
+          jobLevel: job.jobLevel || "",
+          jobType: job.jobType || "",
+          openings: job.openings ? String(job.openings) : "",
+          deadline: job.deadline ? String(job.deadline).slice(0, 10) : "",
+          description: job.description || "",
+          experience: job.experience || "",
+          education: job.education || "",
+          salaryFrom: job.salaryFrom || "",
+          salaryTo: job.salaryTo || "",
+          currency: job.currency || "",
+        });
+        setWorkMode(job.workMode || "remote");
+        setGender(job.gender || "both");
+        setResponsibilities(
+          Array.isArray(job.responsibilities) && job.responsibilities.length > 0
+            ? job.responsibilities
+            : [""]
+        );
+        setRequirements(
+          Array.isArray(job.requirements) && job.requirements.length > 0
+            ? job.requirements
+            : [""]
+        );
+        setRequiredSkills(
+          Array.isArray(job.requiredSkills) && job.requiredSkills.length > 0
+            ? job.requiredSkills
+            : [""]
+        );
+        setBenefits(
+          Array.isArray(job.benefits) && job.benefits.length > 0
+            ? job.benefits
+            : [""]
+        );
+        setInterviewStages(
+          Array.isArray(job.interviewStages) && job.interviewStages.length > 0
+            ? job.interviewStages.map((stage: any) => stage.name || "")
+            : [""]
+        );
+        setAssessmentEnabled(Boolean(job.assessmentId));
+        setSelectedAssessmentId(job.assessmentId || "");
+        setAssessmentRequired(Boolean(job.assessmentRequired));
+        setHasPosted(false);
+        setSubmitSuccess("");
+        setSubmitError("");
+      } catch (error) {
+        console.error("Error loading job:", error);
+      }
+    };
+
+    loadJobForEdit();
+  }, [isEditMode, jobIdParam]);
 
   const assessmentMissingFields = useMemo(() => {
     const missing: string[] = [];
@@ -451,7 +520,7 @@ const RecruiterJobPostPage: React.FC = () => {
       return;
     }
 
-    if (hasPosted) {
+    if (hasPosted && !isEditMode) {
       setSubmitError("You have already posted this job.");
       setSubmitSuccess("");
       return;
@@ -462,8 +531,10 @@ const RecruiterJobPostPage: React.FC = () => {
     setSubmitSuccess("");
 
     try {
-      const response = await fetch("http://localhost:5000/api/jobs", {
-        method: "POST",
+      const response = await fetch(
+        `http://localhost:5000/api/jobs${isEditMode ? `/${jobIdParam}` : ""}`,
+        {
+        method: isEditMode ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -503,10 +574,18 @@ const RecruiterJobPostPage: React.FC = () => {
         throw new Error(data?.message || "Failed to post job");
       }
 
-      setSubmitSuccess("Job posted successfully!");
+      setSubmitSuccess(
+        isEditMode ? "Job updated successfully!" : "Job posted successfully!"
+      );
       setHasPosted(true);
-      resetForm();
-      navigate("/recruiter/job-postings");
+      if (isEditMode) {
+        setTimeout(() => {
+          navigate("/recruiter/job-postings");
+        }, 800);
+      } else {
+        resetForm();
+        navigate("/recruiter/job-postings");
+      }
     } catch (error: any) {
       setSubmitError(error.message || "Failed to post job");
       setSubmitSuccess("");
@@ -516,7 +595,7 @@ const RecruiterJobPostPage: React.FC = () => {
   };
 
   const handleCancel = () => {
-    navigate("/recruiter/dashboard");
+    navigate("/recruiter/job-postings");
   };
 
   const handleSearch = (query: string) => {
@@ -739,10 +818,14 @@ const RecruiterJobPostPage: React.FC = () => {
           <div className="recruiter-postjob-scrollable-content">
             <div className="recruiter-postjob-content-wrapper">
               {/* Page Title */}
-              <div className="recruiter-postjob-page-title-area">
-                <h1>Post a New Job</h1>
-                <p>Enter the details below to find your next great hire.</p>
-              </div>
+                <div className="recruiter-postjob-page-title-area">
+                  <h1>{isEditMode ? "Edit Job Posting" : "Post a New Job"}</h1>
+                  <p>
+                    {isEditMode
+                      ? "Update the details below to keep this job post accurate."
+                      : "Enter the details below to find your next great hire."}
+                  </p>
+                </div>
 
               {/* Section 1: Basic Information */}
               <section className="recruiter-postjob-card recruiter-postjob-card--compensation">
@@ -1978,17 +2061,23 @@ const RecruiterJobPostPage: React.FC = () => {
                       )}
 
                       <div className="recruiter-jobpost-main-action-buttons">
-                        <button
-                          className="recruiter-jobpost-btn-post-job"
-                          onClick={handlePostJob}
-                          disabled={isSubmitting || hasPosted}
-                        >
-                          {hasPosted
-                            ? "Posted"
-                            : isSubmitting
-                              ? "Posting..."
-                              : "Post Job"}
-                        </button>
+                          <button
+                            className="recruiter-jobpost-btn-post-job"
+                            onClick={handlePostJob}
+                            disabled={isSubmitting || hasPosted}
+                          >
+                            {hasPosted
+                              ? isEditMode
+                                ? "Updated"
+                                : "Posted"
+                              : isSubmitting
+                                ? isEditMode
+                                  ? "Updating..."
+                                  : "Posting..."
+                                : isEditMode
+                                  ? "Update Job"
+                                  : "Post Job"}
+                          </button>
                         <button
                           className="recruiter-jobpost-btn-cancel"
                           onClick={handleCancel}

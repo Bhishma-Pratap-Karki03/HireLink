@@ -2,6 +2,7 @@
 // Now uses User Service for business logic, making the controller cleaner
 
 const userService = require("../services/userService");
+const User = require("../models/userModel");
 
 // Handle user registration request
 exports.registerUser = async (req, res, next) => {
@@ -103,6 +104,21 @@ exports.loginUser = async (req, res, next) => {
     }
 
     // Pass other errors to error handler middleware
+    next(error);
+  }
+};
+
+// List candidates for recruiter view
+exports.listCandidates = async (req, res, next) => {
+  try {
+    const candidates = await User.find({ role: "candidate" })
+      .select(
+        "fullName email currentJobTitle address profilePicture skills experience"
+      )
+      .lean();
+
+    res.status(200).json({ success: true, candidates });
+  } catch (error) {
     next(error);
   }
 };

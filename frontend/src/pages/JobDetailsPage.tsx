@@ -144,6 +144,8 @@ const JobDetailsPage = () => {
   const [useCustomResume, setUseCustomResume] = useState(false);
   const [customResumeFile, setCustomResumeFile] = useState<File | null>(null);
   const [applyNote, setApplyNote] = useState("");
+  const [isApplied, setIsApplied] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [confirmRequirements, setConfirmRequirements] = useState(false);
   const [confirmResume, setConfirmResume] = useState(false);
 
@@ -189,6 +191,53 @@ const JobDetailsPage = () => {
   useEffect(() => {
     fetchJobDetails();
   }, [id]);
+
+
+  const fetchSavedStatus = async () => {
+    if (!job?.id && !job?._id) return;
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+    try {
+      const jobId = job.id || job._id;
+      const res = await fetch(`http://localhost:5000/api/saved-jobs/status/${jobId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setIsSaved(Boolean(data.saved));
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    fetchApplyStatus();
+    fetchSavedStatus();
+  }, [job?.id, job?._id]);
+
+
+  const fetchApplyStatus = async () => {
+    if (!job?.id && !job?._id) return;
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+    try {
+      const jobId = job.id || job._id;
+      const res = await fetch(`http://localhost:5000/api/applications/status/${jobId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setIsApplied(Boolean(data.applied));
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    fetchApplyStatus();
+  }, [job?.id, job?._id]);
 
   useEffect(() => {
     const loadAssessment = async () => {
@@ -402,16 +451,81 @@ const JobDetailsPage = () => {
     setApplyModalOpen(false);
   };
 
-  const handleConfirmApply = () => {
+  const toggleSaveJob = async () => {
+    const token = localStorage.getItem("authToken");
+    if (!token || !job) return;
+    const jobId = job.id || job._id;
+    try {
+      const res = await fetch("http://localhost:5000/api/saved-jobs/toggle", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ jobId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setIsSaved(Boolean(data.saved));
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleConfirmApply = async () => {
     if (!confirmRequirements || !confirmResume) {
       setApplyError("Please confirm the requirements and resume review.");
       return;
     }
+    if (!job) {
+      setApplyError("Job details not loaded.");
+      return;
+    }
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      setApplyError("Please log in to apply.");
+      return;
+    }
+
+    const jobIdToUse = job.id || job._id;
+    if (!jobIdToUse) {
+      setApplyError("Job ID missing.");
+      return;
+    }
+
     setApplyError("");
-    setApplyMessage("Application submitted. Recruiter will be notified.");
-    setTimeout(() => {
-      setApplyModalOpen(false);
-    }, 1200);
+    try {
+      setApplyLoading(true);
+      const formData = new FormData();
+      formData.append("jobId", jobIdToUse);
+      formData.append("message", applyNote || "");
+      if (useCustomResume && customResumeFile) {
+        formData.append("resume", customResumeFile);
+      } else if (applyProfileResume) {
+        formData.append("resumeUrl", applyProfileResume);
+      }
+
+      const response = await fetch("http://localhost:5000/api/applications/apply", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to apply");
+      }
+
+      setApplyMessage("Application submitted. Recruiter will be notified.");
+      setIsApplied(true);
+      setTimeout(() => {
+        setApplyModalOpen(false);
+      }, 1200);
+    } catch (err) {
+      setApplyError(err?.message || "Failed to apply");
+    } finally {
+      setApplyLoading(false);
+    }
   };
 
   const isMandatoryAssessment = Boolean(
@@ -445,28 +559,38 @@ const JobDetailsPage = () => {
               </div>
               <div>
                 <h1>{job?.jobTitle || "Job Title"}</h1>
-                <div className="job-details-hero-meta">
-                  <span>{job?.companyName || "Company"}</span>
-                  <span className="job-details-divider">/</span>
-                  <span>Home / Jobs Description</span>
+                <p className="job-details-company-name">
+                  {job?.companyName || "Company"}
+                </p>
+              </div>
+              {isApplied && (
+                <p className="job-details-assessment-note">
+                  Applied ? wait for recruiter response.
+                </p>
+              )}
+              {isCandidate && (
+                <div className="job-details-hero-actions">
+                  <button
+                    className={`job-details-primary-btn${isApplied ? " job-details-applied" : ""}`}
+                    disabled={!canApply || isApplied}
+                    title={
+                      isMandatoryAssessment && !isAssessmentSubmitted
+                        ? "Complete the assessment before applying."
+                        : undefined
+                    }
+                    onClick={openApplyModal}
+                  >
+                    {isApplied ? "Applied" : "Apply Now"}
+                  </button>
+                  <button
+                    className="job-details-outline-btn"
+                    onClick={toggleSaveJob}
+                  >
+                    {isSaved ? "Saved" : "Save Job"}
+                  </button>
                 </div>
-              </div>
-              <div className="job-details-hero-actions">
-                <button
-                  className="job-details-primary-btn"
-                  disabled={!canApply || !isCandidate}
-                  title={
-                    isMandatoryAssessment && !isAssessmentSubmitted
-                      ? "Complete the assessment before applying."
-                      : undefined
-                  }
-                  onClick={openApplyModal}
-                >
-                  Apply Now
-                </button>
-                <button className="job-details-outline-btn">Save Job</button>
-              </div>
-              {isMandatoryAssessment && !isAssessmentSubmitted && (
+              )}
+              {isCandidate && isMandatoryAssessment && !isAssessmentSubmitted && (
                 <p className="job-details-assessment-note">
                   Complete the mandatory assessment before applying.
                 </p>

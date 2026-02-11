@@ -237,12 +237,6 @@ const CandidateSidebar: React.FC<SideNavigationProps> = ({
           icon: profileIcon,
         },
         {
-          id: "resume",
-          path: "/candidate/resume",
-          label: "Resume",
-          icon: resumeIcon,
-        },
-        {
           id: "messages",
           path: "/candidate/messages",
           label: "Messages",
@@ -251,7 +245,7 @@ const CandidateSidebar: React.FC<SideNavigationProps> = ({
         {
           id: "job-alerts",
           path: "/candidate/job-alerts",
-          label: "Job Alerts",
+          label: "Smart Jobs",
           icon: jobAlertsIcon,
         },
         {

@@ -1,0 +1,119 @@
+/* Candidate Top Bar - same as Admin */
+.candidate-top-bar {
+  height: 84px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  border-bottom: 1px solid #dcdcdc;
+  width: calc(100% + 80px);
+  margin: -40px -40px 20px -40px;
+}
+
+.candidate-search-container {
+  flex: 1;
+  max-width: 406px;
+}
+
+.candidate-search-input-wrapper {
+  background: #f8fafb;
+  border: 1px solid #ffffff;
+  border-radius: 12px;
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.candidate-search-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.candidate-search-input {
+  border: none;
+  background: transparent;
+  flex-grow: 1;
+  outline: none;
+  color: #0f283c;
+  font-size: 14px;
+  font-family: "Montserrat", sans-serif;
+}
+
+.candidate-search-input::placeholder {
+  color: #8c8c8c;
+}
+
+.candidate-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.candidate-action-btn {
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.candidate-action-btn:hover {
+  transform: scale(1.1);
+}
+
+.candidate-action-btn img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+@media (max-width: 1200px) {
+  .candidate-search-container {
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 992px) {
+  .candidate-top-bar {
+    padding: 0 20px;
+    height: 70px;
+    width: calc(100% + 40px);
+    margin: -20px -20px 16px -20px;
+  }
+
+  .candidate-search-input-wrapper {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .candidate-top-bar {
+    flex-direction: column;
+    height: auto;
+    padding: 15px 20px;
+    gap: 15px;
+    width: calc(100% + 30px);
+    margin: -15px -15px 16px -15px;
+  }
+
+  .candidate-search-container {
+    width: 100%;
+    max-width: none;
+  }
+
+  .candidate-search-input-wrapper {
+    width: 100%;
+  }
+
+  .candidate-header-actions {
+    width: 100%;
+    justify-content: center;
+    gap: 15px;
+  }
+}

@@ -171,7 +171,7 @@ const RecruiterSidebar: React.FC<RecruiterSidebarProps> = ({
     {
       id: "scanner",
       path: "/recruiter/scanner",
-      label: "Scanner",
+      label: "ATS Scanner",
       icon: scannerIcon,
     },
     {
@@ -257,7 +257,13 @@ const RecruiterSidebar: React.FC<RecruiterSidebarProps> = ({
 
       <nav className="recruiter-sidebar-nav">
         {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const isActive =
+            location.pathname === item.path ||
+            (item.id === "job-postings" &&
+              (location.pathname.startsWith("/recruiter/job-postings") ||
+                location.pathname === "/recruiter/post-job")) ||
+            (item.id === "scanner" &&
+              location.pathname.startsWith("/recruiter/scanner"));
 
           return (
             <Link

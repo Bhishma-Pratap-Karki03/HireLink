@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import SideNavigation from "../../components/candidatecomponents/CandidateSidebar.tsx";
+import CandidateTopBar from "../../components/candidatecomponents/CandidateTopBar";
 import ProfilePictureEditor from "../../components/candidatecomponents/ProfilePictureEditor.tsx";
 import PersonalInfoEditor from "../../components/candidatecomponents/PersonalInfoEditor.tsx";
 import AboutUsEditor from "../../components/candidatecomponents/AboutUsEditor.tsx";
@@ -18,7 +19,6 @@ import "../../styles/CandidateProfilePage.css";
 import fileIcon from "../../images/Candidate Profile Page Images/Resume-icon.png";
 
 // Import images
-import notificationIcon from "../../images/Candidate Profile Page Images/261_1980.svg";
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
 import editIcon from "../../images/Candidate Profile Page Images/261_2045.svg";
 import emailIcon from "../../images/Candidate Profile Page Images/261_2082.svg";
@@ -149,11 +149,11 @@ interface UserProfile {
   education: Education[];
   languages: Language[];
   certifications: Certification[];
-  projects: Project[];
-  skills: Skill[];
-  createdAt: string;
-  updatedAt: string;
-}
+    projects: Project[];
+    skills: Skill[];
+    createdAt: string;
+    updatedAt: string;
+  }
 
 /**
  * CandidateProfilePage Component
@@ -350,6 +350,7 @@ const CandidateProfilePage = () => {
   const handleEditPersonalInfo = () => {
     setIsPersonalInfoEditorOpen(true);
   };
+
 
   /**
    * Open about us editor modal
@@ -933,6 +934,7 @@ const CandidateProfilePage = () => {
       setIsLoading(false);
     }
   };
+
 
   /**
    * Save about information
@@ -1570,12 +1572,7 @@ const CandidateProfilePage = () => {
     <div className="candidate-dashboard-container">
       <SideNavigation />
       <main className="candidate-main-content">
-        <header className="candidate-page-header">
-          <h1>My Profile</h1>
-          <button className="candidate-notification-btn">
-            <img src={notificationIcon} alt="Notifications" />
-          </button>
-        </header>
+        <CandidateTopBar />
 
         <div className="candidate-content-grid">
           {/* Profile Header Card */}
@@ -1713,12 +1710,7 @@ const CandidateProfilePage = () => {
                     <span className="resume-file-icon">
                       <img src={fileIcon} alt="Resume File" />
                     </span>
-                    <span
-                      className="resume-file-name-text"
-                      title={resumeData.fileName}
-                    >
-                      {truncateFileName(resumeData.fileName)}
-                    </span>
+                    <span className="resume-file-name-text">Resume</span>
                   </div>
                   <div className="resume-file-meta">
                     <span className="resume-file-size">
@@ -2346,16 +2338,16 @@ const CandidateProfilePage = () => {
         onSave={handleSaveProfilePicture}
       />
       {/* Personal Information Editor Modal */}
-      <PersonalInfoEditor
-        userData={{
-          email: userProfile.email,
-          phone: userProfile.phone || "",
-          address: userProfile.address || "",
-        }}
-        isOpen={isPersonalInfoEditorOpen}
-        onClose={() => setIsPersonalInfoEditorOpen(false)}
-        onSave={handleSavePersonalInfo}
-      />
+        <PersonalInfoEditor
+          userData={{
+            email: userProfile.email,
+            phone: userProfile.phone || "",
+            address: userProfile.address || "",
+          }}
+          isOpen={isPersonalInfoEditorOpen}
+          onClose={() => setIsPersonalInfoEditorOpen(false)}
+          onSave={handleSavePersonalInfo}
+        />
       {/* About Us Editor Modal */}
       <AboutUsEditor
         currentAbout={userProfile.about || ""}

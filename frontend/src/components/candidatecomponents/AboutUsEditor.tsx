@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css"; // Import Quill styles
 import "../../styles/AboutUsEditor.css";
@@ -17,28 +17,15 @@ interface AboutUsEditorProps {
 // Define modules configuration for React Quill editor
 const modules = {
   toolbar: [
-    // Text formatting options
-    [{ header: [1, 2, 3, false] }], // Header sizes (H1, H2, H3, Normal)
-    ["bold", "italic", "underline", "strike"], // Basic text formatting
-    [{ list: "ordered" }, { list: "bullet" }], // Lists (ordered and bullet)
-
-    // Text alignment
+    [{ header: [1, 2, 3, false] }],
+    ["bold", "italic", "underline", "strike"],
+    [{ list: "ordered" }, { list: "bullet" }],
     [{ align: [] }],
-
-    // Indentation
     [{ indent: "-1" }, { indent: "+1" }],
-
-    // Color options
     [{ color: [] }, { background: [] }],
-
-    // Clean formatting
     ["clean"],
-
-    // Link and image
-    ["link", "image"],
-
-    // Blockquote and code block
-    ["blockquote", "code-block"],
+    ["link"],
+    ["blockquote"],
   ],
 };
 
@@ -56,9 +43,7 @@ const formats = [
   "color",
   "background",
   "link",
-  "image",
   "blockquote",
-  "code-block",
 ];
 
 /**
@@ -77,6 +62,7 @@ const AboutUsEditor: React.FC<AboutUsEditorProps> = ({
 
   // State for loading/saving indicator
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const quillRef = useRef<ReactQuill | null>(null);
 
   // Initialize state when modal opens
   useEffect(() => {
@@ -84,6 +70,14 @@ const AboutUsEditor: React.FC<AboutUsEditorProps> = ({
       // Reset to current about text when modal opens
       setAboutText(currentAbout || "");
       setIsSaving(false);
+
+      // Keep toolbar alignment state in sync with saved content by
+      // moving the selection to the first line after render.
+      setTimeout(() => {
+        const quill = quillRef.current?.getEditor();
+        if (!quill) return;
+        quill.setSelection(0, 0, "api");
+      }, 0);
     }
   }, [isOpen, currentAbout]);
 
@@ -191,6 +185,7 @@ const AboutUsEditor: React.FC<AboutUsEditorProps> = ({
           {/* Rich Text Editor Section */}
           <div className="about-us-editor-wrapper">
             <ReactQuill
+              ref={quillRef}
               theme="snow"
               value={aboutText}
               onChange={handleTextChange}

@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const JobPost = require("../models/jobPostModel");
 const User = require("../models/userModel");
+const AppliedJob = require("../models/appliedJobModel");
 
 const listJobPosts = async (req, res) => {
   try {
@@ -223,6 +224,123 @@ const listJobPosts = async (req, res) => {
   }
 };
 
+const listRecruiterJobPosts = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const recruiter = await User.findById(userId).lean();
+    if (!recruiter || recruiter.role !== "recruiter") {
+      return res.status(403).json({
+        success: false,
+        message: "Only recruiters can access this resource",
+      });
+    }
+
+    const pipeline = [
+      { $match: { recruiterId: new mongoose.Types.ObjectId(userId) } },
+      {
+        $lookup: {
+          from: "appliedjobs",
+          localField: "_id",
+          foreignField: "job",
+          as: "applications",
+        },
+      },
+      {
+        $addFields: {
+          applicantsCount: { $size: "$applications" },
+        },
+      },
+      {
+        $addFields: {
+          statusLabel: {
+            $cond: [
+              {
+                $and: [
+                  { $eq: ["$status", "published"] },
+                  { $eq: ["$isActive", true] },
+                  { $gte: ["$deadline", new Date()] },
+                ],
+              },
+              "Open",
+              "Closed",
+            ],
+          },
+        },
+      },
+      {
+        $project: {
+          applications: 0,
+          __v: 0,
+        },
+      },
+      { $sort: { createdAt: -1 } },
+    ];
+
+    const jobs = await JobPost.aggregate(pipeline);
+
+    res.status(200).json({
+      success: true,
+      jobs,
+    });
+  } catch (error) {
+    console.error("Recruiter job posts error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error fetching recruiter job posts",
+      error: error.message,
+    });
+  }
+};
+
+const updateJobPost = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const recruiter = await User.findById(userId).lean();
+    if (!recruiter || recruiter.role !== "recruiter") {
+      return res.status(403).json({
+        success: false,
+        message: "Only recruiters can update jobs",
+      });
+    }
+
+    const job = await JobPost.findById(id);
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: "Job not found",
+      });
+    }
+
+    if (job.recruiterId.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have permission to update this job",
+      });
+    }
+
+    const updates = { ...req.body };
+    delete updates.recruiterId;
+
+    const updated = await JobPost.findByIdAndUpdate(id, updates, {
+      new: true,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Job updated successfully",
+      jobPost: updated,
+    });
+  } catch (error) {
+    console.error("Update job post error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error updating job post",
+      error: error.message,
+    });
+  }
+};
+
 const getJobPostById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -251,6 +369,7 @@ const getJobPostById = async (req, res) => {
       companyLocation: recruiter.address || "",
       companyAbout: recruiter.about || "",
       department: job.department || "",
+      location: job.location || "",
       jobLevel: job.jobLevel || "",
       jobType: job.jobType || "",
       workMode: job.workMode || "",
@@ -421,4 +540,6 @@ module.exports = {
   createJobPost,
   listJobPosts,
   getJobPostById,
+  listRecruiterJobPosts,
+  updateJobPost,
 };
