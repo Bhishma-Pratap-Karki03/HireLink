@@ -5,93 +5,116 @@
 
 /* Hero Section */
 .employerspublic-hero {
-  background-color: #e7f7ff;
-  height: 360px;
+  background: #fff7f1;
   position: relative;
   overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  padding: 80px 12%;
 }
 
 .employerspublic-hero-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
   width: 100%;
-  max-width: 1440px;
-  height: 100%;
   position: relative;
-  padding: 0 20px;
+  z-index: 1;
 }
 
 .employerspublic-hero-bg-elements {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
+  display: none;
 }
 
 .employerspublic-bg-left {
-  position: absolute;
-  left: -130px;
-  bottom: 0;
-  height: 40%;
+  left: 0;
+  width: 320px;
+  opacity: 0.45;
 }
 
 .employerspublic-bg-right {
-  position: absolute;
-  right: -130px;
-  bottom: 0;
-  height: 60%;
+  right: 0;
+  width: 320px;
+  opacity: 0.45;
 }
 
 .employerspublic-bg-circle {
-  position: absolute;
-  right: -140px;
-  top: -20%;
-  width: 200px;
-  height: 200px;
+  right: 18%;
+  bottom: -40px;
+  width: 140px;
+  opacity: 0.6;
 }
 
 .employerspublic-bg-icon-1 {
-  position: absolute;
-  right: 20%;
-  top: 20%;
-  opacity: 0.15;
-  width: 40px;
+  right: 12%;
+  top: 30%;
+  width: 44px;
+  opacity: 0.8;
 }
 
 .employerspublic-bg-icon-2 {
-  position: absolute;
-  left: 5%;
-  top: 20%;
-  opacity: 0.15;
-  width: 40px;
+  left: 10%;
+  top: 50%;
+  width: 44px;
+  opacity: 0.8;
 }
 
 .employerspublic-hero-content {
-  position: relative;
-  z-index: 1;
-  text-align: center;
+  text-align: left;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-top: 88px;
+  gap: 10px;
 }
 
 .employerspublic-hero-content h1 {
-  font-size: 48px;
+  font-size: 32px;
   font-weight: 700;
-  color: #1e2937;
+  color: #0f283c;
   margin: 0;
   font-family: "Montserrat", sans-serif;
 }
 
 .employerspublic-hero-content p {
-  font-size: 18px;
-  color: rgba(30, 41, 55, 0.84);
   margin: 0;
+  color: #6b7280;
+  font-size: 15px;
   font-family: "Montserrat", sans-serif;
+}
+
+.employerspublic-top-search {
+  margin: -32px 8% 24px;
+  background: #ffffff;
+  padding: 14px 18px;
+  border-radius: 16px;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  position: relative;
+  z-index: 2;
+}
+
+.employerspublic-top-search-inner {
+  width: 100%;
+  border: 1px solid #d7dfea;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.employerspublic-top-search-inner img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.employerspublic-top-search-inner input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: #1e2937;
+  font-family: "Montserrat", sans-serif;
+}
+
+.employerspublic-top-search-inner input::placeholder {
+  color: #87929b;
 }
 
 /* Main Content - FIXED: Reduced padding and moved content to left */
@@ -473,6 +496,8 @@
   display: flex;
   gap: 10px;
   align-items: center;
+  width: 100%;
+  justify-content: center;
 }
 
 .employerspublic-contact-btn {
@@ -489,7 +514,7 @@
   color: #0f283c;
   cursor: pointer;
   box-shadow: 0 8px 14px rgba(15, 23, 42, 0.08);
-  min-width: 120px;
+  min-width: 122px;
   height: 42px;
 }
 
@@ -497,6 +522,28 @@
   width: 20px;
   height: 20px;
   object-fit: contain;
+}
+
+.employerspublic-contact-btn:disabled {
+  cursor: default;
+  box-shadow: 0 6px 10px rgba(15, 23, 42, 0.05);
+}
+
+.employerspublic-contact-btn.is-pending {
+  border-color: #f59e0b;
+  background: #fff8eb;
+  color: #b45309;
+}
+
+.employerspublic-contact-btn.is-friend {
+  border-color: #10b981;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.employerspublic-contact-actions.is-single .employerspublic-contact-btn {
+  min-width: 170px;
+  width: 100%;
 }
 
 
@@ -653,6 +700,15 @@
 }
 
 @media (max-width: 768px) {
+  .employerspublic-hero {
+    padding: 60px 6%;
+  }
+
+  .employerspublic-top-search {
+    margin: -24px 6% 20px;
+    padding: 14px;
+  }
+
   .employerspublic-company-grid {
     grid-template-columns: 1fr;
   }
@@ -674,6 +730,11 @@
 }
 
 @media (max-width: 600px) {
+  .employerspublic-top-search-inner {
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+
   .employerspublic-hero-content h1 {
     font-size: 36px;
   }
@@ -690,6 +751,16 @@
 
   .employerspublic-content-container {
     padding: 0 10px; /* Further reduced */
+  }
+}
+
+@media (max-width: 1100px) {
+  .employerspublic-hero {
+    padding: 70px 8%;
+  }
+
+  .employerspublic-top-search {
+    margin: -28px 8% 20px;
   }
 }
 

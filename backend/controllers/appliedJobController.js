@@ -344,3 +344,73 @@ exports.updateApplicationStatus = async (req, res) => {
     });
   }
 };
+
+exports.getMyApplications = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const applications = await AppliedJob.find({ candidate: userId })
+      .populate({
+        path: "job",
+        select: "jobTitle location jobType recruiterId",
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const recruiterIds = [
+      ...new Set(
+        applications
+          .map((item) => item?.job?.recruiterId?.toString())
+          .filter(Boolean),
+      ),
+    ];
+
+    const recruiters = await User.find(
+      { _id: { $in: recruiterIds } },
+      "fullName profilePicture",
+    ).lean();
+
+    const recruiterMap = new Map(
+      recruiters.map((item) => [item._id.toString(), item]),
+    );
+
+    const mapped = applications.map((item) => {
+      const recruiterId = item?.job?.recruiterId?.toString() || "";
+      const recruiter = recruiterMap.get(recruiterId);
+
+      return {
+        id: item._id,
+        jobId: item.job?._id || item.job,
+        jobTitle: item.jobTitle || item?.job?.jobTitle || "Untitled Role",
+        companyName: item.companyName || recruiter?.fullName || "Company",
+        location: item?.job?.location || "Location not specified",
+        jobType: item?.job?.jobType || "Job type not specified",
+        appliedAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        status: item.status || "submitted",
+        resumeUrl: item.resumeUrl || "",
+        resumeFileName: item.resumeFileName || "",
+        resumeFileSize: item.resumeFileSize || 0,
+        recruiter: recruiterId
+          ? {
+              id: recruiterId,
+              fullName: recruiter?.fullName || "Recruiter",
+              profilePicture: recruiter?.profilePicture || "",
+            }
+          : null,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      applications: mapped,
+    });
+  } catch (error) {
+    console.error("Get my applications error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error fetching your applications",
+      error: error.message,
+    });
+  }
+};

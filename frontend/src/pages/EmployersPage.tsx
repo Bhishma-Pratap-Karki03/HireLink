@@ -22,7 +22,10 @@ import heroCircle from "../images/Employers Page Images/8_205.svg";
 import heroIcon1 from "../images/Employers Page Images/8_208.svg";
 import heroIcon2 from "../images/Employers Page Images/8_209.svg";
 import connectIcon from "../images/Employers Page Images/connect-icon.png";
+import pendingIcon from "../images/Employers Page Images/pending-icon.png";
+import friendIcon from "../images/Employers Page Images/friend-icon.png";
 import messageIcon from "../images/Employers Page Images/message-icon.png";
+import viewProfileIcon from "../images/Employers Page Images/view-profile-icon.png";
 
 // Import default logo for companies without logo
 import defaultLogo from "../images/Register Page Images/Default Profile.webp";
@@ -39,6 +42,8 @@ interface Company {
   foundedYear?: string;
   websiteUrl?: string;
 }
+
+type ConnectionState = "none" | "pending" | "friend";
 
 const EmployersPage = () => {
   // State for UI controls
@@ -75,6 +80,7 @@ const EmployersPage = () => {
   const [sortBy, setSortBy] = useState("");
   const [page, setPage] = useState(1);
   const perPage = 20;
+  const [quickSearch, setQuickSearch] = useState("");
 
   const [searchCompanyName, setSearchCompanyName] = useState("");
   const [searchLocation, setSearchLocation] = useState("");
@@ -89,6 +95,16 @@ const EmployersPage = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [connectionStatuses, setConnectionStatuses] = useState<
+    Record<string, ConnectionState>
+  >({});
+  const [sendingConnectionId, setSendingConnectionId] = useState<string | null>(
+    null
+  );
+  const userDataStr = localStorage.getItem("userData");
+  const currentUser = userDataStr ? JSON.parse(userDataStr) : null;
+  const currentUserId =
+    currentUser?.id || currentUser?._id || currentUser?.userId || "";
 
   // Function to fetch companies from backend
   const fetchCompanies = async () => {
@@ -146,6 +162,115 @@ const EmployersPage = () => {
     fetchCompanies();
   }, []);
 
+  useEffect(() => {
+    const fetchConnectionStatuses = async () => {
+      const token = localStorage.getItem("authToken");
+      const role = currentUser?.role;
+      const isAllowed = role === "candidate" || role === "recruiter";
+
+      if (!token || !isAllowed) {
+        setConnectionStatuses({});
+        return;
+      }
+
+      const targetIds = companies
+        .map((company) => company.id)
+        .filter((id) => Boolean(id) && id !== currentUserId);
+      if (targetIds.length === 0) {
+        setConnectionStatuses({});
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `http://localhost:5000/api/connections/statuses?targetIds=${targetIds.join(",")}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        const data = await res.json();
+        if (!res.ok) return;
+        setConnectionStatuses(
+          (data.statuses || {}) as Record<string, ConnectionState>
+        );
+      } catch {
+        setConnectionStatuses({});
+      }
+    };
+
+    fetchConnectionStatuses();
+  }, [companies, currentUser?.role, currentUserId]);
+
+  const handleSendConnection = async (targetUserId: string) => {
+    const token = localStorage.getItem("authToken");
+    const role = currentUser?.role;
+    const isAllowed = role === "candidate" || role === "recruiter";
+
+    if (!token || !isAllowed) {
+      navigate("/login");
+      return;
+    }
+
+    if (
+      !targetUserId ||
+      targetUserId === currentUserId ||
+      sendingConnectionId ||
+      (connectionStatuses[targetUserId] || "none") !== "none"
+    ) {
+      return;
+    }
+
+    try {
+      setSendingConnectionId(targetUserId);
+      const res = await fetch("http://localhost:5000/api/connections/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ recipientId: targetUserId }),
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+
+      const nextState: ConnectionState =
+        data.status === "accepted" ? "friend" : "pending";
+      setConnectionStatuses((prev) => ({
+        ...prev,
+        [targetUserId]: nextState,
+      }));
+    } finally {
+      setSendingConnectionId(null);
+    }
+  };
+
+  const getConnectionLabel = (targetUserId: string) => {
+    const status = connectionStatuses[targetUserId] || "none";
+    if (status === "friend") return "Friend";
+    if (status === "pending") return "Pending";
+    return "Connect";
+  };
+
+  const getConnectionIcon = (targetUserId: string) => {
+    const status = connectionStatuses[targetUserId] || "none";
+    if (status === "friend") return friendIcon;
+    if (status === "pending") return pendingIcon;
+    return connectIcon;
+  };
+
+  const openMessages = (targetUserId: string) => {
+    const token = localStorage.getItem("authToken");
+    const role = currentUser?.role;
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    if (!targetUserId || (role !== "candidate" && role !== "recruiter")) {
+      return;
+    }
+    navigate(`/${role}/messages?user=${targetUserId}`);
+  };
+
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
       ...prev,
@@ -170,6 +295,7 @@ const EmployersPage = () => {
   };
 
   const clearFilters = () => {
+    setQuickSearch("");
     setSearchCompanyName("");
     setSearchLocation("");
     setSearchCategory("");
@@ -183,6 +309,11 @@ const EmployersPage = () => {
   };
 
   const filteredCompanies = companies.filter((company) => {
+    const quickMatch = quickSearch
+      ? `${company.name} ${company.location}`
+          .toLowerCase()
+          .includes(quickSearch.toLowerCase())
+      : true;
     const nameMatch = appliedFilters.companyName
       ? company.name
           .toLowerCase()
@@ -198,7 +329,7 @@ const EmployersPage = () => {
           .toLowerCase()
           .includes(appliedFilters.category.toLowerCase())
       : true;
-    return nameMatch && locationMatch && categoryMatch;
+    return quickMatch && nameMatch && locationMatch && categoryMatch;
   });
 
   const sortedCompanies = [...filteredCompanies].sort((a, b) => {
@@ -290,6 +421,21 @@ const EmployersPage = () => {
             <h1>Company</h1>
             <p>Find you desire company and get your dream job</p>
           </div>
+        </div>
+      </section>
+
+      <section className="employerspublic-top-search">
+        <div className="employerspublic-top-search-inner">
+          <img src={searchIcon} alt="Search" />
+          <input
+            type="text"
+            placeholder="Search by company name or location"
+            value={quickSearch}
+            onChange={(e) => {
+              setQuickSearch(e.target.value);
+              setPage(1);
+            }}
+          />
         </div>
       </section>
 
@@ -817,7 +963,23 @@ const EmployersPage = () => {
               <>
                 <div className="employerspublic-company-grid">
                   {paginatedCompanies.length > 0 ? (
-                    paginatedCompanies.map((company) => (
+                    paginatedCompanies.map((company) => {
+                      const companyStatus = connectionStatuses[company.id] || "none";
+                      const statusClass =
+                        companyStatus === "friend"
+                          ? "is-friend"
+                          : companyStatus === "pending"
+                            ? "is-pending"
+                            : "";
+                      const isDisabled =
+                        !company.id ||
+                        company.id === currentUserId ||
+                        sendingConnectionId === company.id ||
+                        companyStatus !== "none";
+                      const isSelfCard =
+                        Boolean(currentUserId) && company.id === currentUserId;
+
+                      return (
                       <article
                         key={company.id}
                         className="employerspublic-company-card"
@@ -862,27 +1024,59 @@ const EmployersPage = () => {
                             </div>
                           </div>
                           <div className="employerspublic-card-footer">
-                            <div className="employerspublic-contact-actions">
-                              <button
-                                type="button"
-                                className="employerspublic-contact-btn"
-                              title="Send connection request"
-                            >
-                              <img src={connectIcon} alt="Connect" />
-                              <span>Connect</span>
-                            </button>
-                            <button
-                              type="button"
-                              className="employerspublic-contact-btn"
-                              title="Message"
-                              >
-                                <img src={messageIcon} alt="Message" />
-                                <span>Message</span>
-                              </button>
+                            <div className={`employerspublic-contact-actions ${isSelfCard ? "is-single" : ""}`}>
+                              {isSelfCard ? (
+                                <button
+                                  type="button"
+                                  className="employerspublic-contact-btn"
+                                  title="View profile"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    navigate(`/employer/${company.id}`);
+                                  }}
+                                  onMouseDown={(event) => event.stopPropagation()}
+                                >
+                                  <img src={viewProfileIcon} alt="View profile" />
+                                  <span>View Profile</span>
+                                </button>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    className={`employerspublic-contact-btn ${statusClass}`}
+                                    title="Send connection request"
+                                    disabled={isDisabled}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleSendConnection(company.id);
+                                    }}
+                                    onMouseDown={(event) => event.stopPropagation()}
+                                  >
+                                    <img
+                                      src={getConnectionIcon(company.id)}
+                                      alt={getConnectionLabel(company.id)}
+                                    />
+                                    <span>{getConnectionLabel(company.id)}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="employerspublic-contact-btn"
+                                    title="Message"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      openMessages(company.id);
+                                    }}
+                                  >
+                                    <img src={messageIcon} alt="Message" />
+                                    <span>Message</span>
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </div>
                       </article>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="employerspublic-no-data">
                       <p>No companies found in the database.</p>

@@ -20,6 +20,21 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ADMIN_EMAIL = "hirelinknp@gmail.com";
 
 class PasswordService {
+  validatePasswordStrength(password) {
+    if (password.length < 8) {
+      throw new Error("Password must be at least 8 characters long");
+    }
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password)) {
+      throw new Error("Password must contain upper and lower case letters");
+    }
+    if (!/[0-9]/.test(password)) {
+      throw new Error("Password must contain at least one number");
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      throw new Error("Password must contain at least one special character");
+    }
+  }
+
   // Initiate password reset process for a user
   async requestPasswordReset(email) {
     // Validate email is provided
@@ -145,19 +160,7 @@ class PasswordService {
       throw new Error("User not found");
     }
 
-    // Validate password strength requirements
-    if (newPassword.length < 8) {
-      throw new Error("Password must be at least 8 characters long");
-    }
-    if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword)) {
-      throw new Error("Password must contain upper and lower case letters");
-    }
-    if (!/[0-9]/.test(newPassword)) {
-      throw new Error("Password must contain at least one number");
-    }
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)) {
-      throw new Error("Password must contain at least one special character");
-    }
+    this.validatePasswordStrength(newPassword);
 
     // Check if new password is different from old password
     const isSamePassword = await bcrypt.compare(newPassword, user.password);
@@ -216,6 +219,41 @@ class PasswordService {
       success: true,
       message: "New reset code sent to your email.",
       expiresAt: resetCodeExpires,
+    };
+  }
+
+  async changePassword(userId, currentPassword, newPassword) {
+    if (!userId || !currentPassword || !newPassword) {
+      throw new Error("Current password and new password are required");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password,
+    );
+    if (!isCurrentPasswordValid) {
+      throw new Error("Current password is incorrect");
+    }
+
+    this.validatePasswordStrength(newPassword);
+
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      throw new Error("New password cannot be the same as the old password");
+    }
+
+    user.password = newPassword;
+    await user.save();
+    await sendPasswordChangedEmail(user.email, user.fullName);
+
+    return {
+      success: true,
+      message: "Password changed successfully.",
     };
   }
 }

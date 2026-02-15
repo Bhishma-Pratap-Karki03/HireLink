@@ -18,6 +18,8 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const jobPostRoutes = require("./routes/jobPostRoutes");
 const assessmentRoutes = require("./routes/assessmentRoutes");
 const recruiterAssessmentRoutes = require("./routes/recruiterAssessmentRoutes");
+const connectionRequestRoutes = require("./routes/connectionRequestRoutes");
+const messageRoutes = require("./routes/messageRoutes");
 
 // CORS configuration
 const allowedOrigins = process.env.CLIENT_URL
@@ -62,6 +64,8 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/jobs", jobPostRoutes);
 app.use("/api/assessments", assessmentRoutes);
 app.use("/api/recruiter-assessments", recruiterAssessmentRoutes);
+app.use("/api/connections", connectionRequestRoutes);
+app.use("/api/messages", messageRoutes);
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({

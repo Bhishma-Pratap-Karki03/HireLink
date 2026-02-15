@@ -2,6 +2,7 @@
 
 const express = require("express");
 const router = express.Router();
+const { protect } = require("../middleware/authMiddleware");
 
 // Import the change password controller
 const changePasswordController = require("../controllers/changePasswordController");
@@ -17,5 +18,8 @@ router.post("/reset", changePasswordController.resetPassword);
 
 // POST /api/password/resend-code - Resend reset code
 router.post("/resend-code", changePasswordController.resendResetCode);
+
+// POST /api/password/change - Change password for logged-in user
+router.post("/change", protect, changePasswordController.changePassword);
 
 module.exports = router;

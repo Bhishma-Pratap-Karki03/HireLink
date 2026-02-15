@@ -7,6 +7,7 @@ const router = express.Router();
 const upload = createDirectDocumentUpload("appliedresume", 5);
 
 router.get("/status/:jobId", protect, appliedJobController.checkApplied);
+router.get("/mine", protect, appliedJobController.getMyApplications);
 router.get("/job/:jobId", protect, appliedJobController.getApplicationsByJob);
 router.patch(
   "/:applicationId/status",

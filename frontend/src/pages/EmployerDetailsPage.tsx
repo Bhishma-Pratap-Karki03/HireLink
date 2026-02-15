@@ -41,6 +41,10 @@ import starEmpty from "../images/Employers Page Images/unfilled stars.svg";
 import facebookIcon from "../images/Employers Page Images/Facebook.png";
 import linkedinIcon from "../images/Employers Page Images/Linkedin.png";
 import instagramIcon from "../images/Employers Page Images/Instagram icon.jpg";
+import connectIcon from "../images/Employers Page Images/connect-icon.png";
+import pendingIcon from "../images/Employers Page Images/pending-icon.png";
+import friendIcon from "../images/Employers Page Images/friend-icon.png";
+import messageIcon from "../images/Employers Page Images/message-icon.png";
 
 // Review illustration
 import reviewIllustration from "../images/Employers Page Images/3af141ed608258860f6993ff7346ee87372d5fb8.png";
@@ -96,6 +100,8 @@ interface Review {
   reviewerAvatar: string;
 }
 
+type ConnectionState = "none" | "pending" | "friend";
+
 const EmployerDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -126,6 +132,15 @@ const EmployerDetailsPage = () => {
   const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [isCheckingReview, setIsCheckingReview] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [connectionStatus, setConnectionStatus] =
+    useState<ConnectionState>("none");
+  const [sendingConnection, setSendingConnection] = useState(false);
+  const userDataStr = localStorage.getItem("userData");
+  const currentUser = userDataStr ? JSON.parse(userDataStr) : null;
+  const currentUserId =
+    currentUser?.id || currentUser?._id || currentUser?.userId || "";
+  const isAllowedRole =
+    currentUser?.role === "candidate" || currentUser?.role === "recruiter";
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
@@ -336,6 +351,33 @@ const EmployerDetailsPage = () => {
     }
   }, [isLoggedIn, id]);
 
+  useEffect(() => {
+    const fetchConnectionStatus = async () => {
+      if (!company?.id || !currentUserId || company.id === currentUserId) return;
+      if (!isAllowedRole) return;
+
+      const token = localStorage.getItem("authToken");
+      if (!token) return;
+
+      try {
+        const res = await fetch(
+          `http://localhost:5000/api/connections/statuses?targetIds=${company.id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        const data = await res.json();
+        if (!res.ok) return;
+        const next = (data?.statuses?.[company.id] || "none") as ConnectionState;
+        setConnectionStatus(next);
+      } catch {
+        setConnectionStatus("none");
+      }
+    };
+
+    fetchConnectionStatus();
+  }, [company?.id, currentUserId, isAllowedRole]);
+
   const toggleSave = () => {
     setIsSaved(!isSaved);
   };
@@ -376,7 +418,47 @@ const EmployerDetailsPage = () => {
   };
 
   const handleSendMessage = () => {
-    console.log("Send message to company:", company?.id);
+    if (!company?.id) return;
+
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    if (!isAllowedRole) return;
+    const role = currentUser?.role;
+    if (role !== "candidate" && role !== "recruiter") return;
+
+    navigate(`/${role}/messages?user=${company.id}`);
+  };
+
+  const handleSendConnection = async () => {
+    if (!company?.id || !isAllowedRole || company.id === currentUserId) return;
+
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    if (sendingConnection || connectionStatus !== "none") return;
+
+    try {
+      setSendingConnection(true);
+      const res = await fetch("http://localhost:5000/api/connections/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ recipientId: company.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+      setConnectionStatus(data.status === "accepted" ? "friend" : "pending");
+    } finally {
+      setSendingConnection(false);
+    }
   };
 
   const handleExploreMore = () => {
@@ -751,6 +833,20 @@ const EmployerDetailsPage = () => {
     setShowReviewForm(true);
   };
 
+  const isSelfProfile = Boolean(company?.id && company.id === currentUserId);
+  const connectionLabel =
+    connectionStatus === "friend"
+      ? "Friend"
+      : connectionStatus === "pending"
+        ? "Pending"
+        : "Connect";
+  const connectionActionIcon =
+    connectionStatus === "friend"
+      ? friendIcon
+      : connectionStatus === "pending"
+        ? pendingIcon
+        : connectIcon;
+
   return (
     <div className="employer-details-page">
       <Navbar />
@@ -802,6 +898,33 @@ const EmployerDetailsPage = () => {
                     <h1>{company.name}</h1>
                     <p>Find your dream job at {company.name}</p>
                   </div>
+                  {!isSelfProfile && isAllowedRole && (
+                    <div className="employer-details-hero-actions">
+                      <button
+                        type="button"
+                        className={`employer-details-hero-btn ${
+                          connectionStatus === "pending"
+                            ? "is-pending"
+                            : connectionStatus === "friend"
+                              ? "is-friend"
+                              : ""
+                        }`}
+                        disabled={sendingConnection || connectionStatus !== "none"}
+                        onClick={handleSendConnection}
+                      >
+                        <img src={connectionActionIcon} alt={connectionLabel} />
+                        <span>{connectionLabel}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="employer-details-hero-btn"
+                        onClick={handleSendMessage}
+                      >
+                        <img src={messageIcon} alt="Message" />
+                        <span>Message</span>
+                      </button>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
@@ -1485,3 +1608,4 @@ const EmployerDetailsPage = () => {
 };
 
 export default EmployerDetailsPage;
+

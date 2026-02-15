@@ -291,6 +291,15 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
     closeMobileMenu();
   };
 
+  const handleSavedJobsClick = () => {
+    if (isCandidate && !isAdminUser) {
+      navigate("/candidate/saved-jobs");
+    }
+    closeMobileMenu();
+    setIsUserMenuOpen(false);
+    setIsMobileUserDropdownOpen(false);
+  };
+
   // Determine if user is recruiter
   const isRecruiter = userData?.role === "recruiter";
   const isCandidate = userData?.role === "candidate";
@@ -304,7 +313,11 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
       <>
         {showCandidateIcons && (
           <>
-            <button className="action-icon" title="Bookmarks">
+            <button
+              className="action-icon"
+              title="Saved Jobs"
+              onClick={handleSavedJobsClick}
+            >
               <img src={bookmarkIcon} alt="Bookmark" />
             </button>
             <button className="action-icon" title="Notifications">
@@ -393,14 +406,14 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
         {showCandidateIcons && (
           <>
             <li>
-              <a
-                href="#"
+              <button
+                type="button"
                 className="mobile-action-icon"
-                onClick={closeMobileMenu}
+                onClick={handleSavedJobsClick}
               >
                 <img src={bookmarkIcon} alt="Bookmark" />
                 Bookmarks
-              </a>
+              </button>
             </li>
             <li>
               <a

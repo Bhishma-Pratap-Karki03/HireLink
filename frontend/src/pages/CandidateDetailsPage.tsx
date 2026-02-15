@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../styles/CandidateDetailsPage.css";
@@ -13,6 +13,10 @@ import projectImage from "../images/Candidate Profile Page Images/project-image.
 import arrowIcon from "../images/Candidate Profile Page Images/267_1325.svg";
 import starIcon from "../images/Candidate Profile Page Images/star-icon.svg";
 import emptyStarIcon from "../images/Candidate Profile Page Images/empty-star-icon.png";
+import connectIcon from "../images/Employers Page Images/connect-icon.png";
+import pendingIcon from "../images/Employers Page Images/pending-icon.png";
+import friendIcon from "../images/Employers Page Images/friend-icon.png";
+import messageIcon from "../images/Employers Page Images/message-icon.png";
 
 type Skill = {
   skillName: string;
@@ -80,6 +84,8 @@ type CandidateProfile = {
   projects?: Project[];
 };
 
+type ConnectionState = "none" | "pending" | "friend";
+
 const formatDate = (value?: string | null) => {
   if (!value) return "";
   const date = new Date(value);
@@ -140,9 +146,18 @@ const renderLanguageStars = (rating = 0) => {
 
 const CandidateDetailsPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionState>("none");
+  const [sendingConnection, setSendingConnection] = useState(false);
+  const userDataStr = localStorage.getItem("userData");
+  const currentUser = userDataStr ? JSON.parse(userDataStr) : null;
+  const currentUserId =
+    currentUser?.id || currentUser?._id || currentUser?.userId || "";
+  const isAllowedRole =
+    currentUser?.role === "candidate" || currentUser?.role === "recruiter";
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -166,6 +181,85 @@ const CandidateDetailsPage = () => {
     fetchProfile();
   }, [id]);
 
+  useEffect(() => {
+    const fetchConnectionStatus = async () => {
+      if (!profile?.id || !currentUserId || profile.id === currentUserId) return;
+      if (!isAllowedRole) return;
+
+      const token = localStorage.getItem("authToken");
+      if (!token) return;
+
+      try {
+        const res = await fetch(
+          `http://localhost:5000/api/connections/statuses?targetIds=${profile.id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        const data = await res.json();
+        if (!res.ok) return;
+        const next = (data?.statuses?.[profile.id] || "none") as ConnectionState;
+        setConnectionStatus(next);
+      } catch {
+        setConnectionStatus("none");
+      }
+    };
+
+    fetchConnectionStatus();
+  }, [profile?.id, currentUserId, isAllowedRole]);
+
+  const handleSendConnection = async () => {
+    if (!profile?.id || !isAllowedRole || profile.id === currentUserId) return;
+
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+    if (sendingConnection || connectionStatus !== "none") return;
+
+    try {
+      setSendingConnection(true);
+      const res = await fetch("http://localhost:5000/api/connections/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ recipientId: profile.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+      setConnectionStatus(data.status === "accepted" ? "friend" : "pending");
+    } finally {
+      setSendingConnection(false);
+    }
+  };
+
+  const connectionLabel =
+    connectionStatus === "friend"
+      ? "Friend"
+      : connectionStatus === "pending"
+        ? "Pending"
+        : "Connect";
+  const connectionIcon =
+    connectionStatus === "friend"
+      ? friendIcon
+      : connectionStatus === "pending"
+        ? pendingIcon
+        : connectIcon;
+  const isSelfProfile = Boolean(profile?.id && profile.id === currentUserId);
+
+  const handleOpenMessages = () => {
+    if (!profile?.id) return;
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    if (!isAllowedRole) return;
+    const role = currentUser?.role;
+    if (role !== "candidate" && role !== "recruiter") return;
+    navigate(`/${role}/messages?user=${profile.id}`);
+  };
+
   return (
     <div className="candidate-details-page">
       <Navbar />
@@ -179,21 +273,50 @@ const CandidateDetailsPage = () => {
         <div className="candidate-details-hero-inner">
           {profile && (
             <div className="candidate-details-hero-card">
-              <img
-                src={resolveAvatar(profile.profilePicture)}
-                alt={profile.fullName}
-                className="candidate-details-avatar"
-              />
-              <div>
-                <h1>{profile.fullName}</h1>
-                <p>{profile.currentJobTitle || "Candidate"}</p>
-                <span>{profile.address || "Location not specified"}</span>
-                {profile.email && (
-                  <div className="candidate-details-email">
-                    {profile.email}
-                  </div>
-                )}
+              <div className="candidate-details-hero-main">
+                <img
+                  src={resolveAvatar(profile.profilePicture)}
+                  alt={profile.fullName}
+                  className="candidate-details-avatar"
+                />
+                <div>
+                  <h1>{profile.fullName}</h1>
+                  <p>{profile.currentJobTitle || "Candidate"}</p>
+                  <span>{profile.address || "Location not specified"}</span>
+                  {profile.email && (
+                    <div className="candidate-details-email">
+                      {profile.email}
+                    </div>
+                  )}
+                </div>
               </div>
+              {!isSelfProfile && isAllowedRole && (
+                <div className="candidate-details-connect-actions">
+                  <button
+                    type="button"
+                    className={`candidate-details-connect-btn ${
+                      connectionStatus === "pending"
+                        ? "is-pending"
+                        : connectionStatus === "friend"
+                          ? "is-friend"
+                          : ""
+                    }`}
+                    disabled={sendingConnection || connectionStatus !== "none"}
+                    onClick={handleSendConnection}
+                  >
+                    <img src={connectionIcon} alt={connectionLabel} />
+                    <span>{connectionLabel}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="candidate-details-connect-btn"
+                    onClick={handleOpenMessages}
+                  >
+                    <img src={messageIcon} alt="Message" />
+                    <span>Message</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
           {loading && <div className="candidate-details-state">Loading...</div>}
@@ -467,3 +590,4 @@ const CandidateDetailsPage = () => {
 };
 
 export default CandidateDetailsPage;
+

@@ -13,6 +13,7 @@ import messagesIcon from "../../images/Recruiter Profile Page Images/6_317.svg";
 import candidatesIcon from "../../images/Recruiter Profile Page Images/6_323.svg";
 import scannerIcon from "../../images/Recruiter Profile Page Images/6_329.svg";
 import settingsIcon from "../../images/Recruiter Profile Page Images/6_335.svg";
+import friendRequestsIcon from "../../images/Recruiter Profile Page Images/friend-request.svg";
 
 interface UserData {
   id: string;
@@ -82,11 +83,11 @@ const RecruiterSidebar: React.FC<RecruiterSidebarProps> = ({
               ? "&"
               : "?";
             setProfileImage(
-              `${data.user.profilePicture}${separator}t=${Date.now()}`
+              `${data.user.profilePicture}${separator}t=${Date.now()}`,
             );
           } else {
             setProfileImage(
-              `http://localhost:5000${data.user.profilePicture}?t=${Date.now()}`
+              `http://localhost:5000${data.user.profilePicture}?t=${Date.now()}`,
             );
           }
         } else {
@@ -173,6 +174,12 @@ const RecruiterSidebar: React.FC<RecruiterSidebarProps> = ({
       path: "/recruiter/scanner",
       label: "ATS Scanner",
       icon: scannerIcon,
+    },
+    {
+      id: "friend-requests",
+      path: "/recruiter/friend-requests",
+      label: "Friend Requests",
+      icon: friendRequestsIcon,
     },
     {
       id: "settings",
@@ -275,6 +282,9 @@ const RecruiterSidebar: React.FC<RecruiterSidebarProps> = ({
                 src={item.icon}
                 alt={item.label}
                 className="recruiter-nav-icon"
+                onError={(e) => {
+                  e.currentTarget.src = messagesIcon;
+                }}
               />
               <span>{item.label}</span>
             </Link>

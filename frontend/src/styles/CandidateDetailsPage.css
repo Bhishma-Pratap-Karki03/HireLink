@@ -11,10 +11,7 @@
 }
 
 .candidate-details-bg {
-  position: absolute;
-  top: 0;
-  width: 320px;
-  opacity: 0.45;
+  display: none;
 }
 
 .candidate-details-bg.left {
@@ -26,17 +23,11 @@
 }
 
 .candidate-details-circle {
-  position: absolute;
-  right: 18%;
-  bottom: -40px;
-  width: 140px;
-  opacity: 0.6;
+  display: none;
 }
 
 .candidate-details-icon {
-  position: absolute;
-  width: 44px;
-  opacity: 0.8;
+  display: none;
 }
 
 .candidate-details-icon.icon-1 {
@@ -62,8 +53,16 @@
   padding: 24px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 18px;
   box-shadow: 0 18px 30px rgba(15, 23, 42, 0.12);
+}
+
+.candidate-details-hero-main {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
 }
 
 .candidate-details-avatar {
@@ -76,7 +75,7 @@
 
 .candidate-details-hero-card h1 {
   margin: 0;
-  font-size: 28px;
+  font-size: 22px;
   color: #0f283c;
 }
 
@@ -86,7 +85,7 @@
   font-size: 15px;
 }
 
-.candidate-details-hero-card span {
+.candidate-details-hero-main > div > span {
   display: block;
   margin-top: 8px;
   color: #2563eb;
@@ -98,6 +97,63 @@
   font-weight: 600;
   color: #0f283c;
   font-size: 14px;
+}
+
+.candidate-details-connect-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.candidate-details-connect-btn {
+  border: 1px solid #d7e0ef;
+  background: #ffffff;
+  border-radius: 12px;
+  height: 42px;
+  min-width: 140px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f283c;
+  box-shadow: 0 8px 14px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+}
+
+.candidate-details-connect-btn img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
+}
+
+.candidate-details-connect-btn span {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  color: inherit;
+  line-height: 1;
+}
+
+.candidate-details-connect-btn:disabled {
+  cursor: default;
+  box-shadow: 0 6px 10px rgba(15, 23, 42, 0.05);
+}
+
+.candidate-details-connect-btn.is-pending {
+  border-color: #f59e0b;
+  background: #fff8eb;
+  color: #b45309;
+}
+
+.candidate-details-connect-btn.is-friend {
+  border-color: #10b981;
+  background: #ecfdf5;
+  color: #047857;
 }
 
 .candidate-details-state {
@@ -481,6 +537,16 @@
   .candidate-details-hero-card {
     flex-direction: column;
     text-align: center;
+  }
+
+  .candidate-details-hero-main {
+    flex-direction: column;
+  }
+
+  .candidate-details-connect-actions {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
   }
 
   .candidate-project-item {

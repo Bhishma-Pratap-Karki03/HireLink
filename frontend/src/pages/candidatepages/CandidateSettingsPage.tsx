@@ -1,0 +1,21 @@
+import CandidateSidebar from "../../components/candidatecomponents/CandidateSidebar";
+import CandidateTopBar from "../../components/candidatecomponents/CandidateTopBar";
+import SettingsContent from "../../components/settings/SettingsContent";
+import "../../styles/SettingsPage.css";
+
+const CandidateSettingsPage = () => {
+  return (
+    <div className="candidate-dashboard-container">
+      <CandidateSidebar />
+      <main className="candidate-settings-main">
+        <CandidateTopBar />
+        <SettingsContent
+          title="Settings"
+          subtitle="Update your password and manage your account access."
+        />
+      </main>
+    </div>
+  );
+};
+
+export default CandidateSettingsPage;

@@ -415,6 +415,12 @@
   padding: 16px 20px;
   color: #0f283c;
   text-decoration: none;
+  width: 100%;
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
 }
 
 .mobile-menu-list .mobile-action-icon img {

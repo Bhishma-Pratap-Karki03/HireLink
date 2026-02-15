@@ -37,6 +37,14 @@ import AssessmentPreviewPage from "./pages/AssessmentPreviewPage";
 import AdminAssessmentCreatePage from "./pages/adminpages/AdminAssessmentCreatePage";
 import AdminAssessmentEditPage from "./pages/adminpages/AdminAssessmentEditPage";
 import AdminAssessmentsPage from "./pages/adminpages/AdminAssessmentsPage";
+import CandidateFriendRequestsPage from "./pages/candidatepages/CandidateFriendRequestsPage";
+import RecruiterFriendRequestsPage from "./pages/recruiterpages/RecruiterFriendRequestsPage";
+import CandidateMessagesPage from "./pages/candidatepages/CandidateMessagesPage";
+import RecruiterMessagesPage from "./pages/recruiterpages/RecruiterMessagesPage";
+import CandidateAppliedStatusPage from "./pages/candidatepages/CandidateAppliedStatusPage";
+import CandidateSettingsPage from "./pages/candidatepages/CandidateSettingsPage";
+import RecruiterSettingsPage from "./pages/recruiterpages/RecruiterSettingsPage";
+import AdminSettingsPage from "./pages/adminpages/AdminSettingsPage";
 import "./App.css";
 
 // Protected Route Component
@@ -327,11 +335,7 @@ function App() {
           path="/admin/settings"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <div style={{ padding: "20px" }}>
-                <h1>Admin Settings</h1>
-                <p>Admin settings page coming soon</p>
-                <p>This page will allow you to configure system settings.</p>
-              </div>
+              <AdminSettingsPage />
             </ProtectedRoute>
           }
         />
@@ -419,10 +423,7 @@ function App() {
           path="/recruiter/settings"
           element={
             <ProtectedRoute allowedRoles={["recruiter"]}>
-              <div style={{ padding: "20px" }}>
-                <h1>Settings</h1>
-                <p>Settings page coming soon</p>
-              </div>
+              <RecruiterSettingsPage />
             </ProtectedRoute>
           }
         />
@@ -454,10 +455,15 @@ function App() {
           path="/recruiter/messages"
           element={
             <ProtectedRoute allowedRoles={["recruiter"]}>
-              <div style={{ padding: "20px" }}>
-                <h1>Messages</h1>
-                <p>Messages page coming soon</p>
-              </div>
+              <RecruiterMessagesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recruiter/friend-requests"
+          element={
+            <ProtectedRoute allowedRoles={["recruiter"]}>
+              <RecruiterFriendRequestsPage />
             </ProtectedRoute>
           }
         />
@@ -494,10 +500,7 @@ function App() {
           path="/candidate/messages"
           element={
             <ProtectedRoute allowedRoles={["candidate"]}>
-              <div style={{ padding: "20px" }}>
-                <h1>Messages</h1>
-                <p>Messages page coming soon</p>
-              </div>
+              <CandidateMessagesPage />
             </ProtectedRoute>
           }
         />
@@ -521,13 +524,26 @@ function App() {
           }
         />
         <Route
+          path="/candidate/applied-status"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <CandidateAppliedStatusPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/candidate/friend-requests"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <CandidateFriendRequestsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/candidate/settings"
           element={
             <ProtectedRoute allowedRoles={["candidate"]}>
-              <div style={{ padding: "20px" }}>
-                <h1>Settings</h1>
-                <p>Settings page coming soon</p>
-              </div>
+              <CandidateSettingsPage />
             </ProtectedRoute>
           }
         />

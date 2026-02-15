@@ -170,3 +170,46 @@ exports.resendResetCode = async (req, res, next) => {
     next(error);
   }
 };
+
+// Handle authenticated password change
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    const result = await passwordService.changePassword(
+      req.user?.id,
+      currentPassword,
+      newPassword,
+    );
+
+    res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    console.error("Change password error:", error);
+
+    if (
+      error.message.includes("required") ||
+      error.message.includes("incorrect") ||
+      error.message.includes("must be") ||
+      error.message.includes("cannot be the same")
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+        code: "VALIDATION_ERROR",
+      });
+    }
+
+    if (error.message.includes("User not found")) {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+        code: "USER_NOT_FOUND",
+      });
+    }
+
+    next(error);
+  }
+};

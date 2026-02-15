@@ -13,6 +13,8 @@ import messagesIcon from "../../images/Candidate Profile Page Images/261_1924.sv
 import jobAlertsIcon from "../../images/Candidate Profile Page Images/261_1929.svg";
 import savedJobIcon from "../../images/Candidate Profile Page Images/261_1935.svg";
 import settingsIcon from "../../images/Candidate Profile Page Images/261_1942.svg";
+import friendRequestsIcon from "../../images/Recruiter Profile Page Images/friend-request.svg";
+import appliedStatusIcon from "../../images/Candidate Profile Page Images/communication.png";
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
 
 interface SideNavigationProps {
@@ -84,12 +86,12 @@ const CandidateSidebar: React.FC<SideNavigationProps> = ({
               ? "&"
               : "?";
             setProfileImage(
-              `${data.user.profilePicture}${separator}t=${Date.now()}`
+              `${data.user.profilePicture}${separator}t=${Date.now()}`,
             );
           } else {
             // Add cache-busting timestamp to prevent caching
             setProfileImage(
-              `http://localhost:5000${data.user.profilePicture}?t=${Date.now()}`
+              `http://localhost:5000${data.user.profilePicture}?t=${Date.now()}`,
             );
           }
         } else {
@@ -255,6 +257,18 @@ const CandidateSidebar: React.FC<SideNavigationProps> = ({
           icon: savedJobIcon,
         },
         {
+          id: "applied-status",
+          path: "/candidate/applied-status",
+          label: "Applied Status",
+          icon: appliedStatusIcon,
+        },
+        {
+          id: "friend-requests",
+          path: "/candidate/friend-requests",
+          label: "Friend Requests",
+          icon: friendRequestsIcon,
+        },
+        {
           id: "settings",
           path: "/candidate/settings",
           label: "Settings",
@@ -355,7 +369,14 @@ const CandidateSidebar: React.FC<SideNavigationProps> = ({
               to={item.path}
               className={`nav-item ${isActive ? "active" : ""}`}
             >
-              <img src={item.icon} alt={item.label} className="nav-icon" />
+              <img
+                src={item.icon}
+                alt={item.label}
+                className="nav-icon"
+                onError={(e) => {
+                  e.currentTarget.src = messagesIcon;
+                }}
+              />
               <span>{item.label}</span>
             </Link>
           );

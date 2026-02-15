@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import "../../styles/CandidateTopBar.css";
 
 // Icons (reuse admin-style assets for consistency)
@@ -12,6 +13,8 @@ interface CandidateTopBarProps {
 }
 
 const CandidateTopBar: React.FC<CandidateTopBarProps> = ({ onSearch = () => {} }) => {
+  const navigate = useNavigate();
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(e.target.value);
   };
@@ -30,7 +33,11 @@ const CandidateTopBar: React.FC<CandidateTopBarProps> = ({ onSearch = () => {} }
         </div>
       </div>
       <div className="candidate-header-actions">
-        <button className="candidate-action-btn">
+        <button
+          className="candidate-action-btn"
+          type="button"
+          onClick={() => navigate("/jobs")}
+        >
           <img src={jobsIcon} alt="Jobs" />
         </button>
         <button className="candidate-action-btn">

@@ -10,7 +10,10 @@ import heroIcon1 from "../images/Employers Page Images/8_208.svg";
 import heroIcon2 from "../images/Employers Page Images/8_209.svg";
 import defaultAvatar from "../images/Register Page Images/Default Profile.webp";
 import connectIcon from "../images/Employers Page Images/connect-icon.png";
+import pendingIcon from "../images/Employers Page Images/pending-icon.png";
+import friendIcon from "../images/Employers Page Images/friend-icon.png";
 import messageIcon from "../images/Employers Page Images/message-icon.png";
+import viewProfileIcon from "../images/Employers Page Images/view-profile-icon.png";
 
 type CandidateSkill = {
   skillName: string;
@@ -33,6 +36,8 @@ type CandidateItem = {
   skills?: CandidateSkill[];
   experience?: CandidateExperience[];
 };
+
+type ConnectionState = "none" | "pending" | "friend";
 
 const resolveAvatar = (profilePicture?: string) => {
   if (!profilePicture) return defaultAvatar;
@@ -74,6 +79,16 @@ const CandidatesPage = () => {
   const [locationFilter, setLocationFilter] = useState("");
   const [skillFilter, setSkillFilter] = useState("");
   const [minExperience, setMinExperience] = useState("");
+  const [connectionStatuses, setConnectionStatuses] = useState<
+    Record<string, ConnectionState>
+  >({});
+  const [sendingConnectionId, setSendingConnectionId] = useState<string | null>(
+    null,
+  );
+  const userDataStr = localStorage.getItem("userData");
+  const currentUser = userDataStr ? JSON.parse(userDataStr) : null;
+  const currentUserId =
+    currentUser?.id || currentUser?._id || currentUser?.userId || "";
 
   useEffect(() => {
     const fetchCandidates = async () => {
@@ -95,6 +110,120 @@ const CandidatesPage = () => {
 
     fetchCandidates();
   }, []);
+
+  useEffect(() => {
+    const fetchConnectionStatuses = async () => {
+      const token = localStorage.getItem("authToken");
+      const role = currentUser?.role;
+      const isAllowed = role === "candidate" || role === "recruiter";
+
+      if (!token || !isAllowed) {
+        setConnectionStatuses({});
+        return;
+      }
+
+      const targetIds = candidates
+        .map((candidate) => candidate.id || candidate._id || "")
+        .filter((id) => Boolean(id) && id !== currentUserId);
+
+      if (targetIds.length === 0) {
+        setConnectionStatuses({});
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `http://localhost:5000/api/connections/statuses?targetIds=${targetIds.join(",")}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        const data = await res.json();
+        if (!res.ok) {
+          return;
+        }
+        setConnectionStatuses(
+          (data.statuses || {}) as Record<string, ConnectionState>,
+        );
+      } catch {
+        setConnectionStatuses({});
+      }
+    };
+
+    fetchConnectionStatuses();
+  }, [candidates, currentUser?.role, currentUserId]);
+
+  const handleSendConnection = async (targetUserId: string) => {
+    const token = localStorage.getItem("authToken");
+    const role = currentUser?.role;
+    const isAllowed = role === "candidate" || role === "recruiter";
+
+    if (!token || !isAllowed) {
+      navigate("/login");
+      return;
+    }
+
+    if (
+      !targetUserId ||
+      targetUserId === currentUserId ||
+      sendingConnectionId ||
+      connectionStatuses[targetUserId] !== "none"
+    ) {
+      return;
+    }
+
+    try {
+      setSendingConnectionId(targetUserId);
+      const res = await fetch("http://localhost:5000/api/connections/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ recipientId: targetUserId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return;
+      }
+
+      const nextState: ConnectionState =
+        data.status === "accepted" ? "friend" : "pending";
+      setConnectionStatuses((prev) => ({
+        ...prev,
+        [targetUserId]: nextState,
+      }));
+    } finally {
+      setSendingConnectionId(null);
+    }
+  };
+
+  const getConnectionLabel = (targetUserId: string) => {
+    const status = connectionStatuses[targetUserId] || "none";
+    if (status === "friend") return "Friend";
+    if (status === "pending") return "Pending";
+    return "Connect";
+  };
+
+  const getConnectionIcon = (targetUserId: string) => {
+    const status = connectionStatuses[targetUserId] || "none";
+    if (status === "friend") return friendIcon;
+    if (status === "pending") return pendingIcon;
+    return connectIcon;
+  };
+
+  const openMessages = (targetUserId: string) => {
+    const token = localStorage.getItem("authToken");
+    const role = currentUser?.role;
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    if (!targetUserId || (role !== "candidate" && role !== "recruiter")) {
+      return;
+    }
+    navigate(`/${role}/messages?user=${targetUserId}`);
+  };
 
   const filteredCandidates = useMemo(() => {
     const searchValue = search.trim().toLowerCase();
@@ -193,17 +322,22 @@ const CandidatesPage = () => {
           )}
 
           {filteredCandidates.map((candidate) => {
-            const allSkills = (candidate.skills || [])
-              .map((s) => s.skillName)
-              .filter(Boolean);
-            const maxVisibleSkills = 2;
-            const skills = allSkills.slice(0, maxVisibleSkills);
-            const remainingSkills = Math.max(
-              allSkills.length - skills.length,
-              0,
-            );
-            const experienceYears = getExperienceYears(candidate.experience);
             const cardId = candidate.id || candidate._id || candidate.email;
+            const connectionId = candidate.id || candidate._id || "";
+            const isSelfCard = Boolean(
+              currentUserId && connectionId === currentUserId,
+            );
+            const isConnectionDisabled =
+              !connectionId ||
+              isSelfCard ||
+              sendingConnectionId === connectionId ||
+              (connectionStatuses[connectionId] || "none") !== "none";
+            const statusClass =
+              connectionStatuses[connectionId] === "friend"
+                ? "is-friend"
+                : connectionStatuses[connectionId] === "pending"
+                  ? "is-pending"
+                  : "";
 
             return (
               <article
@@ -229,37 +363,54 @@ const CandidatesPage = () => {
                     <strong>{candidate.email}</strong>
                   </div>
                 </div>
-                <div className="candidates-card-skills">
-                  {skills.length > 0 ? (
-                    <>
-                      {skills.map((skill) => (
-                        <span key={skill}>{skill}</span>
-                      ))}
-                      {remainingSkills > 0 && (
-                        <span className="more">+{remainingSkills}</span>
-                      )}
-                    </>
+                <div
+                  className={`candidates-card-actions ${isSelfCard ? "is-single" : ""}`}
+                >
+                  {isSelfCard ? (
+                    <button
+                      type="button"
+                      title="View profile"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        navigate(`/candidate/${cardId}`);
+                      }}
+                    >
+                      <img src={viewProfileIcon} alt="View profile" />
+                      <span>View Profile</span>
+                    </button>
                   ) : (
-                    <span className="empty">Skills not added</span>
+                    <>
+                      <button
+                        type="button"
+                        title="Send connection request"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (!connectionId) return;
+                          handleSendConnection(connectionId);
+                        }}
+                        disabled={isConnectionDisabled}
+                        className={statusClass}
+                      >
+                        <img
+                          src={getConnectionIcon(connectionId)}
+                          alt={getConnectionLabel(connectionId)}
+                        />
+                        <span>{getConnectionLabel(connectionId)}</span>
+                      </button>
+                      <button
+                        type="button"
+                        title="Message"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (!connectionId) return;
+                          openMessages(connectionId);
+                        }}
+                      >
+                        <img src={messageIcon} alt="Message" />
+                        <span>Message</span>
+                      </button>
+                    </>
                   )}
-                </div>
-                <div className="candidates-card-actions">
-                  <button
-                    type="button"
-                    title="Send connection request"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <img src={connectIcon} alt="Connect" />
-                    <span>Connect</span>
-                  </button>
-                  <button
-                    type="button"
-                    title="Message"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <img src={messageIcon} alt="Message" />
-                    <span>Message</span>
-                  </button>
                 </div>
               </article>
             );

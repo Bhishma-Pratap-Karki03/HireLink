@@ -11,10 +11,7 @@
 }
 
 .candidates-hero-bg {
-  position: absolute;
-  top: 0;
-  width: 320px;
-  opacity: 0.45;
+  display: none;
 }
 
 .candidates-hero-bg.left {
@@ -26,17 +23,11 @@
 }
 
 .candidates-hero-circle {
-  position: absolute;
-  right: 18%;
-  bottom: -40px;
-  width: 140px;
-  opacity: 0.6;
+  display: none;
 }
 
 .candidates-hero-icon {
-  position: absolute;
-  width: 44px;
-  opacity: 0.8;
+  display: none;
 }
 
 .candidates-hero-icon.icon-1 {
@@ -140,20 +131,21 @@
 .candidates-card {
   background: #ffffff;
   border-radius: 16px;
-  padding: 22px;
+  padding: 18px;
   border: 1px solid #dfe7f2;
   box-shadow: 0 18px 34px rgba(15, 23, 42, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  min-height: 280px;
+  gap: 10px;
+  min-height: 0;
   cursor: pointer;
 }
 
 .candidates-card-header {
   display: flex;
   gap: 14px;
-  align-items: center;
+  align-items: flex-start;
+  min-height: 94px;
 }
 
 .candidates-card-header img {
@@ -191,9 +183,11 @@
 .candidates-card-meta {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 16px;
+  gap: 6px;
   color: #6b7280;
   font-size: 13.5px;
+  min-height: 52px;
+  align-content: start;
 }
 
 .candidates-card-meta span {
@@ -244,7 +238,11 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   align-items: center;
-  margin-top: 2px;
+  margin-top: auto;
+}
+
+.candidates-card-actions.is-single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .candidates-card-actions button {
@@ -277,6 +275,24 @@
   border-color: #9bb7f0;
   box-shadow: 0 12px 22px rgba(15, 23, 42, 0.12);
   transform: translateY(-1px);
+}
+
+.candidates-card-actions button:disabled {
+  cursor: default;
+  transform: none;
+  box-shadow: 0 8px 14px rgba(15, 23, 42, 0.06);
+}
+
+.candidates-card-actions button.is-pending {
+  border-color: #f59e0b;
+  background: #fff8eb;
+  color: #b45309;
+}
+
+.candidates-card-actions button.is-friend {
+  border-color: #10b981;
+  background: #ecfdf5;
+  color: #047857;
 }
 
 .candidates-state {
