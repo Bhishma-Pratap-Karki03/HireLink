@@ -24,7 +24,6 @@ import editIcon from "../../images/Candidate Profile Page Images/261_2045.svg";
 import emailIcon from "../../images/Candidate Profile Page Images/261_2082.svg";
 import phoneIcon from "../../images/Candidate Profile Page Images/261_2173.svg";
 import locationIcon from "../../images/Candidate Profile Page Images/261_2182.svg";
-import connectionsIcon from "../../images/Candidate Profile Page Images/261_2020.svg";
 import addIcon from "../../images/Candidate Profile Page Images/264_2241.svg";
 import addIcon2 from "../../images/Candidate Profile Page Images/264_2253.svg";
 import addIcon3 from "../../images/Candidate Profile Page Images/264_2262.svg";
@@ -1592,10 +1591,6 @@ const CandidateProfilePage = () => {
                 <div className="candidate-profile-name-row">
                   <h2>{userProfile.fullName || "User"}</h2>
                   <span className="candidate-badge-public">Public</span>
-                </div>
-                <div className="candidate-profile-connections">
-                  <img src={connectionsIcon} alt="Connections Icons" />
-                  <span className="candidate-blue-text">+144 Connections</span>
                 </div>
                 {userProfile.currentJobTitle && (
                   <div className="candidate-job-title">

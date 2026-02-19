@@ -4,6 +4,7 @@ const { pathToFileURL } = require("url");
 const { PDFParse } = require("pdf-parse");
 const mammoth = require("mammoth");
 const skillDictionary = require("./atsSkills");
+const skillAliases = require("./atsSkillAliases");
 
 const normalize = (value) => String(value || "").toLowerCase();
 
@@ -13,10 +14,13 @@ const normalizeText = (value) =>
     .replace(/\s+/g, " ")
     .trim();
 
-const ensureString = (value) => (typeof value === "string" ? value : String(value || ""));
+const ensureString = (value) =>
+  typeof value === "string" ? value : String(value || "");
 
 const extractEmails = (text) => {
-  const matches = ensureString(text).match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}/g);
+  const matches = ensureString(text).match(
+    /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}/g,
+  );
   return Array.from(new Set(matches || []));
 };
 
@@ -44,13 +48,17 @@ const extractExperienceYears = (text) => {
     return Math.max(...explicitValues);
   }
 
-  const yearMatches = source.match(/(19|20)\d{2}\s*[-–]\s*(present|current|(19|20)\d{2})/gi) || [];
+  const yearMatches =
+    source.match(/(19|20)\d{2}\s*[-–]\s*(present|current|(19|20)\d{2})/gi) ||
+    [];
   const currentYear = new Date().getFullYear();
   const rangeValues = yearMatches.map((match) => {
     const parts = match.split(/[-–]/).map((part) => part.trim().toLowerCase());
     const start = parseInt(parts[0], 10);
     const endPart = parts[1] || "";
-    const end = /present|current/.test(endPart) ? currentYear : parseInt(endPart, 10);
+    const end = /present|current/.test(endPart)
+      ? currentYear
+      : parseInt(endPart, 10);
     if (Number.isNaN(start) || Number.isNaN(end)) return 0;
     return Math.max(0, end - start);
   });
@@ -59,43 +67,67 @@ const extractExperienceYears = (text) => {
   return maxRange;
 };
 
-const skillAliases = [
-  { canonical: "uiux", variants: ["uiux", "ui/ux", "ui ux", "ui-ux", "uidesign", "ui design", "ux design"] },
-  { canonical: "javascript", variants: ["javascript", "js"] },
-  { canonical: "typescript", variants: ["typescript", "ts"] },
-  { canonical: "node.js", variants: ["node.js", "nodejs", "node"] },
-  { canonical: "react", variants: ["react", "reactjs", "react.js"] },
-  { canonical: "css", variants: ["css", "css3"] },
-  { canonical: "html", variants: ["html", "html5"] },
-];
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const normalizedAliasMap = new Map();
+const variantsByCanonical = new Map();
+
+skillAliases.forEach((entry) => {
+  const canonical = normalizeText(entry.canonical);
+  const variants = Array.from(
+    new Set(
+      [entry.canonical, ...(entry.variants || [])]
+        .map((item) => normalizeText(item))
+        .filter(Boolean),
+    ),
+  );
+
+  if (!variants.length) return;
+
+  variantsByCanonical.set(canonical, variants);
+  variants.forEach((variant) => {
+    normalizedAliasMap.set(variant, canonical);
+  });
+});
+
+const hasTermInText = (normalizedText, term) => {
+  if (!normalizedText || !term) return false;
+  const regex = new RegExp(`(?:^|\\s)${escapeRegex(term)}(?:\\s|$)`);
+  return regex.test(normalizedText);
+};
 
 const canonicalizeSkill = (skill) => {
   const normalized = normalizeText(skill);
-  for (const entry of skillAliases) {
-    if (entry.variants.some((variant) => normalizeText(variant) === normalized)) {
-      return entry.canonical;
-    }
-  }
+  if (!normalized) return "";
+  if (normalizedAliasMap.has(normalized))
+    return normalizedAliasMap.get(normalized);
   return normalized;
 };
 
 const extractSkills = (text, dictionary = skillDictionary) => {
-  const normalizedText = ` ${normalizeText(text)} `;
+  const normalizedText = normalizeText(text);
   const matches = new Set();
 
   dictionary.forEach((skill) => {
-    const normalizedSkill = normalizeText(skill);
-    if (normalizedSkill && normalizedText.includes(` ${normalizedSkill} `)) {
-      matches.add(canonicalizeSkill(skill));
+    const canonical = canonicalizeSkill(skill);
+    if (!canonical) return;
+    const variants = variantsByCanonical.get(canonical) || [canonical];
+    const matched = variants.some((variant) =>
+      hasTermInText(normalizedText, variant),
+    );
+    if (matched) {
+      matches.add(canonical);
     }
   });
 
   skillAliases.forEach((entry) => {
-    const matched = entry.variants.some((variant) =>
-      normalizedText.includes(` ${normalizeText(variant)} `)
+    const canonical = canonicalizeSkill(entry.canonical);
+    const variants = variantsByCanonical.get(canonical) || [canonical];
+    const matched = variants.some((variant) =>
+      hasTermInText(normalizedText, variant),
     );
     if (matched) {
-      matches.add(entry.canonical);
+      matches.add(canonical);
     }
   });
 
@@ -104,10 +136,38 @@ const extractSkills = (text, dictionary = skillDictionary) => {
 
 const educationLevels = [
   { label: "Doctorate", rank: 5, terms: ["phd", "doctorate", "dphil"] },
-  { label: "Master", rank: 4, terms: ["master", "msc", "m.sc", "mba", "m.a", "m.s"] },
-  { label: "Bachelor", rank: 3, terms: ["bachelor", "bsc", "b.sc", "be", "b.e", "ba", "b.a", "btech"] },
-  { label: "Associate", rank: 2, terms: ["associate", "diploma", "advanced diploma"] },
-  { label: "High School", rank: 1, terms: ["high school", "secondary", "slc", "10+2", "plus two"] },
+  {
+    label: "Master",
+    rank: 4,
+    terms: ["master", "msc", "m.sc", "mba", "m.a", "m.s"],
+  },
+  {
+    label: "Bachelor",
+    rank: 3,
+    terms: [
+      "bachelor",
+      "bsc",
+      "b.sc",
+      "be",
+      "b.e",
+      "ba",
+      "b.a",
+      "btech",
+      "bsc(hons)",
+      "bsc (hons)",
+      "bsc. (hons)",
+    ],
+  },
+  {
+    label: "Associate",
+    rank: 2,
+    terms: ["associate", "diploma", "advanced diploma"],
+  },
+  {
+    label: "High School",
+    rank: 1,
+    terms: ["high school", "secondary", "slc", "10+2", "plus two"],
+  },
 ];
 
 const extractEducationLevel = (text) => {
@@ -115,7 +175,7 @@ const extractEducationLevel = (text) => {
   let best = { label: "", rank: 0 };
   for (const level of educationLevels) {
     const hit = level.terms.some((term) =>
-      normalizedText.includes(` ${normalizeText(term)} `)
+      normalizedText.includes(` ${normalizeText(term)} `),
     );
     if (hit && level.rank > best.rank) {
       best = { label: level.label, rank: level.rank };
@@ -133,7 +193,7 @@ const parseResumeText = async (resumePath) => {
       "..",
       "node_modules",
       "pdfjs-dist",
-      "standard_fonts"
+      "standard_fonts",
     );
     const standardFontsUrl = `${pathToFileURL(standardFontsPath).href}/`;
     const parser = new PDFParse({

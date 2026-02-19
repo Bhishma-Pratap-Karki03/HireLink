@@ -150,6 +150,13 @@
   flex-shrink: 0;
 }
 
+.employer-details-hero-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
 .employer-details-hero-btn {
   border: 1px solid #d7e0ef;
   background: #ffffff;
@@ -198,6 +205,37 @@
   border-color: #10b981;
   background: #ecfdf5;
   color: #047857;
+}
+
+.employer-details-mutuals {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.employer-details-mutual-avatars {
+  display: flex;
+  align-items: center;
+}
+
+.employer-details-mutual-avatars img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #ffffff;
+  margin-left: -8px;
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.12);
+}
+
+.employer-details-mutual-avatars img:first-child {
+  margin-left: 0;
+}
+
+.employer-details-mutuals span {
+  font-size: 12.5px;
+  color: #64748b;
+  font-weight: 600;
 }
 
 /* Main Content */
@@ -1235,8 +1273,8 @@
 }
 
 .employer-details-jobs-section .joblist-icon-btn {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   border: none;
   background: #edf4ff;
   border-radius: 50%;
@@ -1262,6 +1300,11 @@
 .employer-details-jobs-section .joblist-card-title {
   font-size: 16px;
   margin: 0;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .employer-details-jobs-section .joblist-card-info {
@@ -1287,6 +1330,7 @@
   display: flex;
   gap: 10px;
   height: 44px;
+  margin-top: auto;
 }
 
 .employer-details-jobs-section .joblist-btn-outline,
@@ -1590,6 +1634,10 @@
   .employer-details-hero-actions {
     justify-content: center;
     flex-wrap: wrap;
+  }
+
+  .employer-details-hero-side {
+    align-items: center;
   }
 }
 

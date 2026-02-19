@@ -102,6 +102,16 @@
   flex-shrink: 0;
 }
 
+.recruiter-friend-avatar.recruiter-logo {
+  width: 110px;
+  height: 54px;
+  border-radius: 0;
+  object-fit: contain;
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
 .recruiter-friend-info {
   min-width: 0;
 }

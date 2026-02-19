@@ -72,9 +72,15 @@
   border-radius: 16px;
   padding: 20px;
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recruiter-ats-top-row {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 20px;
+  grid-template-columns: minmax(340px, 1fr) minmax(190px, 220px) minmax(90px, 110px) auto;
+  gap: 16px;
   align-items: center;
 }
 
@@ -86,7 +92,7 @@
 
 .recruiter-ats-candidate {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
 }
 
@@ -125,6 +131,23 @@
   background: #f1f6ff;
   padding: 12px 16px;
   border-radius: 12px;
+  justify-self: end;
+  width: 100%;
+  max-width: 96px;
+}
+
+.recruiter-ats-status-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recruiter-ats-status-inline > span {
+  display: block;
+  margin-bottom: 0;
+  font-weight: 700;
+  color: #0f283c;
+  font-size: 13px;
 }
 
 .recruiter-ats-score span {
@@ -138,39 +161,186 @@
   color: #1f4acc;
 }
 
-.recruiter-ats-skills {
-  grid-column: span 3;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  color: #4b5563;
-  font-size: 14px;
-}
-
-.recruiter-ats-skills span {
+.recruiter-ats-top-item span {
   display: block;
   margin-bottom: 6px;
   font-weight: 700;
   color: #0f283c;
+  font-size: 13px;
 }
 
-.recruiter-ats-skills p {
+.recruiter-ats-top-item p {
   margin: 0;
   color: #1f2937;
+  font-size: 14px;
   font-weight: 600;
 }
 
+.recruiter-ats-details-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: 22px;
+  row-gap: 12px;
+  padding: 12px;
+  border: 1px solid #e4ecf8;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.recruiter-ats-details-row > div:not(:first-child) {
+  padding-left: 8px;
+}
+
+.recruiter-ats-details-row span {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 700;
+  color: #0f283c;
+  font-size: 13px;
+}
+
+.recruiter-ats-details-row p {
+  margin: 0;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.recruiter-ats-status-text {
+  text-transform: capitalize;
+}
+
+.recruiter-ats-status-control select {
+  width: 170px;
+  min-width: 0;
+  height: 34px;
+  border: 1px solid #c7d6f8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0f283c;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 8px;
+  outline: none;
+}
+
+.recruiter-ats-status-control select:disabled {
+  background: #eef2f9;
+  color: #7b8aa5;
+}
+
+.recruiter-ats-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: end;
+}
+
+.recruiter-ats-action-icon-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  outline: none;
+  box-shadow: none;
+}
+
+.recruiter-ats-action-icon-btn img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.recruiter-ats-action-icon-btn:focus,
+.recruiter-ats-action-icon-btn:focus-visible,
+.recruiter-ats-action-icon-btn:active,
+.recruiter-ats-action-icon-btn:hover {
+  outline: none;
+  box-shadow: none;
+  border: none;
+  background: transparent;
+}
+
+.recruiter-ats-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border: 1px solid #b8c7e6;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #2563eb;
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.recruiter-ats-overlay-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  background: #f7f9fc;
+  border: 1px solid #e3eaf5;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.recruiter-ats-overlay-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recruiter-ats-overlay-grid span {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.recruiter-ats-overlay-grid p {
+  margin: 0;
+  color: #0f283c;
+  font-size: 14px;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.recruiter-ats-overlay-assessment {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recruiter-ats-overlay-assessment small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+@media (max-width: 1400px) {
+  .recruiter-ats-top-row {
+    grid-template-columns: minmax(300px, 1fr) minmax(170px, 200px) minmax(90px, 110px) auto;
+  }
+}
+
 @media (max-width: 900px) {
-  .recruiter-ats-card {
+  .recruiter-ats-top-row {
     grid-template-columns: 1fr;
-    text-align: left;
+    gap: 10px;
   }
 
   .recruiter-ats-score {
     text-align: left;
+    justify-self: start;
   }
 
-  .recruiter-ats-skills {
-    grid-column: auto;
+  .recruiter-ats-actions {
+    justify-self: start;
+  }
+
+  .recruiter-ats-overlay-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

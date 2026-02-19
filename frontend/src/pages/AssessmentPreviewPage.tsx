@@ -8,14 +8,14 @@ type Assessment = {
   id: string;
   title: string;
   description: string;
-  type: "quiz" | "writing" | "code";
+  type: "quiz" | "writing" | "task" | "code";
   quizQuestions?: { question: string; options: string[]; correctIndex: number }[];
   writingTask?: string;
   writingInstructions?: string;
   writingFormat?: "text" | "file" | "link";
   codeProblem?: string;
   codeLanguages?: string[];
-  codeSubmission?: "file" | "repo";
+  codeSubmission?: "file" | "repo" | "link";
   codeEvaluation?: string;
 };
 
@@ -48,7 +48,7 @@ const AssessmentPreviewPage = () => {
           id: item._id || item.id,
           title: item.title,
           description: item.description || "",
-          type: item.type || "quiz",
+          type: item.type === "code" ? "task" : item.type || "quiz",
           quizQuestions: item.quizQuestions || [],
           writingTask: item.writingTask || "",
           writingInstructions: item.writingInstructions || "",
@@ -139,7 +139,7 @@ const AssessmentPreviewPage = () => {
                 </div>
               )}
 
-              {assessment.type === "code" && (
+              {(assessment.type === "task" || assessment.type === "code") && (
                 <div className="assessment-attempt-section">
                   <div className="writing-block">
                     <h3>Problem Statement</h3>

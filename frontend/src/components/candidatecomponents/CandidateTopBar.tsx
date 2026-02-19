@@ -10,28 +10,32 @@ import notificationsIcon from "../../images/Admin Profile Page Images/4_75.svg";
 
 interface CandidateTopBarProps {
   onSearch?: (query: string) => void;
+  showSearch?: boolean;
+  searchPlaceholder?: string;
 }
 
-const CandidateTopBar: React.FC<CandidateTopBarProps> = ({ onSearch = () => {} }) => {
+const CandidateTopBar: React.FC<CandidateTopBarProps> = ({
+  onSearch = () => {},
+  showSearch = false,
+  searchPlaceholder = "Search candidates, jobs, or keywords..",
+}) => {
   const navigate = useNavigate();
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onSearch(e.target.value);
-  };
-
   return (
-    <header className="candidate-top-bar">
-      <div className="candidate-search-container">
-        <div className="candidate-search-input-wrapper">
-          <input
-            type="text"
-            placeholder="Search candidates, jobs, or keywords.."
-            className="candidate-search-input"
-            onChange={handleSearchChange}
-          />
-          <img src={searchIcon} alt="Search" className="candidate-search-icon" />
+    <header className={`candidate-top-bar${showSearch ? " has-search" : ""}`}>
+      {showSearch && (
+        <div className="candidate-search-container">
+          <div className="candidate-search-input-wrapper">
+            <input
+              type="text"
+              placeholder={searchPlaceholder}
+              className="candidate-search-input"
+              onChange={(e) => onSearch(e.target.value)}
+            />
+            <img src={searchIcon} alt="Search" className="candidate-search-icon" />
+          </div>
         </div>
-      </div>
+      )}
       <div className="candidate-header-actions">
         <button
           className="candidate-action-btn"

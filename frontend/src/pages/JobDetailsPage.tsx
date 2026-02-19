@@ -1,11 +1,9 @@
 ﻿import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import ApplyJobModal from "../components/ApplyJobModal";
 import "../styles/JobDetailsPage.css";
-import closeIcon from "../images/Candidate Profile Page Images/corss icon.png";
 
 // Hero background (reuse Employers Page assets)
 import heroBgLeft from "../images/Employers Page Images/8_189.svg";
@@ -50,6 +48,7 @@ type InterviewStage = {
 
 type JobDetails = {
   id: string;
+  _id?: string;
   jobTitle: string;
   companyName: string;
   companyLogo: string;
@@ -85,7 +84,7 @@ type AssessmentDetails = {
   id: string;
   title: string;
   description: string;
-  type: "quiz" | "writing" | "code";
+  type: "quiz" | "writing" | "task" | "code";
   difficulty: "beginner" | "intermediate" | "advanced";
   timeLimit?: string;
   maxAttempts?: number;
@@ -99,7 +98,7 @@ type AssessmentDetails = {
   writingFormat?: "text" | "file" | "link";
   codeProblem?: string;
   codeLanguages?: string[];
-  codeSubmission?: "file" | "repo";
+  codeSubmission?: "file" | "repo" | "link";
   codeEvaluation?: string;
   skillTags?: string[];
 };
@@ -149,26 +148,6 @@ const JobDetailsPage = () => {
   const [confirmRequirements, setConfirmRequirements] = useState(false);
   const [confirmResume, setConfirmResume] = useState(false);
 
-  const quillModules = {
-    toolbar: [
-      [{ header: [1, 2, false] }],
-      ["bold", "italic", "underline"],
-      [{ list: "ordered" }, { list: "bullet" }],
-      ["link"],
-      ["clean"],
-    ],
-  };
-  const quillFormats = [
-    "header",
-    "bold",
-    "italic",
-    "underline",
-    "list",
-    "bullet",
-    "link",
-  ];
-
-
   const fetchJobDetails = async () => {
     if (!id) return;
     try {
@@ -192,16 +171,18 @@ const JobDetailsPage = () => {
     fetchJobDetails();
   }, [id]);
 
-
   const fetchSavedStatus = async () => {
     if (!job?.id && !job?._id) return;
     const token = localStorage.getItem("authToken");
     if (!token) return;
     try {
       const jobId = job.id || job._id;
-      const res = await fetch(`http://localhost:5000/api/saved-jobs/status/${jobId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `http://localhost:5000/api/saved-jobs/status/${jobId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       const data = await res.json();
       if (res.ok) {
         setIsSaved(Boolean(data.saved));
@@ -216,16 +197,18 @@ const JobDetailsPage = () => {
     fetchSavedStatus();
   }, [job?.id, job?._id]);
 
-
   const fetchApplyStatus = async () => {
     if (!job?.id && !job?._id) return;
     const token = localStorage.getItem("authToken");
     if (!token) return;
     try {
       const jobId = job.id || job._id;
-      const res = await fetch(`http://localhost:5000/api/applications/status/${jobId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `http://localhost:5000/api/applications/status/${jobId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       const data = await res.json();
       if (res.ok) {
         setIsApplied(Boolean(data.applied));
@@ -299,7 +282,9 @@ const JobDetailsPage = () => {
         return;
       }
       try {
-        if (job.assessmentSource === "recruiter") {
+        const source = job.assessmentSource || "recruiter";
+
+        if (source === "recruiter") {
           const response = await fetch(
             `http://localhost:5000/api/recruiter-assessments/${job.assessmentId}/meta`,
             {
@@ -319,7 +304,8 @@ const JobDetailsPage = () => {
               latestSubmittedAttemptId: meta.latestSubmittedAttemptId || null,
               latestScore:
                 typeof meta.latestScore === "number" ? meta.latestScore : null,
-              quizTotal: typeof meta.quizTotal === "number" ? meta.quizTotal : null,
+              quizTotal:
+                typeof meta.quizTotal === "number" ? meta.quizTotal : null,
             });
           }
           return;
@@ -338,7 +324,8 @@ const JobDetailsPage = () => {
           return;
         }
         const found = (data.assessments || []).find(
-          (item: any) => item.id === job.assessmentId || item.id === job.assessmentId,
+          (item: any) =>
+            item.id === job.assessmentId || item.id === job.assessmentId,
         );
         if (found) {
           setAssessmentMeta({
@@ -358,7 +345,7 @@ const JobDetailsPage = () => {
     };
 
     loadAssessmentMeta();
-  }, [job?.assessmentId]);
+  }, [job?.assessmentId, job?.assessmentSource]);
 
   const resolveLogo = (logo?: string) => {
     if (!logo) return defaultLogo;
@@ -506,11 +493,14 @@ const JobDetailsPage = () => {
         formData.append("resumeUrl", applyProfileResume);
       }
 
-      const response = await fetch("http://localhost:5000/api/applications/apply", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
+      const response = await fetch(
+        "http://localhost:5000/api/applications/apply",
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        },
+      );
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data?.message || "Failed to apply");
@@ -521,8 +511,9 @@ const JobDetailsPage = () => {
       setTimeout(() => {
         setApplyModalOpen(false);
       }, 1200);
-    } catch (err) {
-      setApplyError(err?.message || "Failed to apply");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to apply";
+      setApplyError(message);
     } finally {
       setApplyLoading(false);
     }
@@ -590,11 +581,13 @@ const JobDetailsPage = () => {
                   </button>
                 </div>
               )}
-              {isCandidate && isMandatoryAssessment && !isAssessmentSubmitted && (
-                <p className="job-details-assessment-note">
-                  Complete the mandatory assessment before applying.
-                </p>
-              )}
+              {isCandidate &&
+                isMandatoryAssessment &&
+                !isAssessmentSubmitted && (
+                  <p className="job-details-assessment-note">
+                    Complete the mandatory assessment before applying.
+                  </p>
+                )}
             </div>
           </div>
         </div>
@@ -763,14 +756,14 @@ const JobDetailsPage = () => {
                             <button
                               className="job-details-outline-btn"
                               onClick={() =>
-                                (window.location.href = `/assessments/${job.assessmentId}/preview?source=${job.assessmentSource || 'admin'}`)
+                                (window.location.href = `/assessments/${job.assessmentId}/preview?source=${job.assessmentSource || "admin"}`)
                               }
                             >
                               View Questions
                             </button>
                           )}
-                          {assessmentMeta?.status === "submitted" &&
-                            assessmentMeta.latestSubmittedAttemptId && isCandidate && (
+                          {assessmentMeta?.latestSubmittedAttemptId &&
+                            isCandidate && (
                               <button
                                 className="job-details-outline-btn"
                                 onClick={() =>
@@ -782,7 +775,8 @@ const JobDetailsPage = () => {
                             )}
                           {assessmentMeta &&
                             assessmentMeta.status !== "submitted" &&
-                            assessmentMeta.attemptsLeft > 0 && isCandidate && (
+                            assessmentMeta.attemptsLeft > 0 &&
+                            isCandidate && (
                               <button
                                 className="job-details-primary-btn"
                                 onClick={() => {
@@ -792,7 +786,8 @@ const JobDetailsPage = () => {
                                     window.location.href = "/login";
                                     return;
                                   }
-                                  const attemptId = assessmentMeta.activeAttemptId;
+                                  const attemptId =
+                                    assessmentMeta.activeAttemptId;
                                   if (attemptId) {
                                     window.location.href = `/assessments/${job.assessmentId}/attempts/${attemptId}?fromJob=${job.id}`;
                                     return;
@@ -811,7 +806,11 @@ const JobDetailsPage = () => {
                                       },
                                     },
                                   )
-                                    .then((res) => res.json().then((data) => ({ res, data })))
+                                    .then((res) =>
+                                      res
+                                        .json()
+                                        .then((data) => ({ res, data })),
+                                    )
                                     .then(({ res, data }) => {
                                       if (!res.ok) return;
                                       const newAttempt =
@@ -830,7 +829,8 @@ const JobDetailsPage = () => {
                             )}
                           {assessmentMeta &&
                             assessmentMeta.status !== "submitted" &&
-                            assessmentMeta.attemptsLeft === 0 && isCandidate && (
+                            assessmentMeta.attemptsLeft === 0 &&
+                            isCandidate && (
                               <span className="job-details-muted">
                                 No attempts remaining.
                               </span>
@@ -959,152 +959,31 @@ const JobDetailsPage = () => {
         </div>
       </section>
 
-      {applyModalOpen && (
-        <div className="apply-modal-overlay">
-          <div className="apply-modal">
-            <div className="apply-modal-header">
-              <div>
-                <h3>Confirm Application</h3>
-                <p>Review your resume and confirm the requirements before applying.</p>
-              </div>
-              <button className="apply-modal-close" onClick={closeApplyModal}>
-                <img src={closeIcon} alt="Close" />
-              </button>
-            </div>
-
-            {applyLoading && <p>Loading details...</p>}
-            {!applyLoading && job && (
-              <div className="apply-modal-body">
-                <div className="apply-modal-section">
-                  <h4>{job.jobTitle}</h4>
-                  <p className="apply-modal-muted">{job.companyName}</p>
-                </div>
-
-                <div className="apply-modal-section">
-                  <h5>Resume</h5>
-                  {applyProfileResume ? (
-                    <a
-                      href={`http://localhost:5000${applyProfileResume}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="apply-modal-link"
-                    >
-                      View current resume
-                    </a>
-                  ) : (
-                    <p className="apply-modal-muted">No resume on profile.</p>
-                  )}
-                  <label className="apply-modal-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={useCustomResume}
-                      onChange={(e) => setUseCustomResume(e.target.checked)}
-                    />
-                    Use a different resume for this application (won't change your profile)
-                  </label>
-                  {useCustomResume && (
-                    <label className="apply-modal-upload">
-                      <input
-                        type="file"
-                        onChange={(e) =>
-                          setCustomResumeFile(e.target.files ? e.target.files[0] : null)
-                        }
-                      />
-                      <div className="apply-modal-upload-inner">
-                        <span className="apply-modal-upload-title">Upload new resume</span>
-                        <span className="apply-modal-upload-subtitle">PDF or DOCX ? Max 5MB</span>
-                        {customResumeFile && (
-                          <>
-                            <span className="apply-modal-upload-file">
-                              {customResumeFile.name}
-                            </span>
-                            <button
-                              type="button"
-                              className="apply-modal-link apply-modal-preview-btn"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                const url = URL.createObjectURL(customResumeFile);
-                                window.open(url, "_blank", "noopener,noreferrer");
-                              }}
-                            >
-                              Preview selected resume
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </label>
-                  )}
-                </div>
-
-                <div className="apply-modal-divider" />
-
-                <div className="apply-modal-section">
-                  <h5>Requirements</h5>
-                  <p className="apply-modal-muted">
-                    Education: {job.education || "Not specified"}
-                  </p>
-                  <p className="apply-modal-muted">
-                    Experience: {job.experience || "Not specified"}
-                  </p>
-                  <label className="apply-modal-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={confirmRequirements}
-                      onChange={(e) => setConfirmRequirements(e.target.checked)}
-                    />
-                    I confirm I meet the listed requirements.
-                  </label>
-                </div>
-
-                <div className="apply-modal-divider" />
-
-                <div className="apply-modal-section">
-                  <h5>Message to recruiter (optional)</h5>
-                  <div className="apply-modal-quill">
-                    <ReactQuill
-                      theme="snow"
-                      value={applyNote}
-                      onChange={setApplyNote}
-                      modules={quillModules}
-                      formats={quillFormats}
-                      placeholder="Add a short note for the recruiter..."
-                    />
-                  </div>
-                </div>
-
-                <label className="apply-modal-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={confirmResume}
-                    onChange={(e) => setConfirmResume(e.target.checked)}
-                  />
-                  I have reviewed my resume and want to apply.
-                </label>
-              </div>
-            )}
-
-            {applyError && <div className="apply-modal-error">{applyError}</div>}
-            {applyMessage && <div className="apply-modal-success">{applyMessage}</div>}
-
-            <div className="apply-modal-actions">
-              <button className="apply-modal-secondary" onClick={closeApplyModal}>
-                Cancel
-              </button>
-              <button
-                className="apply-modal-primary"
-                onClick={handleConfirmApply}
-                disabled={applyLoading}
-              >
-                Confirm & Apply
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      <ApplyJobModal
+        isOpen={applyModalOpen}
+        loading={applyLoading}
+        job={job}
+        profileResume={applyProfileResume}
+        useCustomResume={useCustomResume}
+        customResumeFile={customResumeFile}
+        applyNote={applyNote}
+        confirmRequirements={confirmRequirements}
+        confirmResume={confirmResume}
+        applyError={applyError}
+        applyMessage={applyMessage}
+        onClose={closeApplyModal}
+        onConfirm={handleConfirmApply}
+        onUseCustomResumeChange={setUseCustomResume}
+        onCustomResumeChange={setCustomResumeFile}
+        onApplyNoteChange={setApplyNote}
+        onConfirmRequirementsChange={setConfirmRequirements}
+        onConfirmResumeChange={setConfirmResume}
+      />
       <Footer />
     </div>
   );
 };
 
 export default JobDetailsPage;
+
+

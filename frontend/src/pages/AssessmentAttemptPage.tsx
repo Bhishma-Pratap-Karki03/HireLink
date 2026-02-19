@@ -8,7 +8,7 @@ type Assessment = {
   id: string;
   title: string;
   description: string;
-  type: "quiz" | "writing" | "code";
+  type: "quiz" | "writing" | "task" | "code";
   timeLimit: string;
   maxAttempts: number;
   quizQuestions?: { question: string; options: string[]; correctIndex: number }[];
@@ -17,7 +17,7 @@ type Assessment = {
   writingFormat?: "text" | "file" | "link";
   codeProblem?: string;
   codeLanguages?: string[];
-  codeSubmission?: "file" | "repo";
+  codeSubmission?: "file" | "repo" | "link";
   codeEvaluation?: string;
 };
 
@@ -90,11 +90,13 @@ const AssessmentAttemptPage = () => {
       }
       const assessmentData = data.assessment;
       const attemptData = data.attempt;
+      const normalizedType =
+        assessmentData.type === "code" ? "task" : assessmentData.type;
       setAssessment({
         id: assessmentData._id || assessmentData.id,
         title: assessmentData.title,
         description: assessmentData.description,
-        type: assessmentData.type,
+        type: normalizedType,
         timeLimit: assessmentData.timeLimit,
         maxAttempts: assessmentData.maxAttempts,
         quizQuestions: assessmentData.quizQuestions || [],
@@ -305,7 +307,11 @@ const AssessmentAttemptPage = () => {
           )}
 
           {!loading && !error && assessment && attempt && (
-            <div className="assessment-attempt-card">
+            <div
+              className={`assessment-attempt-card ${
+                isSubmitted ? "assessment-attempt-card-submitted" : ""
+              }`}
+            >
                 <div className="assessment-attempt-header">
                 <div>
                   <h1>{assessment.title}</h1>
@@ -416,7 +422,7 @@ const AssessmentAttemptPage = () => {
                 </div>
               )}
 
-              {assessment.type === "code" && (
+              {(assessment.type === "task" || assessment.type === "code") && (
                 <div className="assessment-attempt-section">
                   <div className="writing-block">
                     <h3>Problem Statement</h3>
@@ -431,23 +437,6 @@ const AssessmentAttemptPage = () => {
                     <h3>Allowed Languages</h3>
                     <p>{(assessment.codeLanguages || []).join(", ")}</p>
                   </div>
-                  {assessment.codeSubmission === "repo" ? (
-                    <input
-                      className="assessment-input"
-                      placeholder="Paste repository link"
-                      value={codeLink}
-                      disabled={isReadOnly}
-                      onChange={(e) => setCodeLink(e.target.value)}
-                    />
-                  ) : (
-                    <textarea
-                      className="assessment-textarea"
-                      placeholder="Write or paste your code here..."
-                      value={codeResponse}
-                      disabled={isReadOnly}
-                      onChange={(e) => setCodeResponse(e.target.value)}
-                    />
-                  )}
                   <div className="writing-block">
                     <h3>Evaluation Guidelines</h3>
                     <div
@@ -456,6 +445,41 @@ const AssessmentAttemptPage = () => {
                         __html: assessment.codeEvaluation || "",
                       }}
                     />
+                  </div>
+                  <div className="writing-block assessment-submission-block">
+                    <h3>
+                      {assessment.codeSubmission === "repo" || assessment.codeSubmission === "link"
+                        ? "Submitted Task Link"
+                        : "Submitted Content"}
+                    </h3>
+                    {assessment.codeSubmission === "repo" || assessment.codeSubmission === "link" ? (
+                      isReadOnly && codeLink ? (
+                        <a
+                          className="assessment-link-output"
+                          href={codeLink}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {codeLink}
+                        </a>
+                      ) : (
+                        <input
+                          className="assessment-input"
+                          placeholder="Paste task link"
+                          value={codeLink}
+                          disabled={isReadOnly}
+                          onChange={(e) => setCodeLink(e.target.value)}
+                        />
+                      )
+                    ) : (
+                      <textarea
+                        className="assessment-textarea"
+                        placeholder="Write or paste your code here..."
+                        value={codeResponse}
+                        disabled={isReadOnly}
+                        onChange={(e) => setCodeResponse(e.target.value)}
+                      />
+                    )}
                   </div>
                 </div>
               )}

@@ -8,7 +8,7 @@ import "../../styles/AdminAssessmentCreatePage.css";
 import addIcon from "../../images/Recruiter Job Post Page Images/addIcon.svg";
 import deleteIcon from "../../images/Recruiter Job Post Page Images/deleteIcon.svg";
 
-type AssessmentType = "quiz" | "writing" | "code";
+type AssessmentType = "quiz" | "writing" | "task" | "code";
 
 type QuizQuestion = {
   question: string;
@@ -32,7 +32,7 @@ type AssessmentForm = {
   writingFormat: "text" | "file" | "link";
   codeProblem: string;
   codeLanguages: string[];
-  codeSubmission: "file" | "repo";
+  codeSubmission: "file" | "repo" | "link";
   codeEvaluation: string;
 };
 
@@ -87,7 +87,7 @@ const AdminAssessmentEditPage: React.FC = () => {
         setForm({
           title: assessment.title || "",
           description: assessment.description || "",
-          type: assessment.type || "quiz",
+          type: assessment.type === "code" ? "task" : assessment.type || "quiz",
           difficulty: assessment.difficulty || "beginner",
           timeLimit: assessment.timeLimit || "",
           maxAttempts:
@@ -129,7 +129,7 @@ const AdminAssessmentEditPage: React.FC = () => {
         setInitialForm({
           title: assessment.title || "",
           description: assessment.description || "",
-          type: assessment.type || "quiz",
+          type: assessment.type === "code" ? "task" : assessment.type || "quiz",
           difficulty: assessment.difficulty || "beginner",
           timeLimit: assessment.timeLimit || "",
           maxAttempts:
@@ -244,7 +244,7 @@ const AdminAssessmentEditPage: React.FC = () => {
         missing.push("Submission Instructions");
       if (!form.writingFormat) missing.push("Submission Format");
     }
-    if (form.type === "code") {
+    if (form.type === "task" || form.type === "code") {
       if (!stripHtml(form.codeProblem)) missing.push("Problem Statement");
       if (form.codeLanguages.length === 0) missing.push("Allowed Languages");
       if (!form.codeSubmission) missing.push("Submission Format");
@@ -381,7 +381,7 @@ const AdminAssessmentEditPage: React.FC = () => {
   const normalizePayload = (value: AssessmentForm) => ({
     title: value.title.trim(),
     description: value.description.trim(),
-    type: value.type,
+      type: value.type === "code" ? "task" : value.type,
     difficulty: value.difficulty,
     timeLimit: value.timeLimit.trim(),
     maxAttempts: value.maxAttempts.trim(),
@@ -605,7 +605,7 @@ const AdminAssessmentEditPage: React.FC = () => {
                           {[
                             { value: "quiz", label: "Quiz (MCQ)" },
                             { value: "writing", label: "Writing Assignment" },
-                            { value: "code", label: "Code-Based" },
+                            { value: "task", label: "Task-Based" },
                           ].map((item) => (
                             <button
                               key={item.value}
@@ -929,9 +929,9 @@ const AdminAssessmentEditPage: React.FC = () => {
                       </div>
                     )}
 
-                    {form.type === "code" && (
+                    {(form.type === "task" || form.type === "code") && (
                       <div className="admin-assessment-type-section">
-                        <h3>Code-Based Assignment</h3>
+                        <h3>Task-Based Assignment</h3>
                         <div className="admin-assessment-form-group">
                           <label>Problem Statement *</label>
                           <ReactQuill
@@ -946,7 +946,7 @@ const AdminAssessmentEditPage: React.FC = () => {
                           />
                         </div>
                         <div className="admin-assessment-form-group">
-                          <label>Allowed Programming Languages *</label>
+                          <label>Relevant Tools / Languages</label>
                           <div className="admin-assessment-checkbox-grid">
                             {[
                               "JavaScript",
@@ -974,6 +974,7 @@ const AdminAssessmentEditPage: React.FC = () => {
                             {[
                               { value: "file", label: "File" },
                               { value: "repo", label: "Repository Link" },
+                              { value: "link", label: "Task Link" },
                             ].map((item) => (
                               <button
                                 key={item.value}

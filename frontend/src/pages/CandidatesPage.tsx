@@ -151,6 +151,13 @@ const CandidatesPage = () => {
     };
 
     fetchConnectionStatuses();
+
+    const intervalId = window.setInterval(() => {
+      if (document.hidden) return;
+      fetchConnectionStatuses();
+    }, 2500);
+
+    return () => window.clearInterval(intervalId);
   }, [candidates, currentUser?.role, currentUserId]);
 
   const handleSendConnection = async (targetUserId: string) => {

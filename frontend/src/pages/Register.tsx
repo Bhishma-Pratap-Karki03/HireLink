@@ -44,8 +44,8 @@ const Register = () => {
 
     if (token && userDataStr) {
       try {
-        const userData = JSON.parse(userDataStr);
-        redirectBasedOnRole(userData);
+        JSON.parse(userDataStr);
+        redirectBasedOnRole();
       } catch (error) {
         console.error("Error parsing user data:", error);
         // Clear invalid data
@@ -55,17 +55,8 @@ const Register = () => {
     }
   }, []);
 
-  const redirectBasedOnRole = (userData: any) => {
-    // Check if this is the admin email
-    const isAdminEmail = userData.email === "hirelinknp@gmail.com";
-
-    if (isAdminEmail) {
-      navigate("/admin-home");
-    } else if (userData.role === "recruiter") {
-      navigate("/recruiter-home");
-    } else {
-      navigate("/candidate-home");
-    }
+  const redirectBasedOnRole = () => {
+    navigate("/home");
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

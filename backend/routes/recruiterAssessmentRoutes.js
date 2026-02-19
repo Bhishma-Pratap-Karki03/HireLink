@@ -7,6 +7,7 @@ const router = express.Router();
 
 router.post("/", protect, recruiterAssessmentController.createRecruiterAssessment);
 router.get("/:id", recruiterAssessmentController.getRecruiterAssessmentById);
+router.put("/:id", protect, recruiterAssessmentController.updateRecruiterAssessment);
 router.get(
   "/:id/meta",
   protect,

@@ -30,11 +30,31 @@ interface UserData {
   address?: string;
 }
 
+const readStoredUserData = (): UserData | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("userData");
+    return raw ? (JSON.parse(raw) as UserData) : null;
+  } catch {
+    return null;
+  }
+};
+
+const readStoredUserName = (): string => {
+  const stored = readStoredUserData();
+  if (!stored) return "";
+  if (stored.fullName) return stored.fullName;
+  if (stored.email) return stored.email.split("@")[0];
+  return "";
+};
+
 const Navbar = ({ userType = "candidate" }: NavbarProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userName, setUserName] = useState<string>("");
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() =>
+    typeof window !== "undefined" ? Boolean(localStorage.getItem("authToken")) : false
+  );
+  const [userName, setUserName] = useState<string>(() => readStoredUserName());
+  const [userData, setUserData] = useState<UserData | null>(() => readStoredUserData());
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileUserDropdownOpen, setIsMobileUserDropdownOpen] =
     useState(false);
@@ -149,19 +169,6 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
 
     return () => clearInterval(intervalId);
   }, []); // Empty dependency array - FIXED: prevents infinite loop
-
-  // Check authentication on initial load
-  useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      fetchUserData();
-    } else {
-      setIsAuthenticated(false);
-      setUserData(null);
-      setUserName("");
-      setProfileImage(defaultAvatar);
-    }
-  }, []);
 
   // Listen for profile update events
   useEffect(() => {
@@ -391,7 +398,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
         <img src={applyDot} alt="" className="apply-dot" />
         Apply Now
       </a>
-      <Link to="/register" className="btn btn-primary">
+      <Link to="/login" className="btn btn-primary">
         Register/Login
       </Link>
     </>
@@ -508,7 +515,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
       </li>
       <li>
         <Link
-          to="/register"
+          to="/login"
           className="btn btn-primary mobile-register-btn"
           onClick={closeMobileMenu}
         >
@@ -527,17 +534,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
           onClick={(e) => {
             if (isAuthenticated) {
               e.preventDefault();
-              // Navigate to appropriate home page
-              if (userData) {
-                // Check if admin by email (primary check)
-                if (isAdminUser) {
-                  navigate("/admin-home");
-                } else if (userData.role === "recruiter") {
-                  navigate("/recruiter-home");
-                } else {
-                  navigate("/candidate-home");
-                }
-              }
+              navigate("/home");
             }
           }}
         >
@@ -546,30 +543,29 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
         <nav className="main-navigation">
           <ul>
             <li>
-              <a href="#">
-                Home <img src={dropdownArrow} alt="dropdown arrow" />
-              </a>
-            </li>
-            <li>
-              <Link to="/jobs">
-                Browse Jobs <img src={dropdownArrow} alt="dropdown arrow" />
+              <Link to="/home">
+                Home
               </Link>
             </li>
             <li>
-              <a href="/employers">
-                Employers <img src={dropdownArrow} alt="dropdown arrow" />
-              </a>
+              <Link to="/jobs">
+                Browse Jobs
+              </Link>
+            </li>
+            <li>
+              <Link to="/employers">
+                Employers
+              </Link>
             </li>
             <li>
               <Link to="/candidates">
-                Candidates <img src={dropdownArrow} alt="dropdown arrow" />
+                Candidates
               </Link>
             </li>
             {isCandidate && !isAdminUser && (
               <li>
                 <Link to="/assessments">
-                  Quiz/Assessment{" "}
-                  <img src={dropdownArrow} alt="dropdown arrow" />
+                  Quiz/Assessment
                 </Link>
               </li>
             )}
@@ -607,30 +603,29 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
         </div>
         <ul className="mobile-menu-list">
           <li>
-            <a href="#" onClick={closeMobileMenu}>
-              Home <img src={dropdownArrow} alt="dropdown arrow" />
-            </a>
-          </li>
-          <li>
-            <Link to="/jobs" onClick={closeMobileMenu}>
-              Browse Jobs <img src={dropdownArrow} alt="dropdown arrow" />
+            <Link to="/home" onClick={closeMobileMenu}>
+              Home
             </Link>
           </li>
           <li>
-            <a href="/employers" onClick={closeMobileMenu}>
-              Employers <img src={dropdownArrow} alt="dropdown arrow" />
-            </a>
+            <Link to="/jobs" onClick={closeMobileMenu}>
+              Browse Jobs
+            </Link>
+          </li>
+          <li>
+            <Link to="/employers" onClick={closeMobileMenu}>
+              Employers
+            </Link>
           </li>
           <li>
             <Link to="/candidates" onClick={closeMobileMenu}>
-              Candidates <img src={dropdownArrow} alt="dropdown arrow" />
+              Candidates
             </Link>
           </li>
           {isCandidate && !isAdminUser && (
             <li>
               <Link to="/assessments" onClick={closeMobileMenu}>
-                Quiz/Assessment{" "}
-                <img src={dropdownArrow} alt="dropdown arrow" />
+                Quiz/Assessment
               </Link>
             </li>
           )}

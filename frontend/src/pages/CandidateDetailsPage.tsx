@@ -85,6 +85,11 @@ type CandidateProfile = {
 };
 
 type ConnectionState = "none" | "pending" | "friend";
+type MutualConnection = {
+  id: string;
+  fullName: string;
+  profilePicture?: string;
+};
 
 const formatDate = (value?: string | null) => {
   if (!value) return "";
@@ -152,6 +157,7 @@ const CandidateDetailsPage = () => {
   const [error, setError] = useState("");
   const [connectionStatus, setConnectionStatus] = useState<ConnectionState>("none");
   const [sendingConnection, setSendingConnection] = useState(false);
+  const [mutualConnections, setMutualConnections] = useState<MutualConnection[]>([]);
   const userDataStr = localStorage.getItem("userData");
   const currentUser = userDataStr ? JSON.parse(userDataStr) : null;
   const currentUserId =
@@ -206,6 +212,44 @@ const CandidateDetailsPage = () => {
     };
 
     fetchConnectionStatus();
+  }, [profile?.id, currentUserId, isAllowedRole]);
+
+  useEffect(() => {
+    const fetchMutualConnections = async () => {
+      if (!profile?.id || !currentUserId || profile.id === currentUserId) {
+        setMutualConnections([]);
+        return;
+      }
+      if (!isAllowedRole) {
+        setMutualConnections([]);
+        return;
+      }
+
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setMutualConnections([]);
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `http://localhost:5000/api/connections/mutual/${profile.id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        const data = await res.json();
+        if (!res.ok) {
+          setMutualConnections([]);
+          return;
+        }
+        setMutualConnections(data?.mutualConnections || []);
+      } catch {
+        setMutualConnections([]);
+      }
+    };
+
+    fetchMutualConnections();
   }, [profile?.id, currentUserId, isAllowedRole]);
 
   const handleSendConnection = async () => {
@@ -291,30 +335,50 @@ const CandidateDetailsPage = () => {
                 </div>
               </div>
               {!isSelfProfile && isAllowedRole && (
-                <div className="candidate-details-connect-actions">
-                  <button
-                    type="button"
-                    className={`candidate-details-connect-btn ${
-                      connectionStatus === "pending"
-                        ? "is-pending"
-                        : connectionStatus === "friend"
-                          ? "is-friend"
-                          : ""
-                    }`}
-                    disabled={sendingConnection || connectionStatus !== "none"}
-                    onClick={handleSendConnection}
-                  >
-                    <img src={connectionIcon} alt={connectionLabel} />
-                    <span>{connectionLabel}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="candidate-details-connect-btn"
-                    onClick={handleOpenMessages}
-                  >
-                    <img src={messageIcon} alt="Message" />
-                    <span>Message</span>
-                  </button>
+                <div className="candidate-details-hero-side">
+                  <div className="candidate-details-connect-actions">
+                    <button
+                      type="button"
+                      className={`candidate-details-connect-btn ${
+                        connectionStatus === "pending"
+                          ? "is-pending"
+                          : connectionStatus === "friend"
+                            ? "is-friend"
+                            : ""
+                      }`}
+                      disabled={sendingConnection || connectionStatus !== "none"}
+                      onClick={handleSendConnection}
+                    >
+                      <img src={connectionIcon} alt={connectionLabel} />
+                      <span>{connectionLabel}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="candidate-details-connect-btn"
+                      onClick={handleOpenMessages}
+                    >
+                      <img src={messageIcon} alt="Message" />
+                      <span>Message</span>
+                    </button>
+                  </div>
+                  {mutualConnections.length > 0 && (
+                    <div className="candidate-details-mutuals">
+                      <div className="candidate-details-mutual-avatars">
+                        {mutualConnections.slice(0, 4).map((item) => (
+                          <img
+                            key={item.id}
+                            src={resolveAvatar(item.profilePicture)}
+                            alt={item.fullName}
+                            title={item.fullName}
+                          />
+                        ))}
+                      </div>
+                      <span>
+                        {mutualConnections.length} mutual connection
+                        {mutualConnections.length > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

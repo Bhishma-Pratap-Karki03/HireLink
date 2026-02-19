@@ -1,9 +1,8 @@
 ﻿import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import ApplyJobModal from "../components/ApplyJobModal";
 import "../styles/JobListingPage.css";
 
 // TODO: Replace with actual files in Job List Page Images folder
@@ -22,7 +21,6 @@ import promoIllustration from "../images/Job List Page Images/promo-illustration
 import bookmarkIcon from "../images/Recruiter Job Post Page Images/bookmarkIcon.svg";
 import savedBookmarkIcon from "../images/Recruiter Job Post Page Images/bookmarkFilled.svg";
 import shareIcon from "../images/Recruiter Job Post Page Images/shareFg.svg";
-import closeIcon from "../images/Candidate Profile Page Images/corss icon.png";
 import companyLogo from "../images/Recruiter Job Post Page Images/companyLogo.png";
 import prevIcon from "../images/Employers Page Images/Prev Icon.svg";
 import nextIcon from "../images/Employers Page Images/Next Icon.svg";
@@ -45,6 +43,14 @@ type JobCard = {
   location: string;
   jobType: string;
   companyLogo?: string;
+  assessmentRequired?: boolean;
+};
+
+type ApplyModalJob = {
+  jobTitle: string;
+  companyName: string;
+  education?: string;
+  experience?: string;
 };
 
 type AppliedFilters = {
@@ -64,6 +70,7 @@ type AppliedFilters = {
 
 const JobListingPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState("newest");
   const [jobCards, setJobCards] = useState<JobCard[]>([]);
   const [totalJobs, setTotalJobs] = useState(0);
@@ -79,17 +86,34 @@ const JobListingPage = () => {
     "on-site": false,
     hybrid: false,
   });
+  const [workModeCounts, setWorkModeCounts] = useState({
+    remote: 0,
+    "on-site": 0,
+    hybrid: 0,
+  });
   const [filterJobType, setFilterJobType] = useState({
     "Full Time": false,
     "Part Time": false,
     Contract: false,
     Internship: false,
   });
+  const [jobTypeCounts, setJobTypeCounts] = useState({
+    "Full Time": 0,
+    "Part Time": 0,
+    Contract: 0,
+    Internship: 0,
+  });
   const [filterJobLevel, setFilterJobLevel] = useState({
     Junior: false,
     Mid: false,
     Senior: false,
     Lead: false,
+  });
+  const [jobLevelCounts, setJobLevelCounts] = useState({
+    Junior: 0,
+    Mid: 0,
+    Senior: 0,
+    Lead: 0,
   });
   const [filterExperience, setFilterExperience] = useState("");
   const [filterEducation, setFilterEducation] = useState("");
@@ -113,7 +137,9 @@ const JobListingPage = () => {
   });
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [applyJobId, setApplyJobId] = useState<string | null>(null);
-  const [applyJobDetails, setApplyJobDetails] = useState<any>(null);
+  const [applyJobDetails, setApplyJobDetails] = useState<ApplyModalJob | null>(
+    null,
+  );
   const [applyProfileResume, setApplyProfileResume] = useState<string>("");
   const [applyLoading, setApplyLoading] = useState(false);
   const [applyMessage, setApplyMessage] = useState("");
@@ -125,25 +151,6 @@ const JobListingPage = () => {
   const [savedJobs, setSavedJobs] = useState<Record<string, boolean>>({});
   const [confirmRequirements, setConfirmRequirements] = useState(false);
   const [confirmResume, setConfirmResume] = useState(false);
-
-  const quillModules = {
-    toolbar: [
-      [{ header: [1, 2, false] }],
-      ["bold", "italic", "underline"],
-      [{ list: "ordered" }, { list: "bullet" }],
-      ["link"],
-      ["clean"],
-    ],
-  };
-  const quillFormats = [
-    "header",
-    "bold",
-    "italic",
-    "underline",
-    "list",
-    "bullet",
-    "link",
-  ];
 
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
@@ -177,9 +184,13 @@ const JobListingPage = () => {
     params.set("page", String(page));
     params.set("limit", String(limit));
 
-    if (appliedFilters.search) params.set("search", appliedFilters.search);
-    if (appliedFilters.location)
-      params.set("location", appliedFilters.location);
+    const urlSearch = (searchParams.get("search") || "").trim();
+    const urlLocation = (searchParams.get("location") || "").trim();
+    const effectiveSearch = appliedFilters.search || urlSearch;
+    const effectiveLocation = appliedFilters.location || urlLocation;
+
+    if (effectiveSearch) params.set("search", effectiveSearch);
+    if (effectiveLocation) params.set("location", effectiveLocation);
     if (appliedFilters.department)
       params.set("department", appliedFilters.department);
     if (appliedFilters.workMode.length > 0) {
@@ -198,12 +209,147 @@ const JobListingPage = () => {
     if (appliedFilters.skills) params.set("skills", appliedFilters.skills);
     if (appliedFilters.currency)
       params.set("currency", appliedFilters.currency);
-    if (appliedFilters.salaryFrom)
-      params.set("salaryFrom", appliedFilters.salaryFrom);
-    if (appliedFilters.salaryTo)
-      params.set("salaryTo", appliedFilters.salaryTo);
+    const sanitizedSalaryFrom = appliedFilters.salaryFrom.replace(/,/g, "").trim();
+    const sanitizedSalaryTo = appliedFilters.salaryTo.replace(/,/g, "").trim();
+    if (sanitizedSalaryFrom) params.set("salaryFrom", sanitizedSalaryFrom);
+    if (sanitizedSalaryTo) params.set("salaryTo", sanitizedSalaryTo);
 
     return params.toString();
+  };
+
+  const buildWorkModeCountQuery = () => {
+    const params = new URLSearchParams();
+    params.set("page", "1");
+    params.set("limit", "2000");
+
+    const urlSearch = (searchParams.get("search") || "").trim();
+    const urlLocation = (searchParams.get("location") || "").trim();
+    const effectiveSearch = appliedFilters.search || urlSearch;
+    const effectiveLocation = appliedFilters.location || urlLocation;
+
+    if (effectiveSearch) params.set("search", effectiveSearch);
+    if (effectiveLocation) params.set("location", effectiveLocation);
+    if (appliedFilters.department)
+      params.set("department", appliedFilters.department);
+    if (appliedFilters.jobType.length > 0) {
+      params.set("jobType", appliedFilters.jobType.join(","));
+    }
+    if (appliedFilters.jobLevel.length > 0) {
+      params.set("jobLevel", appliedFilters.jobLevel.join(","));
+    }
+    if (appliedFilters.experience)
+      params.set("experience", appliedFilters.experience);
+    if (appliedFilters.education)
+      params.set("education", appliedFilters.education);
+    if (appliedFilters.skills) params.set("skills", appliedFilters.skills);
+    if (appliedFilters.currency)
+      params.set("currency", appliedFilters.currency);
+    const sanitizedSalaryFrom = appliedFilters.salaryFrom.replace(/,/g, "").trim();
+    const sanitizedSalaryTo = appliedFilters.salaryTo.replace(/,/g, "").trim();
+    if (sanitizedSalaryFrom) params.set("salaryFrom", sanitizedSalaryFrom);
+    if (sanitizedSalaryTo) params.set("salaryTo", sanitizedSalaryTo);
+
+    return params.toString();
+  };
+
+  const buildJobTypeCountQuery = () => {
+    const params = new URLSearchParams();
+    params.set("page", "1");
+    params.set("limit", "2000");
+
+    const urlSearch = (searchParams.get("search") || "").trim();
+    const urlLocation = (searchParams.get("location") || "").trim();
+    const effectiveSearch = appliedFilters.search || urlSearch;
+    const effectiveLocation = appliedFilters.location || urlLocation;
+
+    if (effectiveSearch) params.set("search", effectiveSearch);
+    if (effectiveLocation) params.set("location", effectiveLocation);
+    if (appliedFilters.department)
+      params.set("department", appliedFilters.department);
+    if (appliedFilters.workMode.length > 0) {
+      params.set("workMode", appliedFilters.workMode.join(","));
+    }
+    if (appliedFilters.jobLevel.length > 0) {
+      params.set("jobLevel", appliedFilters.jobLevel.join(","));
+    }
+    if (appliedFilters.experience)
+      params.set("experience", appliedFilters.experience);
+    if (appliedFilters.education)
+      params.set("education", appliedFilters.education);
+    if (appliedFilters.skills) params.set("skills", appliedFilters.skills);
+    if (appliedFilters.currency)
+      params.set("currency", appliedFilters.currency);
+    const sanitizedSalaryFrom = appliedFilters.salaryFrom.replace(/,/g, "").trim();
+    const sanitizedSalaryTo = appliedFilters.salaryTo.replace(/,/g, "").trim();
+    if (sanitizedSalaryFrom) params.set("salaryFrom", sanitizedSalaryFrom);
+    if (sanitizedSalaryTo) params.set("salaryTo", sanitizedSalaryTo);
+
+    return params.toString();
+  };
+
+  const buildJobLevelCountQuery = () => {
+    const params = new URLSearchParams();
+    params.set("page", "1");
+    params.set("limit", "2000");
+
+    const urlSearch = (searchParams.get("search") || "").trim();
+    const urlLocation = (searchParams.get("location") || "").trim();
+    const effectiveSearch = appliedFilters.search || urlSearch;
+    const effectiveLocation = appliedFilters.location || urlLocation;
+
+    if (effectiveSearch) params.set("search", effectiveSearch);
+    if (effectiveLocation) params.set("location", effectiveLocation);
+    if (appliedFilters.department)
+      params.set("department", appliedFilters.department);
+    if (appliedFilters.workMode.length > 0) {
+      params.set("workMode", appliedFilters.workMode.join(","));
+    }
+    if (appliedFilters.jobType.length > 0) {
+      params.set("jobType", appliedFilters.jobType.join(","));
+    }
+    if (appliedFilters.experience)
+      params.set("experience", appliedFilters.experience);
+    if (appliedFilters.education)
+      params.set("education", appliedFilters.education);
+    if (appliedFilters.skills) params.set("skills", appliedFilters.skills);
+    if (appliedFilters.currency)
+      params.set("currency", appliedFilters.currency);
+    const sanitizedSalaryFrom = appliedFilters.salaryFrom.replace(/,/g, "").trim();
+    const sanitizedSalaryTo = appliedFilters.salaryTo.replace(/,/g, "").trim();
+    if (sanitizedSalaryFrom) params.set("salaryFrom", sanitizedSalaryFrom);
+    if (sanitizedSalaryTo) params.set("salaryTo", sanitizedSalaryTo);
+
+    return params.toString();
+  };
+
+  const normalizeWorkModeKey = (
+    mode?: string,
+  ): "remote" | "on-site" | "hybrid" => {
+    if (!mode) return "remote";
+    const normalized = mode.toLowerCase().trim();
+    if (normalized === "hybrid") return "hybrid";
+    if (normalized === "on-site" || normalized === "onsite") return "on-site";
+    return "remote";
+  };
+
+  const normalizeJobTypeKey = (
+    jobType?: string,
+  ): "Full Time" | "Part Time" | "Contract" | "Internship" => {
+    const normalized = (jobType || "").toLowerCase().replace(/[-\s]/g, "");
+    if (normalized.includes("parttime")) return "Part Time";
+    if (normalized.includes("contract")) return "Contract";
+    if (normalized.includes("intern")) return "Internship";
+    return "Full Time";
+  };
+
+  const normalizeJobLevelKey = (
+    jobLevel?: string,
+  ): "Junior" | "Mid" | "Senior" | "Lead" => {
+    const normalized = (jobLevel || "").toLowerCase();
+    if (normalized.includes("lead")) return "Lead";
+    if (normalized.includes("senior")) return "Senior";
+    if (normalized.includes("mid")) return "Mid";
+    return "Junior";
   };
 
   const applyFilters = (override?: Partial<AppliedFilters>) => {
@@ -322,6 +468,22 @@ const JobListingPage = () => {
   };
 
   useEffect(() => {
+    const initialSearch = (searchParams.get("search") || "").trim();
+    const initialLocation = (searchParams.get("location") || "").trim();
+
+    if (!initialSearch && !initialLocation) return;
+
+    setSearchTerm(initialSearch);
+    setFilterLocation(initialLocation);
+    setAppliedFilters((prev) => ({
+      ...prev,
+      search: initialSearch,
+      location: initialLocation,
+    }));
+    setPage(1);
+  }, [searchParams]);
+
+  useEffect(() => {
     const fetchJobs = async () => {
       try {
         setLoading(true);
@@ -342,12 +504,60 @@ const JobListingPage = () => {
           location: job.location || "Location",
           jobType: job.jobType || "Full-Time",
           companyLogo: job.companyLogo || "",
+          assessmentRequired: Boolean(job.assessmentRequired),
         }));
 
         setJobCards(mappedJobs);
         setTotalJobs(data.total || 0);
         fetchAppliedStatuses(mappedJobs.map((j: JobCard) => j.id));
         fetchSavedStatuses(mappedJobs.map((j: JobCard) => j.id));
+
+        // Work mode counts should reflect current filters except work mode itself.
+        const countResponse = await fetch(
+          `http://localhost:5000/api/jobs?${buildWorkModeCountQuery()}`,
+        );
+        const countData = await countResponse.json();
+        if (countResponse.ok) {
+          const counts = { remote: 0, "on-site": 0, hybrid: 0 };
+          (countData.jobs || []).forEach((job: any) => {
+            const key = normalizeWorkModeKey(job.workMode);
+            counts[key] += 1;
+          });
+          setWorkModeCounts(counts);
+        }
+
+        // Job type counts should reflect current filters except job type itself.
+        const jobTypeCountResponse = await fetch(
+          `http://localhost:5000/api/jobs?${buildJobTypeCountQuery()}`,
+        );
+        const jobTypeCountData = await jobTypeCountResponse.json();
+        if (jobTypeCountResponse.ok) {
+          const counts = {
+            "Full Time": 0,
+            "Part Time": 0,
+            Contract: 0,
+            Internship: 0,
+          };
+          (jobTypeCountData.jobs || []).forEach((job: any) => {
+            const key = normalizeJobTypeKey(job.jobType);
+            counts[key] += 1;
+          });
+          setJobTypeCounts(counts);
+        }
+
+        // Job level counts should reflect current filters except job level itself.
+        const jobLevelCountResponse = await fetch(
+          `http://localhost:5000/api/jobs?${buildJobLevelCountQuery()}`,
+        );
+        const jobLevelCountData = await jobLevelCountResponse.json();
+        if (jobLevelCountResponse.ok) {
+          const counts = { Junior: 0, Mid: 0, Senior: 0, Lead: 0 };
+          (jobLevelCountData.jobs || []).forEach((job: any) => {
+            const key = normalizeJobLevelKey(job.jobLevel);
+            counts[key] += 1;
+          });
+          setJobLevelCounts(counts);
+        }
       } catch (err: any) {
         setError(err?.message || "Something went wrong");
       } finally {
@@ -677,7 +887,7 @@ const JobListingPage = () => {
                       }
                     />{" "}
                     Remote
-                    <span className="joblist-count">235</span>
+                    <span className="joblist-count">{workModeCounts.remote}</span>
                   </label>
                   <label>
                     <input
@@ -691,7 +901,7 @@ const JobListingPage = () => {
                       }
                     />{" "}
                     On-Site
-                    <span className="joblist-count">128</span>
+                    <span className="joblist-count">{workModeCounts["on-site"]}</span>
                   </label>
                   <label>
                     <input
@@ -705,7 +915,7 @@ const JobListingPage = () => {
                       }
                     />{" "}
                     Hybrid
-                    <span className="joblist-count">67</span>
+                    <span className="joblist-count">{workModeCounts.hybrid}</span>
                   </label>
                 </div>
               )}
@@ -745,7 +955,7 @@ const JobListingPage = () => {
                       }
                     />{" "}
                     Full Time
-                    <span className="joblist-count">235</span>
+                    <span className="joblist-count">{jobTypeCounts["Full Time"]}</span>
                   </label>
                   <label>
                     <input
@@ -759,7 +969,7 @@ const JobListingPage = () => {
                       }
                     />{" "}
                     Part Time
-                    <span className="joblist-count">28</span>
+                    <span className="joblist-count">{jobTypeCounts["Part Time"]}</span>
                   </label>
                   <label>
                     <input
@@ -773,7 +983,7 @@ const JobListingPage = () => {
                       }
                     />{" "}
                     Contract
-                    <span className="joblist-count">97</span>
+                    <span className="joblist-count">{jobTypeCounts.Contract}</span>
                   </label>
                   <label>
                     <input
@@ -787,7 +997,7 @@ const JobListingPage = () => {
                       }
                     />{" "}
                     Internship
-                    <span className="joblist-count">14</span>
+                    <span className="joblist-count">{jobTypeCounts.Internship}</span>
                   </label>
                 </div>
               )}
@@ -827,7 +1037,7 @@ const JobListingPage = () => {
                       }
                     />{" "}
                     Junior
-                    <span className="joblist-count">235</span>
+                    <span className="joblist-count">{jobLevelCounts.Junior}</span>
                   </label>
                   <label>
                     <input
@@ -841,7 +1051,7 @@ const JobListingPage = () => {
                       }
                     />{" "}
                     Mid
-                    <span className="joblist-count">198</span>
+                    <span className="joblist-count">{jobLevelCounts.Mid}</span>
                   </label>
                   <label>
                     <input
@@ -855,7 +1065,7 @@ const JobListingPage = () => {
                       }
                     />{" "}
                     Senior
-                    <span className="joblist-count">126</span>
+                    <span className="joblist-count">{jobLevelCounts.Senior}</span>
                   </label>
                   <label>
                     <input
@@ -869,7 +1079,7 @@ const JobListingPage = () => {
                       }
                     />{" "}
                     Lead
-                    <span className="joblist-count">66</span>
+                    <span className="joblist-count">{jobLevelCounts.Lead}</span>
                   </label>
                 </div>
               )}
@@ -1136,13 +1346,33 @@ const JobListingPage = () => {
                     >
                       View Details
                     </button>
-                    {userRole === "candidate" && (
+                    {(userRole === "candidate" || !userRole) && (
                       <button
-                        className="joblist-btn-primary"
-                        onClick={() => openApplyModal(job.id)}
-                        disabled={appliedJobs[job.id]}
+                        className={`joblist-btn-primary ${
+                          userRole === "candidate" && appliedJobs[job.id]
+                            ? "joblist-btn-applied"
+                            : ""
+                        }`}
+                        onClick={() => {
+                          if (!userRole) {
+                            navigate("/login");
+                            return;
+                          }
+                          if (
+                            userRole === "candidate" &&
+                            job.assessmentRequired &&
+                            !appliedJobs[job.id]
+                          ) {
+                            navigate(`/jobs/${job.id}`);
+                            return;
+                          }
+                          openApplyModal(job.id);
+                        }}
+                        disabled={userRole === "candidate" && appliedJobs[job.id]}
                       >
-                        {appliedJobs[job.id] ? "Applied" : "Apply Now"}
+                        {userRole === "candidate" && appliedJobs[job.id]
+                          ? "Applied"
+                          : "Apply Now"}
                       </button>
                     )}
                   </div>
@@ -1194,173 +1424,26 @@ const JobListingPage = () => {
         </div>
       </section>
 
-      {applyModalOpen && (
-        <div className="apply-modal-overlay">
-          <div className="apply-modal">
-            <div className="apply-modal-header">
-              <div>
-                <h3>Confirm Application</h3>
-                <p>
-                  Review your resume and confirm the requirements before
-                  applying.
-                </p>
-              </div>
-              <button className="apply-modal-close" onClick={closeApplyModal}>
-                <img src={closeIcon} alt="Close" />
-              </button>
-            </div>
-
-            {applyLoading && <p>Loading details...</p>}
-            {!applyLoading && applyJobDetails && (
-              <div className="apply-modal-body">
-                <div className="apply-modal-section">
-                  <h4>{applyJobDetails.jobTitle}</h4>
-                  <p className="apply-modal-muted">
-                    {applyJobDetails.companyName}
-                  </p>
-                </div>
-
-                <div className="apply-modal-section">
-                  <h5>Resume</h5>
-                  {applyProfileResume ? (
-                    <a
-                      href={`http://localhost:5000${applyProfileResume}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="apply-modal-link"
-                    >
-                      View current resume
-                    </a>
-                  ) : (
-                    <p className="apply-modal-muted">No resume on profile.</p>
-                  )}
-                  <label className="apply-modal-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={useCustomResume}
-                      onChange={(e) => setUseCustomResume(e.target.checked)}
-                    />
-                    Use a different resume for this application (won't change
-                    your profile)
-                  </label>
-                  {useCustomResume && (
-                    <label className="apply-modal-upload">
-                      <input
-                        type="file"
-                        onChange={(e) =>
-                          setCustomResumeFile(
-                            e.target.files ? e.target.files[0] : null,
-                          )
-                        }
-                      />
-                      <div className="apply-modal-upload-inner">
-                        <span className="apply-modal-upload-title">
-                          Upload new resume
-                        </span>
-                        <span className="apply-modal-upload-subtitle">
-                          PDF or DOCX ? Max 5MB
-                        </span>
-                        {customResumeFile && (
-                          <>
-                            <span className="apply-modal-upload-file">
-                              {customResumeFile.name}
-                            </span>
-                            <button
-                              type="button"
-                              className="apply-modal-link apply-modal-preview-btn"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                const url =
-                                  URL.createObjectURL(customResumeFile);
-                                window.open(
-                                  url,
-                                  "_blank",
-                                  "noopener,noreferrer",
-                                );
-                              }}
-                            >
-                              Preview selected resume
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </label>
-                  )}
-                </div>
-
-                <div className="apply-modal-divider" />
-
-                <div className="apply-modal-section">
-                  <h5>Requirements</h5>
-                  <p className="apply-modal-muted">
-                    Education: {applyJobDetails.education || "Not specified"}
-                  </p>
-                  <p className="apply-modal-muted">
-                    Experience: {applyJobDetails.experience || "Not specified"}
-                  </p>
-                  <label className="apply-modal-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={confirmRequirements}
-                      onChange={(e) => setConfirmRequirements(e.target.checked)}
-                    />
-                    I confirm I meet the listed requirements.
-                  </label>
-                </div>
-
-                <div className="apply-modal-divider" />
-
-                <div className="apply-modal-section">
-                  <h5>Message to recruiter (optional)</h5>
-                  <div className="apply-modal-quill">
-                    <ReactQuill
-                      theme="snow"
-                      value={applyNote}
-                      onChange={setApplyNote}
-                      modules={quillModules}
-                      formats={quillFormats}
-                      placeholder="Add a short note for the recruiter..."
-                    />
-                  </div>
-                </div>
-
-                <label className="apply-modal-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={confirmResume}
-                    onChange={(e) => setConfirmResume(e.target.checked)}
-                  />
-                  I have reviewed my resume and want to apply.
-                </label>
-              </div>
-            )}
-
-            {applyError && (
-              <div className="apply-modal-error">{applyError}</div>
-            )}
-            {applyMessage && (
-              <div className="apply-modal-success">{applyMessage}</div>
-            )}
-
-            <div className="apply-modal-actions">
-              <button
-                className="apply-modal-secondary"
-                onClick={closeApplyModal}
-              >
-                Cancel
-              </button>
-              <button
-                className="apply-modal-primary"
-                onClick={handleConfirmApply}
-                disabled={applyLoading}
-              >
-                Confirm & Apply
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      <ApplyJobModal
+        isOpen={applyModalOpen}
+        loading={applyLoading}
+        job={applyJobDetails}
+        profileResume={applyProfileResume}
+        useCustomResume={useCustomResume}
+        customResumeFile={customResumeFile}
+        applyNote={applyNote}
+        confirmRequirements={confirmRequirements}
+        confirmResume={confirmResume}
+        applyError={applyError}
+        applyMessage={applyMessage}
+        onClose={closeApplyModal}
+        onConfirm={handleConfirmApply}
+        onUseCustomResumeChange={setUseCustomResume}
+        onCustomResumeChange={setCustomResumeFile}
+        onApplyNoteChange={setApplyNote}
+        onConfirmRequirementsChange={setConfirmRequirements}
+        onConfirmResumeChange={setConfirmResume}
+      />
       <section className="joblist-brands">
         <div className="joblist-brands-row">
           <img src={images.brandSamsung} alt="Samsung" />
@@ -1380,3 +1463,5 @@ const JobListingPage = () => {
 };
 
 export default JobListingPage;
+
+

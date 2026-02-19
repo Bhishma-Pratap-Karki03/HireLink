@@ -26,9 +26,14 @@ const formatDate = (value?: string) => {
 const RecruiterJobPostingsListPage = () => {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<RecruiterJobItem[]>([]);
+  const [titleSearch, setTitleSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const filteredJobs = jobs.filter((job) =>
+    job.jobTitle.toLowerCase().includes(titleSearch.trim().toLowerCase()),
+  );
 
   const toggleActive = async (jobId: string, nextValue: boolean) => {
     const token = localStorage.getItem("authToken");
@@ -97,7 +102,11 @@ const RecruiterJobPostingsListPage = () => {
     <div className="recruiter-joblist-layout">
       <RecruiterSidebar />
       <main className="recruiter-joblist-main">
-        <RecruiterTopBar />
+        <RecruiterTopBar
+          showSearch
+          searchPlaceholder="Search by job title..."
+          onSearch={setTitleSearch}
+        />
         <div className="recruiter-joblist-content">
           <div className="recruiter-joblist-header">
             <div>
@@ -117,12 +126,16 @@ const RecruiterJobPostingsListPage = () => {
           {error && !loading && (
             <div className="recruiter-joblist-state error">{error}</div>
           )}
-          {!loading && !error && jobs.length === 0 && (
-            <div className="recruiter-joblist-state">No job postings yet.</div>
+          {!loading && !error && filteredJobs.length === 0 && (
+            <div className="recruiter-joblist-state">
+              {jobs.length === 0
+                ? "No job postings yet."
+                : "No jobs found for this title."}
+            </div>
           )}
 
           <div className="recruiter-joblist-grid">
-            {jobs.map((job) => (
+            {filteredJobs.map((job) => (
               <article key={job._id} className="recruiter-joblist-card">
                 <div className="recruiter-joblist-card-header">
                   <h3>{job.jobTitle}</h3>

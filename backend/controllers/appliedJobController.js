@@ -4,6 +4,9 @@ const AppliedJob = require("../models/appliedJobModel");
 const JobPost = require("../models/jobPostModel");
 const User = require("../models/userModel");
 const AtsReport = require("../models/atsReportModel");
+const AssessmentAttempt = require("../models/assessmentAttemptModel");
+const AdminAssessment = require("../models/adminAssessmentModel");
+const RecruiterAssessment = require("../models/recruiterAssessmentModel");
 const {
   parseResumeText,
   extractEmails,
@@ -249,16 +252,86 @@ exports.getApplicationsByJob = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    const formatted = applications.map((app) => ({
-      id: app._id,
-      candidate: app.candidate,
-      resumeUrl: app.resumeUrl,
-      resumeFileName: app.resumeFileName,
-      resumeFileSize: app.resumeFileSize,
-      message: app.message || "",
-      status: app.status,
-      appliedAt: app.createdAt,
-    }));
+    let assessmentDetails = null;
+    let latestAttemptsByCandidate = new Map();
+
+    if (job.assessmentId) {
+      const assessmentSource = job.assessmentSource || "recruiter";
+      const AssessmentModel =
+        assessmentSource === "admin" ? AdminAssessment : RecruiterAssessment;
+
+      const assessment = await AssessmentModel.findById(job.assessmentId).lean();
+      if (assessment) {
+        assessmentDetails = {
+          id: assessment._id,
+          source: assessmentSource,
+          type: assessment.type,
+          title: assessment.title,
+          quizTotal:
+            assessment.type === "quiz" && Array.isArray(assessment.quizQuestions)
+              ? assessment.quizQuestions.length
+              : null,
+        };
+
+        const candidateIds = applications
+          .map((app) => app?.candidate?._id)
+          .filter(Boolean);
+
+        if (candidateIds.length > 0) {
+          const attempts = await AssessmentAttempt.find({
+            assessment: job.assessmentId,
+            assessmentSource,
+            candidate: { $in: candidateIds },
+            status: "submitted",
+          })
+            .sort({ submittedAt: -1, createdAt: -1 })
+            .lean();
+
+          latestAttemptsByCandidate = attempts.reduce((acc, attempt) => {
+            const key = attempt.candidate?.toString();
+            if (!key || acc.has(key)) return acc;
+            acc.set(key, attempt);
+            return acc;
+          }, new Map());
+        }
+      }
+    }
+
+    const formatted = applications.map((app) => {
+      const candidateId = app?.candidate?._id?.toString();
+      const attempt = candidateId ? latestAttemptsByCandidate.get(candidateId) : null;
+      const answers = attempt?.answers || {};
+
+      return {
+        id: app._id,
+        candidate: app.candidate,
+        resumeUrl: app.resumeUrl,
+        resumeFileName: app.resumeFileName,
+        resumeFileSize: app.resumeFileSize,
+        message: app.message || "",
+        status: app.status,
+        appliedAt: app.createdAt,
+        assessment: {
+          attached: Boolean(assessmentDetails),
+          required: Boolean(job.assessmentRequired && assessmentDetails),
+          source: assessmentDetails?.source || null,
+          type: assessmentDetails?.type || null,
+          title: assessmentDetails?.title || "",
+          submitted: Boolean(attempt),
+          submittedAt: attempt?.submittedAt || null,
+          score:
+            assessmentDetails?.type === "quiz" && typeof attempt?.score === "number"
+              ? attempt.score
+              : null,
+          quizTotal:
+            assessmentDetails?.type === "quiz" ? assessmentDetails?.quizTotal : null,
+          writingResponse: answers.writingResponse || "",
+          writingLink: answers.writingLink || "",
+          codeResponse: answers.codeResponse || "",
+          codeLink: answers.codeLink || "",
+        },
+      };
+    });
 
     return res.status(200).json({
       success: true,
@@ -268,6 +341,8 @@ exports.getApplicationsByJob = async (req, res) => {
         location: job.location,
         jobType: job.jobType,
         deadline: job.deadline,
+        assessmentRequired: Boolean(job.assessmentRequired && job.assessmentId),
+        assessmentSource: job.assessmentSource || "recruiter",
       },
       applications: formatted,
     });
@@ -410,6 +485,161 @@ exports.getMyApplications = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Server error fetching your applications",
+      error: error.message,
+    });
+  }
+};
+
+exports.getApplicationAssessmentById = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { applicationId } = req.params;
+
+    const recruiter = await User.findById(userId).lean();
+    if (!recruiter || recruiter.role !== "recruiter") {
+      return res.status(403).json({
+        success: false,
+        message: "Only recruiters can view assessment details",
+      });
+    }
+
+    const application = await AppliedJob.findById(applicationId)
+      .populate({
+        path: "candidate",
+        select: "fullName email profilePicture currentJobTitle",
+      })
+      .populate({
+        path: "job",
+        select: "jobTitle location recruiterId assessmentId assessmentSource assessmentRequired",
+      })
+      .lean();
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    if (application.job?.recruiterId?.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have permission to view this application",
+      });
+    }
+
+    if (!application.job?.assessmentId) {
+      return res.status(200).json({
+        success: true,
+        assessment: {
+          attached: false,
+          required: false,
+          submitted: false,
+        },
+        application: {
+          id: application._id,
+          candidate: application.candidate,
+          job: application.job,
+        },
+      });
+    }
+
+    const assessmentSource = application.job.assessmentSource || "recruiter";
+    const AssessmentModel =
+      assessmentSource === "admin" ? AdminAssessment : RecruiterAssessment;
+
+    const assessment = await AssessmentModel.findById(
+      application.job.assessmentId,
+    ).lean();
+
+    if (!assessment) {
+      return res.status(404).json({
+        success: false,
+        message: "Assessment not found",
+      });
+    }
+
+    const attempt = await AssessmentAttempt.findOne({
+      assessment: application.job.assessmentId,
+      assessmentSource,
+      candidate: application.candidate?._id,
+      status: "submitted",
+    })
+      .sort({ submittedAt: -1, createdAt: -1 })
+      .lean();
+
+    const answers = attempt?.answers || {};
+    const quizAnswers = Array.isArray(answers.quizAnswers) ? answers.quizAnswers : [];
+    const quizReview =
+      assessment.type === "quiz" && Array.isArray(assessment.quizQuestions)
+        ? assessment.quizQuestions.map((question, index) => {
+            const selectedIndex =
+              typeof quizAnswers[index] === "number" ? quizAnswers[index] : null;
+            const correctIndex =
+              typeof question.correctIndex === "number" ? question.correctIndex : null;
+            const options = Array.isArray(question.options) ? question.options : [];
+            return {
+              question: question.question || "",
+              options,
+              selectedIndex,
+              selectedOption:
+                selectedIndex !== null && options[selectedIndex] !== undefined
+                  ? options[selectedIndex]
+                  : "",
+              correctIndex,
+              correctOption:
+                correctIndex !== null && options[correctIndex] !== undefined
+                  ? options[correctIndex]
+                  : "",
+              isCorrect:
+                selectedIndex !== null &&
+                correctIndex !== null &&
+                selectedIndex === correctIndex,
+            };
+          })
+        : [];
+
+    return res.status(200).json({
+      success: true,
+      application: {
+        id: application._id,
+        candidate: application.candidate,
+        job: application.job,
+      },
+      assessment: {
+        attached: true,
+        required: Boolean(application.job.assessmentRequired),
+        source: assessmentSource,
+        type: assessment.type,
+        title: assessment.title,
+        description: assessment.description || "",
+        submitted: Boolean(attempt),
+        submittedAt: attempt?.submittedAt || null,
+        startTime: attempt?.startTime || null,
+        endTime: attempt?.endTime || null,
+        attemptCreatedAt: attempt?.createdAt || null,
+        score: assessment.type === "quiz" ? attempt?.score ?? null : null,
+        quizTotal:
+          assessment.type === "quiz" && Array.isArray(assessment.quizQuestions)
+            ? assessment.quizQuestions.length
+            : null,
+        quizReview,
+        writingTask: assessment.writingTask || "",
+        writingInstructions: assessment.writingInstructions || "",
+        writingFormat: assessment.writingFormat || "",
+        writingResponse: answers.writingResponse || "",
+        writingLink: answers.writingLink || "",
+        codeProblem: assessment.codeProblem || "",
+        codeEvaluation: assessment.codeEvaluation || "",
+        codeResponse: answers.codeResponse || "",
+        codeLink: answers.codeLink || "",
+      },
+    });
+  } catch (error) {
+    console.error("Get application assessment detail error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error fetching assessment details",
       error: error.message,
     });
   }

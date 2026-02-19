@@ -113,14 +113,15 @@
 }
 
 .recruiter-applicant-info {
-  display: flex;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 1fr) auto;
+  column-gap: 24px;
   align-items: center;
   padding-bottom: 8px;
   border-bottom: 1px solid #eef2f7;
 }
 
-.recruiter-applicant-info img {
+.recruiter-applicant-avatar {
   width: 54px;
   height: 54px;
   border-radius: 50%;
@@ -145,6 +146,69 @@
   margin-top: 6px;
   color: #2563eb;
   font-size: 12px;
+}
+
+.recruiter-applicant-user {
+  min-width: 0;
+}
+
+.recruiter-applicant-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.recruiter-applicant-status-inline {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  justify-self: center;
+  width: 220px;
+  transform: translateX(-28px);
+}
+
+.recruiter-applicant-status-inline > span {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.recruiter-applicant-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: end;
+}
+
+.recruiter-applicant-icon-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  outline: none;
+  box-shadow: none;
+  appearance: none;
+}
+
+.recruiter-applicant-icon-btn img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.recruiter-applicant-icon-btn:focus,
+.recruiter-applicant-icon-btn:focus-visible,
+.recruiter-applicant-icon-btn:active,
+.recruiter-applicant-icon-btn:hover {
+  outline: none;
+  box-shadow: none;
+  border: none;
+  background: transparent;
 }
 
 .recruiter-applicant-meta {
@@ -212,6 +276,24 @@
   line-height: 1.1;
 }
 
+.recruiter-applicant-assessment {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recruiter-applicant-assessment-btn {
+  width: fit-content;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #2563eb;
+  border: 1px solid #c7d6f8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 
 .recruiter-applicant-meta small {
   color: #94a3b8;
@@ -234,8 +316,90 @@
   color: #374151;
 }
 
+.recruiter-applicant-overlay-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  background: #f7f9fc;
+  border: 1px solid #e3eaf5;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.recruiter-applicant-overlay-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recruiter-applicant-overlay-grid span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.recruiter-applicant-overlay-grid strong {
+  color: #0f283c;
+  font-size: 14px;
+}
+
+.recruiter-applicant-overlay-grid a {
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.recruiter-applicant-overlay-grid small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.recruiter-applicant-overlay-assessment {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recruiter-applicant-overlay-message {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recruiter-applicant-overlay-message span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.recruiter-applicant-overlay-message p {
+  margin: 0;
+  background: #f7f9fc;
+  border: 1px solid #e3eaf5;
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: #374151;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 @media (max-width: 768px) {
   .recruiter-applicants-content {
     padding: 24px;
+  }
+
+  .recruiter-applicant-info {
+    grid-template-columns: 1fr;
+    row-gap: 12px;
+  }
+
+  .recruiter-applicant-status-inline {
+    justify-self: start;
+    width: 100%;
+    max-width: 220px;
+    transform: none;
+  }
+
+  .recruiter-applicant-top-actions {
+    justify-self: start;
   }
 }

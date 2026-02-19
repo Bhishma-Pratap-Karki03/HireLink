@@ -349,6 +349,16 @@ const userSchema = new mongoose.Schema(
       default: "candidate",
     },
 
+    isBlocked: {
+      type: Boolean,
+      default: false,
+    },
+
+    lastLoginAt: {
+      type: Date,
+      default: null,
+    },
+
     workspaceImages: [workspaceImageSchema],
 
     phone: {

@@ -25,6 +25,9 @@
   flex-direction: column;
   gap: 24px;
 }
+.assessment-attempt-card-submitted {
+  border: 1px solid #dbe6f4;
+}
 
 .assessment-attempt-header {
   display: flex;
@@ -137,6 +140,8 @@
   border: 1px solid #d7e0ef;
   padding: 12px;
   font-family: "Montserrat", sans-serif;
+  width: 100%;
+  max-width: 100%;
 }
 
 .writing-block h3 {
@@ -158,10 +163,51 @@
   color: #5f6f88;
   line-height: 1.6;
 }
+.assessment-richtext ul,
+.assessment-richtext ol {
+  margin: 0 0 8px;
+  padding-left: 18px;
+}
 
 .assessment-richtext ul {
-  padding-left: 18px;
-  margin: 0;
+  list-style: disc;
+}
+
+.assessment-richtext ol {
+  list-style: decimal;
+}
+
+.assessment-richtext li {
+  display: list-item;
+}
+
+.assessment-submission-block {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f8fbff;
+}
+
+.assessment-submission-block h3 {
+  margin-bottom: 10px;
+}
+
+.assessment-link-output {
+  display: inline-block;
+  width: 100%;
+  border: 1px solid #d7e0ef;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f8fbff;
+  color: #2563eb;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.assessment-attempt-card-submitted .assessment-input,
+.assessment-attempt-card-submitted .assessment-textarea {
+  background: #f8fbff;
+  color: #334155;
 }
 
 .assessment-attempt-actions {

@@ -44,8 +44,37 @@
   margin-top: 8px;
 }
 
+/* Scope job-card styling to Saved Jobs page to avoid cross-page CSS conflicts */
+.savedjobs-main .joblist-grid.savedjobs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 380px));
+  gap: 24px;
+  justify-content: start;
+}
+
+.savedjobs-main .joblist-card-item.savedjobs-card {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.savedjobs-main .joblist-company-logo {
+  width: 92px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.savedjobs-main .joblist-card-buttons {
+  margin-top: auto;
+}
+
 @media (max-width: 768px) {
   .savedjobs-main {
     padding: 24px;
+  }
+
+  .savedjobs-main .joblist-grid.savedjobs-grid {
+    grid-template-columns: 1fr;
   }
 }

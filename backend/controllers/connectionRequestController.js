@@ -337,3 +337,95 @@ exports.removeConnection = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getMutualConnections = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    const { targetUserId } = req.params;
+
+    if (!userId || !isValidObjectId(userId)) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized",
+      });
+    }
+
+    if (!targetUserId || !isValidObjectId(targetUserId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid targetUserId is required",
+      });
+    }
+
+    if (userId === targetUserId) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        mutualConnections: [],
+      });
+    }
+
+    const [myConnections, targetConnections] = await Promise.all([
+      ConnectionRequest.find({
+        status: "accepted",
+        $or: [{ requester: userId }, { recipient: userId }],
+      })
+        .select("requester recipient")
+        .lean(),
+      ConnectionRequest.find({
+        status: "accepted",
+        $or: [{ requester: targetUserId }, { recipient: targetUserId }],
+      })
+        .select("requester recipient")
+        .lean(),
+    ]);
+
+    const myConnectedIds = new Set(
+      myConnections.map((item) => {
+        const requesterId = item.requester.toString();
+        const recipientId = item.recipient.toString();
+        return requesterId === userId ? recipientId : requesterId;
+      }),
+    );
+
+    const targetConnectedIds = targetConnections.map((item) => {
+      const requesterId = item.requester.toString();
+      const recipientId = item.recipient.toString();
+      return requesterId === targetUserId ? recipientId : requesterId;
+    });
+
+    const mutualIds = targetConnectedIds.filter((id) => myConnectedIds.has(id));
+
+    if (mutualIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        mutualConnections: [],
+      });
+    }
+
+    const users = await User.find({ _id: { $in: mutualIds } })
+      .select("fullName profilePicture role currentJobTitle")
+      .lean();
+
+    const usersById = new Map(users.map((user) => [user._id.toString(), user]));
+    const mutualConnections = mutualIds
+      .map((id) => usersById.get(id))
+      .filter(Boolean)
+      .map((user) => ({
+        id: user._id.toString(),
+        fullName: user.fullName || "User",
+        profilePicture: user.profilePicture || "",
+        role: user.role || "",
+        currentJobTitle: user.currentJobTitle || "",
+      }));
+
+    return res.status(200).json({
+      success: true,
+      count: mutualConnections.length,
+      mutualConnections,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

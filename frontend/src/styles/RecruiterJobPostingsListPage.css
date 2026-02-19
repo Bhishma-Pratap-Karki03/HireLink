@@ -60,7 +60,7 @@
 
 .recruiter-joblist-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -72,7 +72,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 230px;
+  min-height: 0;
 }
 
 .recruiter-joblist-card-header {
@@ -211,5 +211,9 @@
 @media (max-width: 768px) {
   .recruiter-joblist-content {
     padding: 24px;
+  }
+
+  .recruiter-joblist-grid {
+    grid-template-columns: 1fr;
   }
 }

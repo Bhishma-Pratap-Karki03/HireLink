@@ -98,18 +98,19 @@
   max-width: 1440px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 36px;
+  grid-template-columns: 280px 1fr;
+  gap: 30px;
 }
 
 .joblist-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
   background: #e7f7ff;
   border-radius: 8px;
   padding: 20px;
   height: fit-content;
+  margin-left: -10px;
 }
 
 .joblist-card {
@@ -130,23 +131,31 @@
   font-size: 16px;
 }
 
+.joblist-sidebar .joblist-filter-group {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+}
+
 .joblist-input-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   background: #ffffff;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid #e2e8f0;
-  padding: 10px 12px;
-  margin-bottom: 10px;
+  padding: 10px 14px;
+  margin-bottom: 0;
 }
 
 .joblist-input-row input {
   border: none;
   outline: none;
   width: 100%;
-  font-size: 13px;
-  color: #2c3a4b;
+  font-size: 14px;
+  color: #87929b;
 }
 
 .joblist-input-row select {
@@ -154,8 +163,8 @@
   outline: none;
   width: 100%;
   background: transparent;
-  font-size: 13px;
-  color: #2c3a4b;
+  font-size: 14px;
+  color: #87929b;
 }
 
 .joblist-btn-primary {
@@ -166,6 +175,18 @@
   padding: 10px 14px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.joblist-btn-primary.joblist-btn-applied {
+  background: #00c7b9;
+  color: #ffffff;
+}
+
+.joblist-btn-primary.joblist-btn-applied:disabled {
+  background: #00c7b9;
+  color: #ffffff;
+  opacity: 1;
+  cursor: default;
 }
 
 .joblist-btn-outline {
@@ -181,15 +202,16 @@
 .joblist-checklist {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  font-size: 13px;
+  gap: 14px;
+  font-size: 14px;
 }
 
 .joblist-checklist label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   justify-content: space-between;
+  color: #474a4c;
 }
 
 .joblist-checklist input {
@@ -197,11 +219,12 @@
 }
 
 .joblist-count {
-  background: #f0f4ff;
-  color: #4c6fff;
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 11px;
+  background-color: #e0e0ff;
+  color: #474a4c;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .joblist-salary-range input[type="range"] {
@@ -247,7 +270,6 @@
   border-radius: 10px;
 }
 
-
 .joblist-main {
   display: flex;
   flex-direction: column;
@@ -280,7 +302,6 @@
   box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.12);
 }
 
-
 .joblist-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -305,9 +326,9 @@
   justify-content: space-between;
 }
 
-.joblist-company-logo {
-  width: 64px;
-  height: 24px;
+.joblist-page .joblist-company-logo {
+  width: 92px;
+  height: 34px;
   object-fit: contain;
 }
 
@@ -454,7 +475,6 @@
   background: #ffffff;
   padding-top: 50px;
   padding-bottom: 80px;
-
 }
 
 .joblist-brands-row {
@@ -465,7 +485,6 @@
   gap: 20px;
   justify-content: center;
   opacity: 0.7;
-
 }
 
 .joblist-brands-row img {
@@ -536,10 +555,17 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 0;
   font-weight: 600;
   color: #1e2937;
   font-size: 14px;
+  font-family: "Montserrat", sans-serif;
+}
+
+.joblist-filter-group .joblist-input-row,
+.joblist-filter-group .joblist-checklist,
+.joblist-filter-group .joblist-salary-range {
+  margin-top: 10px;
 }
 
 .joblist-toggle-icon {
@@ -560,8 +586,8 @@
 .joblist-divider {
   height: 1px;
   background-color: #0068ce;
-  opacity: 0.12;
-  margin: 10px 0;
+  opacity: 0.1;
+  margin: 16px 0;
 }
 
 .joblist-apply-filter {
@@ -575,12 +601,20 @@
   font-size: 14px;
   border: none;
   cursor: pointer;
+  font-family: "Montserrat", sans-serif;
+  transition: background-color 0.2s;
+}
+
+.joblist-apply-filter:hover {
+  background-color: #0056b3;
 }
 
 .joblist-filter-actions {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-top: 8px;
+  margin-bottom: 14px;
 }
 
 .joblist-clear-filter {
@@ -594,6 +628,12 @@
   font-size: 14px;
   border: 1px solid #0068ce;
   cursor: pointer;
+  font-family: "Montserrat", sans-serif;
+  transition: background-color 0.2s;
+}
+
+.joblist-clear-filter:hover {
+  background-color: #f2f6ff;
 }
 
 .joblist-applied-note {

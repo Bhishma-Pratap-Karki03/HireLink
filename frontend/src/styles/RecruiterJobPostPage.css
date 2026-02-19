@@ -536,6 +536,13 @@
   background: #edf4ff;
 }
 
+.recruiter-jobpost-preview-body .joblist-company-logo {
+  width: 92px;
+  height: 34px;
+  object-fit: contain;
+  display: block;
+}
+
 /* Left Column: Job Card */
 .recruiter-jobpost-job-card {
   width: auto;

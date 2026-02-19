@@ -11,3 +11,6 @@ dist/
 .DS_Store
 .vscode/
 .idea/
+__pycache__/
+*.pyc
+*.pyo

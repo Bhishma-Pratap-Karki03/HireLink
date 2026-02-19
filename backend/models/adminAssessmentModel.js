@@ -15,7 +15,7 @@ const adminAssessmentSchema = new mongoose.Schema(
     description: { type: String, required: true },
     type: {
       type: String,
-      enum: ["quiz", "writing", "code"],
+      enum: ["quiz", "writing", "task", "code"],
       required: true,
     },
     difficulty: {
@@ -39,7 +39,7 @@ const adminAssessmentSchema = new mongoose.Schema(
     },
     codeProblem: { type: String, default: "" },
     codeLanguages: [{ type: String, trim: true }],
-    codeSubmission: { type: String, enum: ["file", "repo"], default: "file" },
+    codeSubmission: { type: String, enum: ["file", "repo", "link"], default: "file" },
     codeEvaluation: { type: String, default: "" },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

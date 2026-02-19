@@ -33,7 +33,7 @@ import successIcon from "../../images/Recruiter Job Post Page Images/successIcon
 import workModeIcon from "../../images/Job List Page Images/work-mode.svg";
 import jobTypeIcon from "../../images/Job List Page Images/job-type.svg";
 
-type AssessmentType = "quiz" | "writing" | "code";
+type AssessmentType = "quiz" | "writing" | "task" | "code";
 
 type QuizQuestion = {
   question: string;
@@ -57,7 +57,7 @@ type AssessmentForm = {
   writingFormat: "text" | "file" | "link";
   codeProblem: string;
   codeLanguages: string[];
-  codeSubmission: "file" | "repo";
+  codeSubmission: "file" | "repo" | "link";
   codeEvaluation: string;
 };
 
@@ -119,7 +119,7 @@ const RecruiterJobPostPage: React.FC = () => {
     writingInstructions: "",
     writingFormat: "text",
     codeProblem: "",
-    codeLanguages: [],
+    codeLanguages: [""],
     codeSubmission: "file",
     codeEvaluation: "",
   });
@@ -166,6 +166,48 @@ const RecruiterJobPostPage: React.FC = () => {
       .replace(/&nbsp;/g, " ")
       .trim();
 
+  const mapAssessmentToForm = (assessment: any): AssessmentForm => ({
+    title: assessment?.title || "",
+    description: assessment?.description || "",
+    type: assessment?.type === "code" ? "task" : assessment?.type || "quiz",
+    difficulty: assessment?.difficulty || "beginner",
+    timeLimit: assessment?.timeLimit || "",
+    maxAttempts: assessment?.maxAttempts
+      ? String(assessment.maxAttempts)
+      : "1",
+    status: assessment?.status || "active",
+    visibleToRecruiters: true,
+    skillTags:
+      Array.isArray(assessment?.skillTags) && assessment.skillTags.length > 0
+        ? assessment.skillTags
+        : [""],
+    quizQuestions:
+      assessment?.type === "quiz" &&
+      Array.isArray(assessment?.quizQuestions) &&
+      assessment.quizQuestions.length > 0
+        ? assessment.quizQuestions.map((q: any) => ({
+            question: q?.question || "",
+            options:
+              Array.isArray(q?.options) && q.options.length > 0
+                ? q.options
+                : [""],
+            correctIndex:
+              typeof q?.correctIndex === "number" ? q.correctIndex : null,
+          }))
+        : [{ question: "", options: [""], correctIndex: null }],
+    writingTask: assessment?.writingTask || "",
+    writingInstructions: assessment?.writingInstructions || "",
+    writingFormat: assessment?.writingFormat || "text",
+    codeProblem: assessment?.codeProblem || "",
+    codeLanguages:
+      Array.isArray(assessment?.codeLanguages) &&
+      assessment.codeLanguages.length > 0
+        ? assessment.codeLanguages
+        : [""],
+    codeSubmission: assessment?.codeSubmission || "file",
+    codeEvaluation: assessment?.codeEvaluation || "",
+  });
+
   const missingFields = useMemo(() => {
     const missing: string[] = [];
     if (!formData.jobTitle.trim()) missing.push("Job Title");
@@ -186,6 +228,32 @@ const RecruiterJobPostPage: React.FC = () => {
 
   const isFormComplete = missingFields.length === 0;
   const shouldShowSuccess = hasPosted || submitSuccess !== "";
+
+  const loadAssessmentById = async (
+    assessmentId: string,
+    mode: "view" | "edit" = "view",
+  ) => {
+    if (!assessmentId) return;
+    try {
+      setAssessmentSubmitError("");
+      setAssessmentSubmitSuccess("");
+      const token = localStorage.getItem("authToken");
+      const response = await fetch(
+        `http://localhost:5000/api/recruiter-assessments/${assessmentId}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to load assessment");
+      }
+      setAssessmentForm(mapAssessmentToForm(data.assessment));
+      setAssessmentMode(mode);
+    } catch (error: any) {
+      setAssessmentSubmitError(error?.message || "Failed to load assessment");
+    }
+  };
 
   useEffect(() => {
     const loadJobForEdit = async () => {
@@ -243,6 +311,7 @@ const RecruiterJobPostPage: React.FC = () => {
         setAssessmentEnabled(Boolean(job.assessmentId));
         setSelectedAssessmentId(job.assessmentId || "");
         setAssessmentRequired(Boolean(job.assessmentRequired));
+        setAssessmentMode("none");
         setHasPosted(false);
         setSubmitSuccess("");
         setSubmitError("");
@@ -284,9 +353,9 @@ const RecruiterJobPostPage: React.FC = () => {
         missing.push("Submission Instructions");
       if (!assessmentForm.writingFormat) missing.push("Submission Format");
     }
-    if (assessmentForm.type === "code") {
+    if (assessmentForm.type === "task" || assessmentForm.type === "code") {
       if (!stripHtml(assessmentForm.codeProblem)) missing.push("Problem Statement");
-      if (assessmentForm.codeLanguages.length === 0)
+      if (assessmentForm.codeLanguages.filter((item) => item.trim()).length === 0)
         missing.push("Allowed Languages");
       if (!assessmentForm.codeSubmission) missing.push("Submission Format");
       if (!stripHtml(assessmentForm.codeEvaluation))
@@ -491,18 +560,22 @@ const RecruiterJobPostPage: React.FC = () => {
     );
   };
 
-  const toggleAssessmentLanguage = (language: string) => {
-    if (assessmentForm.codeLanguages.includes(language)) {
-      updateAssessmentForm(
-        "codeLanguages",
-        assessmentForm.codeLanguages.filter((item) => item !== language),
-      );
-    } else {
-      updateAssessmentForm("codeLanguages", [
-        ...assessmentForm.codeLanguages,
-        language,
-      ]);
-    }
+  const addAssessmentLanguage = () => {
+    updateAssessmentForm("codeLanguages", [...assessmentForm.codeLanguages, ""]);
+  };
+
+  const updateAssessmentLanguage = (index: number, value: string) => {
+    updateAssessmentForm(
+      "codeLanguages",
+      assessmentForm.codeLanguages.map((item, i) => (i === index ? value : item)),
+    );
+  };
+
+  const removeAssessmentLanguage = (index: number) => {
+    updateAssessmentForm(
+      "codeLanguages",
+      assessmentForm.codeLanguages.filter((_, i) => i !== index),
+    );
   };
 
 
@@ -634,6 +707,15 @@ const RecruiterJobPostPage: React.FC = () => {
     }
   })();
 
+  const [previewCompanyLogo, setPreviewCompanyLogo] =
+    useState<string>(companyLogo);
+
+  const resolveCompanyLogoPath = (logo?: string) => {
+    if (!logo) return "";
+    if (logo.startsWith("http")) return logo;
+    return `http://localhost:5000${logo.startsWith("/") ? "" : "/"}${logo}`;
+  };
+
   const defaultEmail = (() => {
     try {
       const userDataStr = localStorage.getItem("userData");
@@ -650,6 +732,53 @@ const RecruiterJobPostPage: React.FC = () => {
       setFormData((prev) => ({ ...prev, contactEmail: defaultEmail }));
     }
   }, [defaultEmail, formData.contactEmail, emailTouched]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCompanyLogo = async () => {
+      try {
+        const userDataStr = localStorage.getItem("userData");
+        if (userDataStr) {
+          const userData = JSON.parse(userDataStr);
+          const localLogo = resolveCompanyLogoPath(
+            userData.profilePicture || userData.logo || "",
+          );
+          if (localLogo) {
+            if (isMounted) setPreviewCompanyLogo(localLogo);
+            return;
+          }
+        }
+      } catch {
+        // ignore local storage parse error and fallback to API
+      }
+
+      try {
+        const token = localStorage.getItem("authToken");
+        if (!token) return;
+        const response = await fetch("http://localhost:5000/api/profile/me", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        const apiLogo = resolveCompanyLogoPath(
+          data?.user?.profilePicture || data?.user?.logo || "",
+        );
+        if (apiLogo && isMounted) {
+          setPreviewCompanyLogo(apiLogo);
+        }
+      } catch {
+        // keep default fallback logo
+      }
+    };
+
+    loadCompanyLogo();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Recruiters create assessments directly for a job (no selection list).
 
@@ -676,7 +805,7 @@ const RecruiterJobPostPage: React.FC = () => {
       writingInstructions: "",
       writingFormat: "text",
       codeProblem: "",
-      codeLanguages: [],
+      codeLanguages: [""],
       codeSubmission: "file",
       codeEvaluation: "",
     });
@@ -684,7 +813,7 @@ const RecruiterJobPostPage: React.FC = () => {
 
   const isAssessmentReadOnly = assessmentMode === "view";
 
-  const handleCreateAssessment = async () => {
+  const handleSaveAssessment = async () => {
     if (assessmentForm.timeLimit) {
       const minutes = Number(
         assessmentForm.timeLimit.replace(/[^0-9]/g, ""),
@@ -705,15 +834,18 @@ const RecruiterJobPostPage: React.FC = () => {
 
     const token = localStorage.getItem("authToken");
     if (!token) {
-      setAssessmentSubmitError("Please log in to create an assessment.");
+      setAssessmentSubmitError("Please log in to save an assessment.");
       setAssessmentSubmitSuccess("");
       return;
     }
 
     try {
       setAssessmentSubmitError("");
-      const response = await fetch("http://localhost:5000/api/recruiter-assessments", {
-        method: "POST",
+      const isUpdate = Boolean(selectedAssessmentId);
+      const response = await fetch(
+        `http://localhost:5000/api/recruiter-assessments${isUpdate ? `/${selectedAssessmentId}` : ""}`,
+        {
+        method: isUpdate ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -721,13 +853,13 @@ const RecruiterJobPostPage: React.FC = () => {
         body: JSON.stringify({
           title: assessmentForm.title,
           description: assessmentForm.description,
-          type: assessmentForm.type,
+          type: assessmentForm.type === "code" ? "task" : assessmentForm.type,
           difficulty: assessmentForm.difficulty,
           timeLimit: assessmentForm.timeLimit,
           maxAttempts: assessmentForm.maxAttempts,
           status: assessmentForm.status,
           visibleToRecruiters: assessmentForm.visibleToRecruiters,
-            skillTags: requiredSkills.filter((tag) => tag.trim()),
+          skillTags: assessmentForm.skillTags.filter((tag) => tag.trim()),
           quizQuestions:
             assessmentForm.type === "quiz"
               ? assessmentForm.quizQuestions.map((q) => ({
@@ -740,28 +872,28 @@ const RecruiterJobPostPage: React.FC = () => {
           writingInstructions: assessmentForm.writingInstructions,
           writingFormat: assessmentForm.writingFormat,
           codeProblem: assessmentForm.codeProblem,
-          codeLanguages: assessmentForm.codeLanguages,
+          codeLanguages: assessmentForm.codeLanguages.filter((item) => item.trim()),
           codeSubmission: assessmentForm.codeSubmission,
           codeEvaluation: assessmentForm.codeEvaluation,
         }),
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data?.message || "Failed to create assessment");
+        throw new Error(data?.message || "Failed to save assessment");
       }
-      const created = data.assessment;
-      setSelectedAssessmentId(created._id || created.id);
+      const saved = data.assessment;
+      setSelectedAssessmentId(saved._id || saved.id);
       setAssessmentEnabled(true);
-      setAssessmentSubmitSuccess("Assessment created successfully.");
-      resetAssessmentForm();
-      setAssessmentMode("none");
+      setAssessmentForm(mapAssessmentToForm(saved));
+      setAssessmentSubmitSuccess(
+        isUpdate ? "Assessment updated successfully." : "Assessment created successfully.",
+      );
+      setAssessmentMode("view");
     } catch (err: any) {
-      setAssessmentSubmitError(err?.message || "Failed to create assessment");
+      setAssessmentSubmitError(err?.message || "Failed to save assessment");
       setAssessmentSubmitSuccess("");
     }
   };
-
-  // Recruiters create a fresh assessment per job. No update/delete in this flow.
 
   const resetForm = () => {
     setFormData({
@@ -1401,26 +1533,52 @@ const RecruiterJobPostPage: React.FC = () => {
                         </div>
                         <div className="recruiter-postjob-form-group">
                           <label>Assessment</label>
-                          <button
-                            type="button"
-                            className="recruiter-postjob-add-btn"
-                            onClick={() => {
-                              resetAssessmentForm();
-                              setSelectedAssessmentId("");
-                              setAssessmentMode("create");
-                            }}
-                          >
-                            <img src={addRequirementIcon} alt="Plus" />
-                            <span>Create New Assessment</span>
-                          </button>
+                          {!selectedAssessmentId ? (
+                            <button
+                              type="button"
+                              className="recruiter-postjob-add-btn"
+                              onClick={() => {
+                                resetAssessmentForm();
+                                setAssessmentMode("create");
+                              }}
+                            >
+                              <img src={addRequirementIcon} alt="Plus" />
+                              <span>Create Assessment</span>
+                            </button>
+                          ) : (
+                            <div className="recruiter-postjob-assessment-actions">
+                              <button
+                                type="button"
+                                className="recruiter-postjob-add-btn"
+                                onClick={() =>
+                                  loadAssessmentById(selectedAssessmentId, "view")
+                                }
+                              >
+                                <span>View Assessment</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="recruiter-postjob-add-btn"
+                                onClick={() =>
+                                  loadAssessmentById(selectedAssessmentId, "edit")
+                                }
+                              >
+                                <span>Edit Assessment</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      {assessmentMode === "create" && (
+                      {assessmentMode !== "none" && (
                         <div className="recruiter-postjob-assessment-builder">
                           <div className="recruiter-postjob-card-header">
                             <h3>
-                              Create Assessment
+                              {assessmentMode === "create"
+                                ? "Create Assessment"
+                                : assessmentMode === "edit"
+                                  ? "Edit Assessment"
+                                  : "View Assessment"}
                             </h3>
                           </div>
                           <div className="recruiter-postjob-form-group">
@@ -1464,7 +1622,7 @@ const RecruiterJobPostPage: React.FC = () => {
                                     value: "writing",
                                     label: "Writing Assignment",
                                   },
-                                  { value: "code", label: "Code-Based" },
+                                  { value: "task", label: "Task-Based" },
                                 ].map((item) => (
                                   <button
                                     key={item.value}
@@ -1801,9 +1959,10 @@ const RecruiterJobPostPage: React.FC = () => {
                               </div>
                             )}
 
-                            {assessmentForm.type === "code" && (
+                            {(assessmentForm.type === "task" ||
+                              assessmentForm.type === "code") && (
                               <div className="recruiter-postjob-assessment-type">
-                                <h4>Code-Based Assignment</h4>
+                                <h4>Task-Based Assignment</h4>
                                 <div className="recruiter-postjob-form-group">
                                   <label>Problem Statement *</label>
                                   <div className="recruiter-postjob-quill-editor">
@@ -1824,37 +1983,55 @@ const RecruiterJobPostPage: React.FC = () => {
                                   </div>
                                 </div>
                                 <div className="recruiter-postjob-form-group">
-                                  <label>Allowed Programming Languages *</label>
-                                  <div className="recruiter-postjob-checkbox-group">
-                                    {[
-                                      "JavaScript",
-                                      "TypeScript",
-                                      "Python",
-                                      "Java",
-                                      "C++",
-                                    ].map((language) => {
-                                      const isChecked =
-                                        assessmentForm.codeLanguages.includes(
-                                          language,
-                                        );
-                                      return (
+                                  <label>Relevant Tools / Languages</label>
+                                  <div className="recruiter-postjob-dynamic-list">
+                                    {(assessmentForm.codeLanguages.length > 0
+                                      ? assessmentForm.codeLanguages
+                                      : [""]).map((language, index) => (
+                                      <div
+                                        className="recruiter-postjob-list-item"
+                                        key={index}
+                                      >
+                                        <div className="recruiter-postjob-list-content">
+                                          <input
+                                            type="text"
+                                            placeholder={`Tool / Language ${index + 1}`}
+                                            value={language}
+                                            disabled={isAssessmentReadOnly}
+                                            onChange={(e) =>
+                                              updateAssessmentLanguage(
+                                                index,
+                                                e.target.value,
+                                              )
+                                            }
+                                          />
+                                        </div>
                                         <button
                                           type="button"
-                                          key={language}
-                                          className="recruiter-postjob-checkbox-item"
+                                          className="recruiter-postjob-list-action"
                                           disabled={isAssessmentReadOnly}
                                           onClick={() => {
                                             if (isAssessmentReadOnly) return;
-                                            toggleAssessmentLanguage(language);
+                                            removeAssessmentLanguage(index);
                                           }}
+                                          aria-label="Remove language"
                                         >
-                                          <div
-                                            className={`recruiter-postjob-checkbox ${isChecked ? "checked" : ""}`}
-                                          />
-                                          <span>{language}</span>
+                                          <img src={tagRemoveIcon} alt="Delete" />
                                         </button>
-                                      );
-                                    })}
+                                      </div>
+                                    ))}
+                                    <button
+                                      type="button"
+                                      className="recruiter-postjob-add-btn"
+                                      disabled={isAssessmentReadOnly}
+                                      onClick={() => {
+                                        if (isAssessmentReadOnly) return;
+                                        addAssessmentLanguage();
+                                      }}
+                                    >
+                                      <img src={addRequirementIcon} alt="Plus" />
+                                      <span>Add Tool / Language</span>
+                                    </button>
                                   </div>
                                 </div>
                                 <div className="recruiter-postjob-form-group">
@@ -1866,6 +2043,7 @@ const RecruiterJobPostPage: React.FC = () => {
                                         value: "repo",
                                         label: "Repository Link",
                                       },
+                                      { value: "link", label: "Task Link" },
                                     ].map((item) => (
                                       <button
                                         key={item.value}
@@ -1914,19 +2092,39 @@ const RecruiterJobPostPage: React.FC = () => {
                             </div>
                           )}
 
-                          {assessmentMode === "create" && (
+                          {(assessmentMode === "create" ||
+                            assessmentMode === "edit") && (
                             <div className="recruiter-jobpost-main-action-buttons recruiter-postjob-mt-20">
                               <button
                                 className="recruiter-jobpost-btn-post-job"
-                                onClick={handleCreateAssessment}
+                                onClick={handleSaveAssessment}
                               >
-                                Create Assessment
+                                {assessmentMode === "create"
+                                  ? "Create Assessment"
+                                  : "Update Assessment"}
                               </button>
                               <button
                                 className="recruiter-jobpost-btn-cancel"
                                 onClick={() => setAssessmentMode("none")}
                               >
                                 Cancel
+                              </button>
+                            </div>
+                          )}
+
+                          {assessmentMode === "view" && (
+                            <div className="recruiter-jobpost-main-action-buttons recruiter-postjob-mt-20">
+                              <button
+                                className="recruiter-jobpost-btn-post-job"
+                                onClick={() => setAssessmentMode("edit")}
+                              >
+                                Edit Assessment
+                              </button>
+                              <button
+                                className="recruiter-jobpost-btn-cancel"
+                                onClick={() => setAssessmentMode("none")}
+                              >
+                                Close
                               </button>
                             </div>
                           )}
@@ -1954,7 +2152,7 @@ const RecruiterJobPostPage: React.FC = () => {
                       <article className="joblist-card-item">
                         <div className="joblist-card-top">
                           <img
-                            src={companyLogo}
+                            src={previewCompanyLogo}
                             alt={companyName}
                             className="joblist-company-logo"
                           />

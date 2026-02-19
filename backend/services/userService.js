@@ -127,6 +127,10 @@ class UserService {
       throw new Error("Invalid email or password");
     }
 
+    if (user.isBlocked) {
+      throw new Error("Your account has been blocked. Please contact admin.");
+    }
+
     // Check if user has verified their email
     if (!user.isVerified) {
       // If verification code is still valid, inform user to verify first
@@ -174,6 +178,9 @@ class UserService {
     // Generate JWT token for authenticated session
     const token = generateToken(user._id);
 
+    user.lastLoginAt = new Date();
+    await user.save();
+
     // Get user data without sensitive information
     const userData = await User.findById(user._id).select(
       "-password -verificationCode -resetCode"
@@ -194,6 +201,8 @@ class UserService {
         isVerified: userData.isVerified,
         createdAt: userData.createdAt,
         updatedAt: userData.updatedAt,
+        isBlocked: userData.isBlocked || false,
+        lastLoginAt: userData.lastLoginAt || null,
       },
       token,
     };

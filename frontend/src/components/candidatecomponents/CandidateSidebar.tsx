@@ -5,7 +5,6 @@ import "../../styles/CandidateSidebar.css";
 // Import images
 import logoImg from "../../images/Register Page Images/Logo.png";
 import avatarBg from "../../images/Candidate Profile Page Images/261_1901.svg";
-import connectionsImg from "../../images/Candidate Profile Page Images/261_1956.svg";
 import dashboardIcon from "../../images/Candidate Profile Page Images/261_1905.svg";
 import profileIcon from "../../images/Candidate Profile Page Images/My Profile.png";
 import resumeIcon from "../../images/Candidate Profile Page Images/261_1918.svg";
@@ -16,10 +15,6 @@ import settingsIcon from "../../images/Candidate Profile Page Images/261_1942.sv
 import friendRequestsIcon from "../../images/Recruiter Profile Page Images/friend-request.svg";
 import appliedStatusIcon from "../../images/Candidate Profile Page Images/communication.png";
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
-
-interface SideNavigationProps {
-  connectionsCount?: number;
-}
 
 interface UserData {
   id: string;
@@ -37,9 +32,7 @@ interface NavItem {
   icon: string;
 }
 
-const CandidateSidebar: React.FC<SideNavigationProps> = ({
-  connectionsCount = 144,
-}) => {
+const CandidateSidebar: React.FC = () => {
   const [userName, setUserName] = useState<string>("User");
   const [userData, setUserData] = useState<UserData | null>(null);
   const [profileImage, setProfileImage] = useState<string>(defaultAvatar);
@@ -280,24 +273,10 @@ const CandidateSidebar: React.FC<SideNavigationProps> = ({
 
   const navItems = getNavItems();
 
-  // Handle logo click - redirect to appropriate HOME PAGE
+  // Handle logo click - redirect to public home
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!userData) {
-      navigate("/login");
-      return;
-    }
-
-    const isAdmin = userData.email === "hirelinknp@gmail.com";
-    const isRecruiter = userData.role === "recruiter";
-
-    if (isAdmin) {
-      navigate("/admin-home");
-    } else if (isRecruiter) {
-      navigate("/recruiter-home");
-    } else {
-      navigate("/candidate-home");
-    }
+    navigate("/home");
   };
 
   if (isLoading) {
@@ -345,17 +324,6 @@ const CandidateSidebar: React.FC<SideNavigationProps> = ({
         <h3 className="user-name">{userName}</h3>
         {userData?.currentJobTitle && (
           <p className="user-job-title">{userData.currentJobTitle}</p>
-        )}
-        {/* Only show connections for candidates */}
-        {userData?.role === "candidate" && (
-          <div className="connections">
-            <div className="connections-avatars">
-              <img src={connectionsImg} alt="Connections" />
-            </div>
-            <span className="connections-text">
-              +{connectionsCount} Connections
-            </span>
-          </div>
         )}
       </div>
 

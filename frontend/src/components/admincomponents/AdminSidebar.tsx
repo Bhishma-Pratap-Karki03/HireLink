@@ -7,11 +7,11 @@ import logoImg from "../../images/Register Page Images/Logo.png";
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
 import dashboardIcon from "../../images/Candidate Profile Page Images/261_1905.svg";
 import profileIcon from "../../images/Admin Profile Page Images/4_93.svg";
-import messagesIcon from "../../images/Admin Profile Page Images/4_109.svg";
 import usersIcon from "../../images/Admin Profile Page Images/4_103.svg";
 import settingsIcon from "../../images/Recruiter Profile Page Images/6_335.svg";
 import reportsIcon from "../../images/Admin Profile Page Images/4_105.svg";
 import assessmentsIcon from "../../images/Admin Profile Page Images/Quiz.svg";
+import jobsIcon from "../../images/Recruiter Profile Page Images/6_312.svg";
 
 interface UserData {
   id: string;
@@ -146,16 +146,16 @@ const AdminSidebar: React.FC = () => {
       icon: usersIcon,
     },
     {
-      id: "messages",
-      path: "/admin/messages",
-      label: "Messages",
-      icon: messagesIcon,
-    },
-    {
       id: "reports",
       path: "/admin/reports",
       label: "Reports",
       icon: reportsIcon,
+    },
+    {
+      id: "jobs",
+      path: "/admin/jobs",
+      label: "Manage Jobs",
+      icon: jobsIcon,
     },
     {
       id: "assessments",
@@ -171,10 +171,10 @@ const AdminSidebar: React.FC = () => {
     },
   ];
 
-  // Handle logo click - redirect to admin home
+  // Handle logo click - redirect to public home
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    navigate("/admin-home");
+    navigate("/home");
   };
 
   if (isLoading) {
@@ -225,7 +225,10 @@ const AdminSidebar: React.FC = () => {
 
       <nav className="admin-sidebar-nav">
         {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const isActive =
+            location.pathname === item.path ||
+            (item.id === "assessments" &&
+              location.pathname.startsWith("/admin/assessments/"));
 
           return (
             <Link

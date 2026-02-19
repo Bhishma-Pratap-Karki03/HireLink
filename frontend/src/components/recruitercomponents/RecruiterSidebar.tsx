@@ -5,12 +5,10 @@ import "../../styles/RecruiterSidebar.css";
 // Import images
 import logoImg from "../../images/Register Page Images/Logo.png";
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
-import connectionsImg from "../../images/Candidate Profile Page Images/261_1956.svg";
 import dashboardIcon from "../../images/Candidate Profile Page Images/261_1905.svg";
 import profileIcon from "../../images/Candidate Profile Page Images/My Profile.png";
 import jobPostingsIcon from "../../images/Recruiter Profile Page Images/6_312.svg";
 import messagesIcon from "../../images/Recruiter Profile Page Images/6_317.svg";
-import candidatesIcon from "../../images/Recruiter Profile Page Images/6_323.svg";
 import scannerIcon from "../../images/Recruiter Profile Page Images/6_329.svg";
 import settingsIcon from "../../images/Recruiter Profile Page Images/6_335.svg";
 import friendRequestsIcon from "../../images/Recruiter Profile Page Images/friend-request.svg";
@@ -31,13 +29,7 @@ interface NavItem {
   icon: string;
 }
 
-interface RecruiterSidebarProps {
-  connectionsCount?: number;
-}
-
-const RecruiterSidebar: React.FC<RecruiterSidebarProps> = ({
-  connectionsCount = 144,
-}) => {
+const RecruiterSidebar: React.FC = () => {
   const [userName, setUserName] = useState<string>("Recruiter");
   const [userData, setUserData] = useState<UserData | null>(null);
   const [profileImage, setProfileImage] = useState<string>(defaultAvatar);
@@ -164,12 +156,6 @@ const RecruiterSidebar: React.FC<RecruiterSidebarProps> = ({
       icon: messagesIcon,
     },
     {
-      id: "candidates",
-      path: "/recruiter/candidates",
-      label: "Candidates",
-      icon: candidatesIcon,
-    },
-    {
       id: "scanner",
       path: "/recruiter/scanner",
       label: "ATS Scanner",
@@ -189,10 +175,10 @@ const RecruiterSidebar: React.FC<RecruiterSidebarProps> = ({
     },
   ];
 
-  // Handle logo click - redirect to recruiter home
+  // Handle logo click - redirect to public home
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    navigate("/recruiter-home");
+    navigate("/home");
   };
 
   if (isLoading) {
@@ -249,17 +235,6 @@ const RecruiterSidebar: React.FC<RecruiterSidebarProps> = ({
 
         {/* REMOVED currentJobTitle display */}
 
-        {/* Show connections count for recruiters */}
-        {userData?.role === "recruiter" && (
-          <div className="recruiter-connections">
-            <div className="recruiter-connections-avatars">
-              <img src={connectionsImg} alt="Connections" />
-            </div>
-            <span className="recruiter-connections-text">
-              +{connectionsCount} Connections
-            </span>
-          </div>
-        )}
       </div>
 
       <nav className="recruiter-sidebar-nav">

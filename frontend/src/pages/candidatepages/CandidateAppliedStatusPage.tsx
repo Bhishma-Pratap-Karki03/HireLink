@@ -33,6 +33,7 @@ type AppliedStatusItem = {
 const CandidateAppliedStatusPage = () => {
   const navigate = useNavigate();
   const [items, setItems] = useState<AppliedStatusItem[]>([]);
+  const [titleSearch, setTitleSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -90,6 +91,12 @@ const CandidateAppliedStatusPage = () => {
     return { total, interview, offers, rejected, applied: total };
   }, [items]);
 
+  const filteredItems = useMemo(() => {
+    const query = titleSearch.trim().toLowerCase();
+    if (!query) return items;
+    return items.filter((item) => item.jobTitle.toLowerCase().includes(query));
+  }, [items, titleSearch]);
+
   const fetchAppliedStatus = async () => {
     const token = localStorage.getItem("authToken");
     if (!token) {
@@ -122,7 +129,11 @@ const CandidateAppliedStatusPage = () => {
     <div className="candidate-dashboard-container">
       <CandidateSidebar />
       <main className="candidate-applied-main">
-        <CandidateTopBar />
+        <CandidateTopBar
+          showSearch
+          searchPlaceholder="Search by job title..."
+          onSearch={setTitleSearch}
+        />
         <section className="candidate-applied-shell">
           <div className="candidate-applied-stats">
             <article className="candidate-applied-stat-card">
@@ -172,13 +183,17 @@ const CandidateAppliedStatusPage = () => {
                 {error}
               </div>
             )}
-            {!loading && !error && items.length === 0 && (
-              <div className="candidate-applied-state">No applied jobs found.</div>
+            {!loading && !error && filteredItems.length === 0 && (
+              <div className="candidate-applied-state">
+                {items.length === 0
+                  ? "No applied jobs found."
+                  : "No job matches this title."}
+              </div>
             )}
 
             {!loading &&
               !error &&
-              items.map((item) => (
+              filteredItems.map((item) => (
                 <article key={item.id} className="candidate-applied-row">
                   <div className="candidate-applied-cell candidate-applied-job">
                     <h4>{item.jobTitle}</h4>

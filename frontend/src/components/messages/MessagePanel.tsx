@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
 import sendIcon from "../../images/Recruiter Job Post Page Images/sendIcon.png";
 import defaultMessageIllustration from "../../images/Recruiter Job Post Page Images/default-message-screen-icon.png";
+import searchIcon from "../../images/Recruiter Profile Page Images/search icon.svg";
 
 type MessageUser = {
   id: string;
@@ -71,6 +72,7 @@ const MessagePanel = ({
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [draft, setDraft] = useState("");
+  const [conversationSearch, setConversationSearch] = useState("");
   const [error, setError] = useState("");
 
   const token = localStorage.getItem("authToken") || "";
@@ -84,11 +86,21 @@ const MessagePanel = ({
     [conversations, activeUserId],
   );
 
-  const fetchConversations = async () => {
+  const filteredConversations = useMemo(() => {
+    const query = conversationSearch.trim().toLowerCase();
+    if (!query) return conversations;
+    return conversations.filter((item) =>
+      item.user.fullName.toLowerCase().includes(query),
+    );
+  }, [conversations, conversationSearch]);
+
+  const fetchConversations = async (silent = false) => {
     if (!token) return;
     try {
-      setLoadingConversations(true);
-      setError("");
+      if (!silent) {
+        setLoadingConversations(true);
+        setError("");
+      }
       const res = await fetch(
         "http://localhost:5000/api/messages/conversations",
         {
@@ -102,8 +114,7 @@ const MessagePanel = ({
       const list = (data.conversations || []) as ConversationItem[];
       setConversations(list);
 
-      const nextUserId =
-        selectedUserIdFromQuery || activeUserId || "";
+      const nextUserId = selectedUserIdFromQuery || activeUserId || "";
       if (nextUserId) {
         setActiveUserId(nextUserId);
       } else {
@@ -111,17 +122,26 @@ const MessagePanel = ({
         setActiveUser(null);
       }
     } catch (err: any) {
-      setError(err?.message || "Failed to load conversations");
+      if (!silent) {
+        setError(err?.message || "Failed to load conversations");
+      }
     } finally {
-      setLoadingConversations(false);
+      if (!silent) {
+        setLoadingConversations(false);
+      }
     }
   };
 
-  const fetchConversationMessages = async (targetUserId: string) => {
+  const fetchConversationMessages = async (
+    targetUserId: string,
+    silent = false,
+  ) => {
     if (!token || !targetUserId) return;
     try {
-      setLoadingMessages(true);
-      setError("");
+      if (!silent) {
+        setLoadingMessages(true);
+        setError("");
+      }
       const res = await fetch(
         `http://localhost:5000/api/messages/conversation/${targetUserId}`,
         {
@@ -151,11 +171,15 @@ const MessagePanel = ({
         ];
       });
     } catch (err: any) {
-      setError(err?.message || "Failed to load chat");
-      setMessages([]);
-      setActiveUser(null);
+      if (!silent) {
+        setError(err?.message || "Failed to load chat");
+        setMessages([]);
+        setActiveUser(null);
+      }
     } finally {
-      setLoadingMessages(false);
+      if (!silent) {
+        setLoadingMessages(false);
+      }
     }
   };
 
@@ -170,9 +194,23 @@ const MessagePanel = ({
 
   useEffect(() => {
     if (!activeUserId) return;
-    fetchConversationMessages(activeUserId);
+    fetchConversationMessages(activeUserId, false);
     if (onSelectUser) onSelectUser(activeUserId);
   }, [activeUserId]);
+
+  // Near real-time updates without refresh.
+  // Poll conversations + active chat silently to keep UI fresh across browsers.
+  useEffect(() => {
+    if (!token) return;
+    const intervalId = window.setInterval(() => {
+      if (document.hidden) return;
+      fetchConversations(true);
+      if (activeUserId) {
+        fetchConversationMessages(activeUserId, true);
+      }
+    }, 2000);
+    return () => window.clearInterval(intervalId);
+  }, [token, activeUserId, selectedUserIdFromQuery]);
 
   const handleSelectConversation = (userId: string) => {
     setActiveUserId(userId);
@@ -260,6 +298,15 @@ const MessagePanel = ({
           <div className="message-page-left-header">
             <h1>Messages</h1>
             <p>Chat with candidates and recruiters.</p>
+            <div className="message-page-conversation-search">
+              <img src={searchIcon} alt="Search" />
+              <input
+                type="text"
+                placeholder="Search user..."
+                value={conversationSearch}
+                onChange={(e) => setConversationSearch(e.target.value)}
+              />
+            </div>
           </div>
           {loadingConversations && (
             <div className="message-page-state">Loading conversations...</div>
@@ -269,8 +316,13 @@ const MessagePanel = ({
               No conversations yet. Open a profile and click Message.
             </div>
           )}
+          {!loadingConversations &&
+            conversations.length > 0 &&
+            filteredConversations.length === 0 && (
+              <div className="message-page-state">No users match your search.</div>
+            )}
           <div className="message-page-conversation-list">
-            {conversations.map((item) => (
+            {filteredConversations.map((item) => (
               <button
                 key={item.user.id}
                 type="button"

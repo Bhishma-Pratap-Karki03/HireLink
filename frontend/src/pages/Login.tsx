@@ -32,8 +32,8 @@ const Login = () => {
 
     if (token && userDataStr) {
       try {
-        const userData = JSON.parse(userDataStr);
-        redirectBasedOnRole(userData);
+        JSON.parse(userDataStr);
+        redirectBasedOnRole();
       } catch (error) {
         console.error("Error parsing user data:", error);
         // Clear invalid data
@@ -54,17 +54,8 @@ const Login = () => {
     }
   }, [location.state]);
 
-  const redirectBasedOnRole = (userData: any) => {
-    // Check if this is the admin email
-    const isAdminEmail = userData.email === "hirelinknp@gmail.com";
-
-    if (isAdminEmail) {
-      navigate("/admin-home");
-    } else if (userData.role === "recruiter") {
-      navigate("/recruiter-home");
-    } else {
-      navigate("/candidate-home");
-    }
+  const redirectBasedOnRole = () => {
+    navigate("/home");
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -169,7 +160,7 @@ const Login = () => {
 
         // Redirect based on user role TO HOME PAGES
         setTimeout(() => {
-          redirectBasedOnRole(data.user);
+          redirectBasedOnRole();
         }, 500);
       }
     } catch (error) {

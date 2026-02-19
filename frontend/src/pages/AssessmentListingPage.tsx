@@ -8,7 +8,7 @@ import searchIcon from "../images/Job List Page Images/search.svg";
 type AssessmentCard = {
   id: string;
   title: string;
-  type: "quiz" | "writing" | "code";
+  type: "quiz" | "writing" | "task" | "code";
   difficulty: "beginner" | "intermediate" | "advanced";
   timeLimit: string;
   maxAttempts: number;
@@ -64,7 +64,12 @@ const AssessmentListingPage = () => {
       if (!response.ok) {
         throw new Error(data?.message || "Failed to load assessments");
       }
-      setAssessments(data.assessments || []);
+      setAssessments(
+        (data.assessments || []).map((item: AssessmentCard) => ({
+          ...item,
+          type: item.type === "code" ? "task" : item.type,
+        })),
+      );
     } catch (err: any) {
       setError(err?.message || "Failed to load assessments");
     } finally {
@@ -79,7 +84,7 @@ const AssessmentListingPage = () => {
   const formatType = (type: AssessmentCard["type"]) => {
     if (type === "quiz") return "MCQ";
     if (type === "writing") return "Writing";
-    return "Coding";
+    return "Task-Based";
   };
 
   const formatDeadline = (deadline?: string) => {
@@ -184,7 +189,7 @@ const AssessmentListingPage = () => {
                 <option value="">Type</option>
                 <option value="quiz">MCQ</option>
                 <option value="writing">Writing</option>
-                <option value="code">Coding</option>
+                <option value="task">Task-Based</option>
               </select>
             </div>
             <div className="assessment-search-field">

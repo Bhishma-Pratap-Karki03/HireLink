@@ -3,6 +3,13 @@ const JobPost = require("../models/jobPostModel");
 const User = require("../models/userModel");
 const AppliedJob = require("../models/appliedJobModel");
 
+const ADMIN_EMAIL = "hirelinknp@gmail.com";
+
+const isAdmin = (user) =>
+  user &&
+  (String(user.role || "").toLowerCase() === "admin" ||
+    String(user.email || "").toLowerCase() === ADMIN_EMAIL);
+
 const listJobPosts = async (req, res) => {
   try {
     const {
@@ -34,15 +41,6 @@ const listJobPosts = async (req, res) => {
 
     if (recruiterId && mongoose.Types.ObjectId.isValid(recruiterId)) {
       match.recruiterId = new mongoose.Types.ObjectId(recruiterId);
-    }
-
-    if (search) {
-      const searchRegex = new RegExp(search, "i");
-      match.$or = [
-        { jobTitle: searchRegex },
-        { department: searchRegex },
-        { location: searchRegex },
-      ];
     }
 
     if (location) {
@@ -173,6 +171,20 @@ const listJobPosts = async (req, res) => {
       },
     );
 
+    if (search) {
+      const searchRegex = new RegExp(search, "i");
+      jobsPipeline.push({
+        $match: {
+          $or: [
+            { jobTitle: searchRegex },
+            { department: searchRegex },
+            { location: searchRegex },
+            { companyName: searchRegex },
+          ],
+        },
+      });
+    }
+
     const sortStage =
       sort === "oldest"
         ? { createdAt: 1 }
@@ -200,9 +212,48 @@ const listJobPosts = async (req, res) => {
       });
     }
 
+    const totalPipeline = [...basePipeline];
+    totalPipeline.push(
+      {
+        $lookup: {
+          from: "users",
+          localField: "recruiterId",
+          foreignField: "_id",
+          as: "recruiter",
+        },
+      },
+      {
+        $unwind: {
+          path: "$recruiter",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          companyName: { $ifNull: ["$recruiter.fullName", ""] },
+        },
+      },
+    );
+
+    if (search) {
+      const searchRegex = new RegExp(search, "i");
+      totalPipeline.push({
+        $match: {
+          $or: [
+            { jobTitle: searchRegex },
+            { department: searchRegex },
+            { location: searchRegex },
+            { companyName: searchRegex },
+          ],
+        },
+      });
+    }
+
+    totalPipeline.push({ $count: "total" });
+
     const [jobs, totalResult] = await Promise.all([
       JobPost.aggregate(jobsPipeline),
-      JobPost.aggregate([...basePipeline, { $count: "total" }]),
+      JobPost.aggregate(totalPipeline),
     ]);
 
     const total = totalResult.length > 0 ? totalResult[0].total : 0;
@@ -536,10 +587,143 @@ const createJobPost = async (req, res) => {
   }
 };
 
+const listJobPostsForAdmin = async (req, res) => {
+  try {
+    if (!isAdmin(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only admin can access this resource",
+      });
+    }
+
+    const search = String(req.query.search || "").trim();
+    const status = String(req.query.status || "all").toLowerCase();
+
+    const match = {};
+
+    if (status === "active") {
+      match.isActive = true;
+    } else if (status === "inactive") {
+      match.isActive = false;
+    }
+
+    if (search) {
+      const regex = new RegExp(search, "i");
+      match.$or = [{ jobTitle: regex }, { location: regex }, { department: regex }];
+    }
+
+    const jobs = await JobPost.aggregate([
+      { $match: match },
+      {
+        $lookup: {
+          from: "users",
+          localField: "recruiterId",
+          foreignField: "_id",
+          as: "recruiter",
+        },
+      },
+      {
+        $unwind: {
+          path: "$recruiter",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "appliedjobs",
+          localField: "_id",
+          foreignField: "job",
+          as: "applications",
+        },
+      },
+      {
+        $addFields: {
+          applicantsCount: { $size: "$applications" },
+          recruiterName: { $ifNull: ["$recruiter.fullName", "Unknown"] },
+        },
+      },
+      {
+        $project: {
+          applications: 0,
+          recruiter: 0,
+          __v: 0,
+        },
+      },
+      { $sort: { createdAt: -1 } },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      jobs,
+    });
+  } catch (error) {
+    console.error("Admin job list error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error loading admin jobs",
+      error: error.message,
+    });
+  }
+};
+
+const updateJobStatusByAdmin = async (req, res) => {
+  try {
+    if (!isAdmin(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only admin can access this resource",
+      });
+    }
+
+    const { id } = req.params;
+    const { action } = req.body;
+    const normalized = String(action || "").toLowerCase();
+
+    if (!["activate", "deactivate"].includes(normalized)) {
+      return res.status(400).json({
+        success: false,
+        message: "Action must be activate or deactivate",
+      });
+    }
+
+    const job = await JobPost.findById(id);
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: "Job not found",
+      });
+    }
+
+    job.isActive = normalized === "activate";
+    await job.save();
+
+    return res.status(200).json({
+      success: true,
+      message:
+        normalized === "activate"
+          ? "Job activated successfully"
+          : "Job deactivated successfully",
+      job: {
+        id: job._id,
+        isActive: job.isActive,
+      },
+    });
+  } catch (error) {
+    console.error("Admin update job status error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error updating job status",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createJobPost,
   listJobPosts,
   getJobPostById,
   listRecruiterJobPosts,
   updateJobPost,
+  listJobPostsForAdmin,
+  updateJobStatusByAdmin,
 };

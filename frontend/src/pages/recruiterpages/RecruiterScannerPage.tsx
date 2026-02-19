@@ -25,10 +25,14 @@ const formatDate = (value?: string) => {
 const RecruiterScannerPage = () => {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<RecruiterJobItem[]>([]);
+  const [titleSearch, setTitleSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [scanningJobId, setScanningJobId] = useState<string | null>(null);
   const [scanMessage, setScanMessage] = useState<string>("");
+  const filteredJobs = jobs.filter((job) =>
+    job.jobTitle.toLowerCase().includes(titleSearch.trim().toLowerCase()),
+  );
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -90,7 +94,11 @@ const RecruiterScannerPage = () => {
     <div className="recruiter-scanner-layout">
       <RecruiterSidebar />
       <main className="recruiter-scanner-main">
-        <RecruiterTopBar />
+        <RecruiterTopBar
+          showSearch
+          searchPlaceholder="Search by job title..."
+          onSearch={setTitleSearch}
+        />
         <div className="recruiter-scanner-content">
           <div className="recruiter-scanner-header">
             <div>
@@ -108,14 +116,16 @@ const RecruiterScannerPage = () => {
           {error && !loading && (
             <div className="recruiter-scanner-state error">{error}</div>
           )}
-          {!loading && !error && jobs.length === 0 && (
+          {!loading && !error && filteredJobs.length === 0 && (
             <div className="recruiter-scanner-state">
-              No job postings yet.
+              {jobs.length === 0
+                ? "No job postings yet."
+                : "No jobs found for this title."}
             </div>
           )}
 
           <div className="recruiter-scanner-grid">
-            {jobs.map((job) => (
+            {filteredJobs.map((job) => (
               <article key={job._id} className="recruiter-scanner-card">
                 <div className="recruiter-scanner-card-header">
                   <h3>{job.jobTitle}</h3>

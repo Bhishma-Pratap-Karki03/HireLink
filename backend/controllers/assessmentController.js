@@ -87,11 +87,11 @@ const createAssessment = async (req, res) => {
       }
     }
 
-    if (type === "code") {
+    if (type === "task" || type === "code") {
       if (!codeProblem || !codeSubmission || !codeEvaluation) {
         return res.status(400).json({
           success: false,
-          message: "Code assessment fields are required",
+          message: "Task assessment fields are required",
         });
       }
     }

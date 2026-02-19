@@ -9,31 +9,35 @@ import notificationsIcon from "../../images/Recruiter Profile Page Images/notifi
 interface RecruiterTopBarProps {
   onPostJob?: () => void;
   onSearch?: (query: string) => void;
+  showSearch?: boolean;
+  searchPlaceholder?: string;
 }
 
 const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
   onPostJob = () => {},
   onSearch = () => {},
+  showSearch = false,
+  searchPlaceholder = "Search candidates, jobs, or keywords...",
 }) => {
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onSearch(e.target.value);
-  };
-
   const handlePostJobClick = () => {
     onPostJob();
   };
 
   return (
-    <header className="recruiter-top-bar">
-      <div className="recruiter-search-container">
-        <img src={searchIcon} alt="Search" className="recruiter-search-icon" />
-        <input
-          type="text"
-          placeholder="Search candidates, jobs, or keywords..."
-          className="recruiter-search-input"
-          onChange={handleSearchChange}
-        />
-      </div>
+    <header
+      className={`recruiter-top-bar${showSearch ? " has-search" : ""}`}
+    >
+      {showSearch && (
+        <div className="recruiter-search-container">
+          <img src={searchIcon} alt="Search" className="recruiter-search-icon" />
+          <input
+            type="text"
+            placeholder={searchPlaceholder}
+            className="recruiter-search-input"
+            onChange={(e) => onSearch(e.target.value)}
+          />
+        </div>
+      )}
       <div className="recruiter-top-actions">
         <button className="recruiter-btn-primary" onClick={handlePostJobClick}>
           <img src={plusIcon} alt="Plus" />

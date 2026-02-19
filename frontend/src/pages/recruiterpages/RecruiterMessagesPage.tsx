@@ -20,7 +20,7 @@ const RecruiterMessagesPage = () => {
   return (
     <div className="recruiter-friend-layout">
       <RecruiterSidebar />
-      <main className="recruiter-friend-main recruiter-messages-main">
+      <main className="recruiter-messages-main-content">
         <RecruiterTopBar />
         <MessagePanel
           selectedUserIdFromQuery={selectedUserId}

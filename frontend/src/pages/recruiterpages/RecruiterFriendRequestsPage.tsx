@@ -38,13 +38,16 @@ const RecruiterFriendRequestsPage = () => {
   const [activeTab, setActiveTab] = useState<"requests" | "connected">(
     "requests",
   );
+  const [topSearch, setTopSearch] = useState("");
 
-  const fetchRequests = async () => {
+  const fetchRequests = async (silent = false) => {
     const token = localStorage.getItem("authToken");
     if (!token) return;
     try {
-      setLoading(true);
-      setError("");
+      if (!silent) {
+        setLoading(true);
+        setError("");
+      }
       const res = await fetch("http://localhost:5000/api/connections/incoming", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -54,9 +57,13 @@ const RecruiterFriendRequestsPage = () => {
       }
       setRequests(data.requests || []);
     } catch (err: any) {
-      setError(err?.message || "Failed to load friend requests");
+      if (!silent) {
+        setError(err?.message || "Failed to load friend requests");
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -91,6 +98,15 @@ const RecruiterFriendRequestsPage = () => {
   useEffect(() => {
     fetchRequests();
     fetchFriends();
+  }, []);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      if (document.hidden) return;
+      fetchRequests(true);
+      fetchFriends();
+    }, 2500);
+    return () => window.clearInterval(intervalId);
   }, []);
 
   const fetchFriends = async () => {
@@ -152,7 +168,15 @@ const RecruiterFriendRequestsPage = () => {
     role?: string;
     currentJobTitle?: string;
   }) => {
-    return item.currentJobTitle || item.role || "User";
+    const title = (item.currentJobTitle || "").trim();
+    const role = (item.role || "").trim();
+    if (role.toLowerCase() === "recruiter") {
+      return "Recruiter";
+    }
+    if (title && title.toLowerCase() !== "this is the logo") {
+      return title;
+    }
+    return role || "User";
   };
 
   const goToProfileDetails = (requester: FriendRequestItem["requester"]) => {
@@ -163,11 +187,38 @@ const RecruiterFriendRequestsPage = () => {
     navigate(path);
   };
 
+  const shouldShowRoleLine = (item: {
+    role?: string;
+    currentJobTitle?: string;
+  }) => {
+    const role = (item.role || "").trim().toLowerCase();
+    if (role === "recruiter") return false;
+    const title = (item.currentJobTitle || "").trim().toLowerCase();
+    return title !== "this is the logo";
+  };
+
+  const filteredRequests = requests.filter((item) =>
+    item.requester.fullName
+      .toLowerCase()
+      .includes(topSearch.trim().toLowerCase()),
+  );
+  const filteredFriends = friends.filter((item) =>
+    item.fullName.toLowerCase().includes(topSearch.trim().toLowerCase()),
+  );
+
   return (
     <div className="recruiter-friend-layout">
       <RecruiterSidebar />
       <main className="recruiter-friend-main">
-        <RecruiterTopBar />
+        <RecruiterTopBar
+          showSearch
+          searchPlaceholder={
+            activeTab === "requests"
+              ? "Search requests by user name..."
+              : "Search connected users by name..."
+          }
+          onSearch={setTopSearch}
+        />
         <section className="recruiter-friend-content">
           <header className="recruiter-friend-header">
             <h1>Friend Requests</h1>
@@ -199,16 +250,30 @@ const RecruiterFriendRequestsPage = () => {
           {error && !loading && (
             <div className="recruiter-friend-state error">{error}</div>
           )}
-          {!loading && !error && activeTab === "requests" && requests.length === 0 && (
-            <div className="recruiter-friend-state">No pending requests.</div>
+          {!loading &&
+            !error &&
+            activeTab === "requests" &&
+            filteredRequests.length === 0 && (
+            <div className="recruiter-friend-state">
+              {requests.length === 0
+                ? "No pending requests."
+                : "No request matches this name."}
+            </div>
           )}
-          {!loading && !error && activeTab === "connected" && friends.length === 0 && (
-            <div className="recruiter-friend-state">No connected users yet.</div>
+          {!loading &&
+            !error &&
+            activeTab === "connected" &&
+            filteredFriends.length === 0 && (
+            <div className="recruiter-friend-state">
+              {friends.length === 0
+                ? "No connected users yet."
+                : "No connected user matches this name."}
+            </div>
           )}
 
           {activeTab === "requests" && (
             <div className="recruiter-friend-list">
-              {requests.map((item) => (
+              {filteredRequests.map((item) => (
                 <article key={item.id} className="recruiter-friend-card">
                   <div
                     className="recruiter-friend-user recruiter-friend-user-clickable"
@@ -225,14 +290,20 @@ const RecruiterFriendRequestsPage = () => {
                     <img
                       src={resolveAvatar(item.requester.profilePicture)}
                       alt={item.requester.fullName}
-                      className="recruiter-friend-avatar"
+                      className={
+                        item.requester.role === "recruiter"
+                          ? "recruiter-friend-avatar recruiter-logo"
+                          : "recruiter-friend-avatar"
+                      }
                       onError={(e) => {
                         e.currentTarget.src = defaultAvatar;
                       }}
                     />
                     <div className="recruiter-friend-info">
                       <h3>{item.requester.fullName}</h3>
-                      <p>{getDisplayRole(item.requester)}</p>
+                      {shouldShowRoleLine(item.requester) && (
+                        <p>{getDisplayRole(item.requester)}</p>
+                      )}
                       <span>{item.requester.email}</span>
                       <small>Requested on {formatDate(item.createdAt)}</small>
                     </div>
@@ -270,7 +341,7 @@ const RecruiterFriendRequestsPage = () => {
 
           {activeTab === "connected" && (
             <div className="recruiter-friend-list">
-              {friends.map((item) => (
+              {filteredFriends.map((item) => (
                 <article key={item.id} className="recruiter-friend-card">
                   <div
                     className="recruiter-friend-user recruiter-friend-user-clickable"
@@ -287,14 +358,18 @@ const RecruiterFriendRequestsPage = () => {
                     <img
                       src={resolveAvatar(item.profilePicture)}
                       alt={item.fullName}
-                      className="recruiter-friend-avatar"
+                      className={
+                        item.role === "recruiter"
+                          ? "recruiter-friend-avatar recruiter-logo"
+                          : "recruiter-friend-avatar"
+                      }
                       onError={(e) => {
                         e.currentTarget.src = defaultAvatar;
                       }}
                     />
                     <div className="recruiter-friend-info">
                       <h3>{item.fullName}</h3>
-                      <p>{getDisplayRole(item)}</p>
+                      {shouldShowRoleLine(item) && <p>{getDisplayRole(item)}</p>}
                       <span>{item.email}</span>
                       <small>Connected on {formatDate(item.connectedAt)}</small>
                     </div>

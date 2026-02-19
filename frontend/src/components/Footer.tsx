@@ -19,8 +19,8 @@ const Footer = () => {
           <div className="footer-about">
             <img src={logoImg} alt="HireLink Logo" className="footer-logo" />
             <p>
-              Jobhub is the heat of the design community and the best resurce to
-              discover and connect with designers and jobs worldwide.
+              HireLink connects candidates and recruiters in one smart platform
+              to discover opportunities, manage applications, and hire faster.
             </p>
           </div>
           <div className="footer-links-grid">

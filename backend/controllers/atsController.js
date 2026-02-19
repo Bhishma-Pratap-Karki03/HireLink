@@ -10,6 +10,7 @@ const {
   extractPhones,
   extractExperienceYears,
   extractSkills,
+  extractEducationLevel,
   canonicalizeSkill,
   normalize,
 } = require("../utils/atsParser");
@@ -21,11 +22,64 @@ const parseMinExperience = (experienceText) => {
   return Number(match[1]) || 0;
 };
 
+const educationLevelRankMap = {
+  "high school": 1,
+  associate: 2,
+  bachelor: 3,
+  master: 4,
+  doctorate: 5,
+};
+
+const parseRequiredEducationRank = (educationText) => {
+  const source = normalize(educationText || "");
+  if (!source) return 0;
+
+  if (
+    source.includes("phd") ||
+    source.includes("doctorate") ||
+    source.includes("dphil")
+  ) {
+    return educationLevelRankMap.doctorate;
+  }
+  if (
+    source.includes("master") ||
+    source.includes("msc") ||
+    source.includes("m.sc") ||
+    source.includes("mba")
+  ) {
+    return educationLevelRankMap.master;
+  }
+  if (
+    source.includes("bachelor") ||
+    source.includes("bsc") ||
+    source.includes("b.sc") ||
+    source.includes("be") ||
+    source.includes("b.e") ||
+    source.includes("btech")
+  ) {
+    return educationLevelRankMap.bachelor;
+  }
+  if (source.includes("associate") || source.includes("diploma")) {
+    return educationLevelRankMap.associate;
+  }
+  if (
+    source.includes("high school") ||
+    source.includes("secondary") ||
+    source.includes("10+2")
+  ) {
+    return educationLevelRankMap["high school"];
+  }
+
+  return 0;
+};
+
 const computeScore = ({
   requiredSkills,
   extractedSkills,
   experienceYears,
   minExperience,
+  educationRank,
+  minEducationRank,
 }) => {
   const required = requiredSkills.map((item) => canonicalizeSkill(item));
   const extracted = extractedSkills.map((item) => canonicalizeSkill(item));
@@ -36,15 +90,21 @@ const computeScore = ({
     ? (matchedSkills.length / required.length) * 70
     : 70;
 
-  let experienceScore = 30;
+  let experienceScore = 20;
   let experienceMatch = true;
   if (minExperience > 0) {
-    experienceScore =
-      Math.min(experienceYears / minExperience, 1) * 30;
+    experienceScore = Math.min(experienceYears / minExperience, 1) * 20;
     experienceMatch = experienceYears >= minExperience;
   }
 
-  const totalScore = Math.round(skillsScore + experienceScore);
+  let educationScore = 10;
+  let educationMatch = true;
+  if (minEducationRank > 0) {
+    educationScore = Math.min(educationRank / minEducationRank, 1) * 10;
+    educationMatch = educationRank >= minEducationRank;
+  }
+
+  const totalScore = Math.round(skillsScore + experienceScore + educationScore);
 
   return {
     totalScore,
@@ -52,7 +112,9 @@ const computeScore = ({
     missingSkills,
     skillsScore: Math.round(skillsScore),
     experienceScore: Math.round(experienceScore),
+    educationScore: Math.round(educationScore),
     experienceMatch,
+    educationMatch,
   };
 };
 
@@ -95,6 +157,7 @@ exports.scanJobApplications = async (req, res) => {
 
     const requiredSkills = job.requiredSkills || [];
     const minExperience = parseMinExperience(job.experience);
+    const minEducationRank = parseRequiredEducationRank(job.education);
     const reports = [];
 
     for (const application of applications) {
@@ -113,6 +176,7 @@ exports.scanJobApplications = async (req, res) => {
         canonicalizeSkill(skill)
       );
       const experienceYears = extractExperienceYears(resumeText);
+      const education = extractEducationLevel(resumeText);
       const emails = extractEmails(resumeText);
       const phones = extractPhones(resumeText);
 
@@ -126,12 +190,16 @@ exports.scanJobApplications = async (req, res) => {
             emails,
             phones,
             experienceYears,
+            educationLevel: education.label || "",
+            educationRank: education.rank || 0,
           },
           matchedSkills: [],
           missingSkills: [],
           experienceMatch: false,
+          educationMatch: false,
           skillsScore: 0,
           experienceScore: 0,
+          educationScore: 0,
           score: 0,
         });
       } else {
@@ -140,6 +208,8 @@ exports.scanJobApplications = async (req, res) => {
           emails,
           phones,
           experienceYears,
+          educationLevel: education.label || "",
+          educationRank: education.rank || 0,
         };
       }
 
@@ -149,19 +219,25 @@ exports.scanJobApplications = async (req, res) => {
         missingSkills,
         skillsScore,
         experienceScore,
+        educationScore,
         experienceMatch,
+        educationMatch,
       } = computeScore({
         requiredSkills,
         extractedSkills: report.extracted?.skills || [],
         experienceYears: report.extracted?.experienceYears || 0,
         minExperience,
+        educationRank: report.extracted?.educationRank || 0,
+        minEducationRank,
       });
 
       report.matchedSkills = matchedSkills;
       report.missingSkills = missingSkills;
       report.skillsScore = skillsScore;
       report.experienceScore = experienceScore;
+      report.educationScore = educationScore;
       report.experienceMatch = experienceMatch;
+      report.educationMatch = educationMatch;
       report.score = totalScore;
       await report.save();
 

@@ -1,4 +1,5 @@
 const { verifyToken } = require("../utils/tokenUtils");
+const User = require("../models/userModel");
 
 const protect = async (req, res, next) => {
   try {
@@ -29,8 +30,27 @@ const protect = async (req, res, next) => {
       });
     }
 
-    // Add user ID to request object
-    req.user = { id: decoded.id };
+    const user = await User.findById(decoded.id).select("email role isBlocked");
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized, invalid token",
+      });
+    }
+
+    if (user.isBlocked) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been blocked. Please contact admin.",
+      });
+    }
+
+    // Add user context to request object
+    req.user = {
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    };
     next();
   } catch (error) {
     console.error("Auth middleware error:", error);

@@ -20,7 +20,7 @@ const CandidateMessagesPage = () => {
   return (
     <div className="candidate-dashboard-container">
       <CandidateSidebar />
-      <main className="candidate-friend-main-content candidate-messages-main">
+      <main className="candidate-messages-main-content">
         <CandidateTopBar />
         <MessagePanel
           selectedUserIdFromQuery={selectedUserId}

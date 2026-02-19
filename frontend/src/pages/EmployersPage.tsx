@@ -7,7 +7,6 @@ import { useNavigate } from "react-router-dom";
 // Import images from Employers Page Images folder
 import searchIcon from "../images/Employers Page Images/8_285.svg";
 import locationIcon from "../images/Employers Page Images/8_298.svg";
-import categoryIcon from "../images/Employers Page Images/8_360.svg";
 import saveIcon from "../images/Employers Page Images/8_426.svg";
 import savedIcon from "../images/Employers Page Images/Saved icon.svg";
 import prevIcon from "../images/Employers Page Images/Prev Icon.svg";
@@ -52,27 +51,9 @@ const EmployersPage = () => {
   >({
     companyName: false,
     location: false,
-    companyStatus: false,
-    category: false,
     team: false,
   });
   const navigate = useNavigate();
-
-  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({
-    new: true,
-    topRated: true,
-    older: true,
-    webDesign: true,
-    designCreative: true,
-    itDevelopment: true,
-    webMobileDev: true,
-    writing: true,
-    team12: true,
-    team7: true,
-    team10: true,
-    team15: true,
-    team5: true,
-  });
 
   const [savedCompanies, setSavedCompanies] = useState<Record<string, boolean>>(
     {}
@@ -84,11 +65,13 @@ const EmployersPage = () => {
 
   const [searchCompanyName, setSearchCompanyName] = useState("");
   const [searchLocation, setSearchLocation] = useState("");
-  const [searchCategory, setSearchCategory] = useState("");
+  const [searchTeamFrom, setSearchTeamFrom] = useState("");
+  const [searchTeamTo, setSearchTeamTo] = useState("");
   const [appliedFilters, setAppliedFilters] = useState({
     companyName: "",
     location: "",
-    category: "",
+    teamFrom: "",
+    teamTo: "",
   });
 
   // State for companies data from backend
@@ -199,6 +182,13 @@ const EmployersPage = () => {
     };
 
     fetchConnectionStatuses();
+
+    const intervalId = window.setInterval(() => {
+      if (document.hidden) return;
+      fetchConnectionStatuses();
+    }, 2500);
+
+    return () => window.clearInterval(intervalId);
   }, [companies, currentUser?.role, currentUserId]);
 
   const handleSendConnection = async (targetUserId: string) => {
@@ -278,18 +268,12 @@ const EmployersPage = () => {
     }));
   };
 
-  const handleCheckboxChange = (item: string) => {
-    setCheckedItems((prev) => ({
-      ...prev,
-      [item]: !prev[item],
-    }));
-  };
-
   const applyFilters = () => {
     setAppliedFilters({
       companyName: searchCompanyName.trim(),
       location: searchLocation.trim(),
-      category: searchCategory.trim(),
+      teamFrom: searchTeamFrom.replace(/,/g, "").trim(),
+      teamTo: searchTeamTo.replace(/,/g, "").trim(),
     });
     setPage(1);
   };
@@ -298,14 +282,22 @@ const EmployersPage = () => {
     setQuickSearch("");
     setSearchCompanyName("");
     setSearchLocation("");
-    setSearchCategory("");
+    setSearchTeamFrom("");
+    setSearchTeamTo("");
     setAppliedFilters({
       companyName: "",
       location: "",
-      category: "",
+      teamFrom: "",
+      teamTo: "",
     });
     setSortBy("");
     setPage(1);
+  };
+
+  const parseTeamSize = (value?: string) => {
+    if (!value) return null;
+    const numeric = Number(String(value).replace(/,/g, "").match(/\d+/)?.[0] || "");
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
   };
 
   const filteredCompanies = companies.filter((company) => {
@@ -324,12 +316,14 @@ const EmployersPage = () => {
           .toLowerCase()
           .includes(appliedFilters.location.toLowerCase())
       : true;
-    const categoryMatch = appliedFilters.category
-      ? `${company.companySize || ""} ${company.websiteUrl || ""}`
-          .toLowerCase()
-          .includes(appliedFilters.category.toLowerCase())
-      : true;
-    return quickMatch && nameMatch && locationMatch && categoryMatch;
+    const teamSize = parseTeamSize(company.companySize);
+    const teamFrom = Number(appliedFilters.teamFrom || 0);
+    const teamTo = Number(appliedFilters.teamTo || 0);
+    const teamFromMatch =
+      !appliedFilters.teamFrom || (teamSize !== null && teamSize >= teamFrom);
+    const teamToMatch =
+      !appliedFilters.teamTo || (teamSize !== null && teamSize <= teamTo);
+    return quickMatch && nameMatch && locationMatch && teamFromMatch && teamToMatch;
   });
 
   const sortedCompanies = [...filteredCompanies].sort((a, b) => {
@@ -506,254 +500,6 @@ const EmployersPage = () => {
 
             <div className="employerspublic-filter-group employerspublic-checkbox-group">
               <div className="employerspublic-filter-header">
-                <span>Company Status</span>
-                <button
-                  className="employerspublic-toggle-icon"
-                  onClick={() => toggleSection("companyStatus")}
-                  aria-label={
-                    expandedSections.companyStatus ? "Collapse" : "Expand"
-                  }
-                >
-                  <img
-                    src={expandedSections.companyStatus ? minusIcon : plusIcon}
-                    alt={expandedSections.companyStatus ? "Collapse" : "Expand"}
-                  />
-                </button>
-              </div>
-              {expandedSections.companyStatus && (
-                <div className="employerspublic-checkbox-list">
-                  <label className="employerspublic-checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={checkedItems.new}
-                      onChange={() => handleCheckboxChange("new")}
-                    />
-                    <span
-                      className={`employerspublic-checkmark ${
-                        checkedItems.new ? "employerspublic-checked" : ""
-                      }`}
-                    >
-                      {checkedItems.new && (
-                        <span className="employerspublic-checkmark-tick">
-                          ✓
-                        </span>
-                      )}
-                    </span>
-                    <span className="employerspublic-label-text">New</span>
-                  </label>
-                  <label className="employerspublic-checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={checkedItems.topRated}
-                      onChange={() => handleCheckboxChange("topRated")}
-                    />
-                    <span
-                      className={`employerspublic-checkmark ${
-                        checkedItems.topRated ? "employerspublic-checked" : ""
-                      }`}
-                    >
-                      {checkedItems.topRated && (
-                        <span className="employerspublic-checkmark-tick">
-                          ✓
-                        </span>
-                      )}
-                    </span>
-                    <span className="employerspublic-label-text">
-                      Top Rated
-                    </span>
-                  </label>
-                  <label className="employerspublic-checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={checkedItems.older}
-                      onChange={() => handleCheckboxChange("older")}
-                    />
-                    <span
-                      className={`employerspublic-checkmark ${
-                        checkedItems.older ? "employerspublic-checked" : ""
-                      }`}
-                    >
-                      {checkedItems.older && (
-                        <span className="employerspublic-checkmark-tick">
-                          ✓
-                        </span>
-                      )}
-                    </span>
-                    <span className="employerspublic-label-text">Older</span>
-                  </label>
-                </div>
-              )}
-            </div>
-
-            <div className="employerspublic-divider"></div>
-
-            <div className="employerspublic-filter-group employerspublic-checkbox-group">
-              <div className="employerspublic-filter-header">
-                <span>Category</span>
-                <button
-                  className="employerspublic-toggle-icon"
-                  onClick={() => toggleSection("category")}
-                  aria-label={expandedSections.category ? "Collapse" : "Expand"}
-                >
-                  <img
-                    src={expandedSections.category ? minusIcon : plusIcon}
-                    alt={expandedSections.category ? "Collapse" : "Expand"}
-                  />
-                </button>
-              </div>
-              {expandedSections.category && (
-                <>
-                  <div className="employerspublic-input-wrapper employerspublic-mb-4">
-                    <img src={categoryIcon} alt="Category" />
-                    <input
-                      type="text"
-                      placeholder="Category"
-                      value={searchCategory}
-                      onChange={(e) => setSearchCategory(e.target.value)}
-                    />
-                  </div>
-                  <div className="employerspublic-checkbox-list">
-                    <label className="employerspublic-checkbox-item employerspublic-justify-between">
-                      <div className="employerspublic-flex employerspublic-items-center employerspublic-gap-2">
-                        <input
-                          type="checkbox"
-                          checked={checkedItems.webDesign}
-                          onChange={() => handleCheckboxChange("webDesign")}
-                        />
-                        <span
-                          className={`employerspublic-checkmark ${
-                            checkedItems.webDesign
-                              ? "employerspublic-checked"
-                              : ""
-                          }`}
-                        >
-                          {checkedItems.webDesign && (
-                            <span className="employerspublic-checkmark-tick">
-                              ✓
-                            </span>
-                          )}
-                        </span>
-                        <span className="employerspublic-label-text">
-                          Web Design
-                        </span>
-                      </div>
-                      <span className="employerspublic-count-badge">235</span>
-                    </label>
-                    <label className="employerspublic-checkbox-item employerspublic-justify-between">
-                      <div className="employerspublic-flex employerspublic-items-center employerspublic-gap-2">
-                        <input
-                          type="checkbox"
-                          checked={checkedItems.designCreative}
-                          onChange={() =>
-                            handleCheckboxChange("designCreative")
-                          }
-                        />
-                        <span
-                          className={`employerspublic-checkmark ${
-                            checkedItems.designCreative
-                              ? "employerspublic-checked"
-                              : ""
-                          }`}
-                        >
-                          {checkedItems.designCreative && (
-                            <span className="employerspublic-checkmark-tick">
-                              ✓
-                            </span>
-                          )}
-                        </span>
-                        <span className="employerspublic-label-text">
-                          Design & Creative
-                        </span>
-                      </div>
-                      <span className="employerspublic-count-badge">28</span>
-                    </label>
-                    <label className="employerspublic-checkbox-item employerspublic-justify-between">
-                      <div className="employerspublic-flex employerspublic-items-center employerspublic-gap-2">
-                        <input
-                          type="checkbox"
-                          checked={checkedItems.itDevelopment}
-                          onChange={() => handleCheckboxChange("itDevelopment")}
-                        />
-                        <span
-                          className={`employerspublic-checkmark ${
-                            checkedItems.itDevelopment
-                              ? "employerspublic-checked"
-                              : ""
-                          }`}
-                        >
-                          {checkedItems.itDevelopment && (
-                            <span className="employerspublic-checkmark-tick">
-                              ✓
-                            </span>
-                          )}
-                        </span>
-                        <span className="employerspublic-label-text">
-                          IT & Development
-                        </span>
-                      </div>
-                      <span className="employerspublic-count-badge">67</span>
-                    </label>
-                    <label className="employerspublic-checkbox-item employerspublic-justify-between">
-                      <div className="employerspublic-flex employerspublic-items-center employerspublic-gap-2">
-                        <input
-                          type="checkbox"
-                          checked={checkedItems.webMobileDev}
-                          onChange={() => handleCheckboxChange("webMobileDev")}
-                        />
-                        <span
-                          className={`employerspublic-checkmark ${
-                            checkedItems.webMobileDev
-                              ? "employerspublic-checked"
-                              : ""
-                          }`}
-                        >
-                          {checkedItems.webMobileDev && (
-                            <span className="employerspublic-checkmark-tick">
-                              ✓
-                            </span>
-                          )}
-                        </span>
-                        <span className="employerspublic-label-text">
-                          Web & Mobile Dev
-                        </span>
-                      </div>
-                      <span className="employerspublic-count-badge">97</span>
-                    </label>
-                    <label className="employerspublic-checkbox-item employerspublic-justify-between">
-                      <div className="employerspublic-flex employerspublic-items-center employerspublic-gap-2">
-                        <input
-                          type="checkbox"
-                          checked={checkedItems.writing}
-                          onChange={() => handleCheckboxChange("writing")}
-                        />
-                        <span
-                          className={`employerspublic-checkmark ${
-                            checkedItems.writing
-                              ? "employerspublic-checked"
-                              : ""
-                          }`}
-                        >
-                          {checkedItems.writing && (
-                            <span className="employerspublic-checkmark-tick">
-                              ✓
-                            </span>
-                          )}
-                        </span>
-                        <span className="employerspublic-label-text">
-                          Writing
-                        </span>
-                      </div>
-                      <span className="employerspublic-count-badge">14</span>
-                    </label>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="employerspublic-divider"></div>
-
-            <div className="employerspublic-filter-group employerspublic-checkbox-group">
-              <div className="employerspublic-filter-header">
                 <span>Team</span>
                 <button
                   className="employerspublic-toggle-icon"
@@ -768,132 +514,27 @@ const EmployersPage = () => {
               </div>
               {expandedSections.team && (
                 <div className="employerspublic-checkbox-list">
-                  <label className="employerspublic-checkbox-item employerspublic-justify-between">
-                    <div className="employerspublic-flex employerspublic-items-center employerspublic-gap-2">
-                      <input
-                        type="checkbox"
-                        checked={checkedItems.team12}
-                        onChange={() => handleCheckboxChange("team12")}
-                      />
-                      <span
-                        className={`employerspublic-checkmark ${
-                          checkedItems.team12 ? "employerspublic-checked" : ""
-                        }`}
-                      >
-                        {checkedItems.team12 && (
-                          <span className="employerspublic-checkmark-tick">
-                            ✓
-                          </span>
-                        )}
-                      </span>
-                      <span className="employerspublic-label-text">
-                        12+ Team Size
-                      </span>
-                    </div>
-                    <span className="employerspublic-count-badge">235</span>
-                  </label>
-                  <label className="employerspublic-checkbox-item employerspublic-justify-between">
-                    <div className="employerspublic-flex employerspublic-items-center employerspublic-gap-2">
-                      <input
-                        type="checkbox"
-                        checked={checkedItems.team7}
-                        onChange={() => handleCheckboxChange("team7")}
-                      />
-                      <span
-                        className={`employerspublic-checkmark ${
-                          checkedItems.team7 ? "employerspublic-checked" : ""
-                        }`}
-                      >
-                        {checkedItems.team7 && (
-                          <span className="employerspublic-checkmark-tick">
-                            ✓
-                          </span>
-                        )}
-                      </span>
-                      <span className="employerspublic-label-text">
-                        7+ Team Size
-                      </span>
-                    </div>
-                    <span className="employerspublic-count-badge">28</span>
-                  </label>
-                  <label className="employerspublic-checkbox-item employerspublic-justify-between">
-                    <div className="employerspublic-flex employerspublic-items-center employerspublic-gap-2">
-                      <input
-                        type="checkbox"
-                        checked={checkedItems.team10}
-                        onChange={() => handleCheckboxChange("team10")}
-                      />
-                      <span
-                        className={`employerspublic-checkmark ${
-                          checkedItems.team10 ? "employerspublic-checked" : ""
-                        }`}
-                      >
-                        {checkedItems.team10 && (
-                          <span className="employerspublic-checkmark-tick">
-                            ✓
-                          </span>
-                        )}
-                      </span>
-                      <span className="employerspublic-label-text">
-                        10+ Team Size
-                      </span>
-                    </div>
-                    <span className="employerspublic-count-badge">67</span>
-                  </label>
-                  <label className="employerspublic-checkbox-item employerspublic-justify-between">
-                    <div className="employerspublic-flex employerspublic-items-center employerspublic-gap-2">
-                      <input
-                        type="checkbox"
-                        checked={checkedItems.team15}
-                        onChange={() => handleCheckboxChange("team15")}
-                      />
-                      <span
-                        className={`employerspublic-checkmark ${
-                          checkedItems.team15 ? "employerspublic-checked" : ""
-                        }`}
-                      >
-                        {checkedItems.team15 && (
-                          <span className="employerspublic-checkmark-tick">
-                            ✓
-                          </span>
-                        )}
-                      </span>
-                      <span className="employerspublic-label-text">
-                        15+ Team Size
-                      </span>
-                    </div>
-                    <span className="employerspublic-count-badge">97</span>
-                  </label>
-                  <label className="employerspublic-checkbox-item employerspublic-justify-between">
-                    <div className="employerspublic-flex employerspublic-items-center employerspublic-gap-2">
-                      <input
-                        type="checkbox"
-                        checked={checkedItems.team5}
-                        onChange={() => handleCheckboxChange("team5")}
-                      />
-                      <span
-                        className={`employerspublic-checkmark ${
-                          checkedItems.team5 ? "employerspublic-checked" : ""
-                        }`}
-                      >
-                        {checkedItems.team5 && (
-                          <span className="employerspublic-checkmark-tick">
-                            ✓
-                          </span>
-                        )}
-                      </span>
-                      <span className="employerspublic-label-text">
-                        5+ Team Size
-                      </span>
-                    </div>
-                    <span className="employerspublic-count-badge">14</span>
-                  </label>
+                  <div className="employerspublic-input-wrapper employerspublic-mb-4">
+                    <input
+                      type="text"
+                      placeholder="From (e.g. 10)"
+                      value={searchTeamFrom}
+                      onChange={(e) => setSearchTeamFrom(e.target.value)}
+                    />
+                  </div>
+                  <div className="employerspublic-input-wrapper">
+                    <input
+                      type="text"
+                      placeholder="To (e.g. 200)"
+                      value={searchTeamTo}
+                      onChange={(e) => setSearchTeamTo(e.target.value)}
+                    />
+                  </div>
                 </div>
               )}
             </div>
 
             <div className="employerspublic-divider"></div>
-
             <div className="employerspublic-filter-actions">
               <button
                 className="employerspublic-btn-apply-filter"

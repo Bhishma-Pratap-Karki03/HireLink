@@ -9,9 +9,6 @@ import Login from "./pages/Login";
 import VerificationPage from "./pages/VerificationPage";
 import ForgotPassword from "./pages/ForgotPassword";
 import NewPassword from "./pages/NewPassword";
-import RecruiterHomePage from "./pages/recruiterpages/RecruiterHomePage";
-import CandidateHomePage from "./pages/candidatepages/CandidateHomePage";
-import AdminHomePage from "./pages/adminpages/AdminHomePage";
 import CandidateProfilePage from "./pages/candidatepages/CandidateProfilePage";
 import RecruiterDashboard from "./pages/recruiterpages/RecruiterDashboard";
 import CandidateDashboard from "./pages/candidatepages/CandidateDashboard";
@@ -20,11 +17,13 @@ import RecruiterProfilePage from "./pages/recruiterpages/RecruiterProfilePage";
 import RecruiterJobPostPage from "./pages/recruiterpages/RecruiterJobPostPage";
 import RecruiterJobPostingsListPage from "./pages/recruiterpages/RecruiterJobPostingsListPage";
 import RecruiterJobApplicantsPage from "./pages/recruiterpages/RecruiterJobApplicantsPage";
+import RecruiterApplicantAssessmentPage from "./pages/recruiterpages/RecruiterApplicantAssessmentPage";
 import RecruiterScannerPage from "./pages/recruiterpages/RecruiterScannerPage";
 import RecruiterAtsRankingPage from "./pages/recruiterpages/RecruiterAtsRankingPage";
 import AdminProfilePage from "./pages/adminpages/AdminProfilePage";
 import AdminDashboard from "./pages/adminpages/AdminDashboard";
 import NotFoundPage from "./pages/NotFoundPage";
+import HomePage from "./pages/HomePage";
 import EmployersPage from "./pages/EmployersPage";
 import EmployerDetailsPage from "./pages/EmployerDetailsPage";
 import JobListingPage from "./pages/JobListingPage";
@@ -42,9 +41,13 @@ import RecruiterFriendRequestsPage from "./pages/recruiterpages/RecruiterFriendR
 import CandidateMessagesPage from "./pages/candidatepages/CandidateMessagesPage";
 import RecruiterMessagesPage from "./pages/recruiterpages/RecruiterMessagesPage";
 import CandidateAppliedStatusPage from "./pages/candidatepages/CandidateAppliedStatusPage";
+import CandidateSmartJobsPage from "./pages/candidatepages/CandidateSmartJobsPage";
+import CandidateSmartJobsHistoryPage from "./pages/candidatepages/CandidateSmartJobsHistoryPage";
 import CandidateSettingsPage from "./pages/candidatepages/CandidateSettingsPage";
 import RecruiterSettingsPage from "./pages/recruiterpages/RecruiterSettingsPage";
 import AdminSettingsPage from "./pages/adminpages/AdminSettingsPage";
+import AdminManageUsersPage from "./pages/adminpages/AdminManageUsersPage";
+import AdminManageJobsPage from "./pages/adminpages/AdminManageJobsPage";
 import "./App.css";
 
 // Protected Route Component
@@ -78,14 +81,7 @@ const ProtectedRoute = ({
       });
 
       if (!allowedRoles.includes(userRole)) {
-        // Redirect based on role TO HOME PAGE
-        if (isAdminEmail) {
-          return <Navigate to="/admin-home" replace />;
-        } else if (userData.role === "recruiter") {
-          return <Navigate to="/recruiter-home" replace />;
-        } else {
-          return <Navigate to="/candidate-home" replace />;
-        }
+        return <Navigate to="/home" replace />;
       }
     } catch (error) {
       console.error("Error in ProtectedRoute:", error);
@@ -103,17 +99,8 @@ const PublicRoute = ({ children }: { children: JSX.Element }) => {
 
   if (token && userDataStr) {
     try {
-      const userData = JSON.parse(userDataStr);
-      // Check if admin email
-      const isAdminEmail = userData.email === "hirelinknp@gmail.com";
-
-      if (isAdminEmail) {
-        return <Navigate to="/admin-home" replace />;
-      } else if (userData.role === "recruiter") {
-        return <Navigate to="/recruiter-home" replace />;
-      } else {
-        return <Navigate to="/candidate-home" replace />;
-      }
+      JSON.parse(userDataStr);
+      return <Navigate to="/home" replace />;
     } catch (error) {
       return children;
     }
@@ -129,23 +116,14 @@ const RootRedirect = () => {
 
   if (token && userDataStr) {
     try {
-      const userData = JSON.parse(userDataStr);
-      // Check if admin email
-      const isAdminEmail = userData.email === "hirelinknp@gmail.com";
-
-      if (isAdminEmail) {
-        return <Navigate to="/admin-home" replace />;
-      } else if (userData.role === "recruiter") {
-        return <Navigate to="/recruiter-home" replace />;
-      } else {
-        return <Navigate to="/candidate-home" replace />;
-      }
+      JSON.parse(userDataStr);
+      return <Navigate to="/home" replace />;
     } catch (error) {
       return <Navigate to="/login" replace />;
     }
   }
 
-  return <Navigate to="/login" replace />;
+  return <Navigate to="/home" replace />;
 };
 
 function App() {
@@ -154,6 +132,7 @@ function App() {
       <Routes>
         {/* Root route - redirects based on authentication */}
         <Route path="/" element={<RootRedirect />} />
+        <Route path="/home" element={<HomePage />} />
 
         {/* Public routes - redirect if already authenticated */}
         <Route
@@ -178,11 +157,32 @@ function App() {
 
         {/* Employers Page - Public access */}
         <Route path="/employers" element={<EmployersPage />} />
-        <Route path="/employer/:id" element={<EmployerDetailsPage />} />
+        <Route
+          path="/employer/:id"
+          element={
+            <ProtectedRoute allowedRoles={["candidate", "recruiter", "admin"]}>
+              <EmployerDetailsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/jobs" element={<JobListingPage />} />
         <Route path="/candidates" element={<CandidatesPage />} />
-        <Route path="/candidate/:id" element={<CandidateDetailsPage />} />
-        <Route path="/jobs/:id" element={<JobDetailsPage />} />
+        <Route
+          path="/candidate/:id"
+          element={
+            <ProtectedRoute allowedRoles={["candidate", "recruiter", "admin"]}>
+              <CandidateDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/jobs/:id"
+          element={
+            <ProtectedRoute allowedRoles={["candidate", "recruiter", "admin"]}>
+              <JobDetailsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/assessments"
           element={
@@ -208,31 +208,10 @@ function App() {
           }
         />
 
-        {/* HOME PAGES - Where users land after login */}
-        <Route
-          path="/recruiter-home"
-          element={
-            <ProtectedRoute allowedRoles={["recruiter"]}>
-              <RecruiterHomePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/candidate-home"
-          element={
-            <ProtectedRoute allowedRoles={["candidate"]}>
-              <CandidateHomePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin-home"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminHomePage />
-            </ProtectedRoute>
-          }
-        />
+        {/* Legacy role-home routes now point to single public home */}
+        <Route path="/recruiter-home" element={<Navigate to="/home" replace />} />
+        <Route path="/candidate-home" element={<Navigate to="/home" replace />} />
+        <Route path="/admin-home" element={<Navigate to="/home" replace />} />
 
         {/* DASHBOARD PAGES - Separate from home pages */}
         <Route
@@ -291,14 +270,7 @@ function App() {
           path="/admin/manage-users"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <div style={{ padding: "20px" }}>
-                <h1>Manage Users</h1>
-                <p>User management page coming soon</p>
-                <p>
-                  This page will allow you to view, edit, and manage all users
-                  in the system.
-                </p>
-              </div>
+              <AdminManageUsersPage />
             </ProtectedRoute>
           }
         />
@@ -345,10 +317,7 @@ function App() {
           path="/admin/jobs"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <div style={{ padding: "20px" }}>
-                <h1>Manage Jobs</h1>
-                <p>Job management page coming soon</p>
-              </div>
+              <AdminManageJobsPage />
             </ProtectedRoute>
           }
         />
@@ -452,6 +421,14 @@ function App() {
           }
         />
         <Route
+          path="/recruiter/job-postings/:id/applicants/:applicationId/assessment"
+          element={
+            <ProtectedRoute allowedRoles={["recruiter"]}>
+              <RecruiterApplicantAssessmentPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/recruiter/messages"
           element={
             <ProtectedRoute allowedRoles={["recruiter"]}>
@@ -504,17 +481,22 @@ function App() {
             </ProtectedRoute>
           }
         />
-          <Route
-            path="/candidate/job-alerts"
-            element={
-              <ProtectedRoute allowedRoles={["candidate"]}>
-                <div style={{ padding: "20px" }}>
-                  <h1>Job Alerts</h1>
-                  <p>Job alerts page coming soon</p>
-                </div>
+        <Route
+          path="/candidate/job-alerts"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <CandidateSmartJobsPage />
               </ProtectedRoute>
             }
           />
+        <Route
+          path="/candidate/job-alerts/history/:historyId"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <CandidateSmartJobsHistoryPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/candidate/saved-jobs"
           element={

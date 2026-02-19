@@ -2,7 +2,16 @@
 
 const express = require("express");
 const router = express.Router();
-const { registerUser, loginUser, listCandidates } = require("../controllers/userController");
+const { protect } = require("../middleware/authMiddleware");
+const {
+  registerUser,
+  loginUser,
+  listCandidates,
+  listUsersForAdmin,
+  updateUserStatusByAdmin,
+  updateUserRoleByAdmin,
+  getAdminDashboardStats,
+} = require("../controllers/userController");
 
 // POST /api/users/register - Register a new user
 router.post("/register", registerUser);
@@ -11,5 +20,11 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 // GET /api/users/candidates - List candidates (recruiter/admin)
 router.get("/candidates", listCandidates);
+
+// Admin user management
+router.get("/admin/list", protect, listUsersForAdmin);
+router.get("/admin/dashboard-stats", protect, getAdminDashboardStats);
+router.patch("/admin/:userId/status", protect, updateUserStatusByAdmin);
+router.patch("/admin/:userId/role", protect, updateUserRoleByAdmin);
 
 module.exports = router;

@@ -931,11 +931,29 @@ a {
 .candidate-experience-description ul,
 .candidate-experience-description ol {
   margin-left: 20px;
+  padding-left: 20px;
   margin-bottom: 12px;
 }
 
 .candidate-experience-description li {
   margin-bottom: 6px;
+}
+
+/* Ensure saved rich-text bullets/numbers stay visible in profile view */
+.candidate-experience-description ul li {
+  list-style-type: disc;
+}
+
+.candidate-experience-description ol li {
+  list-style-type: decimal;
+}
+
+.candidate-experience-description li[data-list="bullet"] {
+  list-style-type: disc;
+}
+
+.candidate-experience-description li[data-list="ordered"] {
+  list-style-type: decimal;
 }
 
 .candidate-experience-description strong {

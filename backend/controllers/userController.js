@@ -3,6 +3,20 @@
 
 const userService = require("../services/userService");
 const User = require("../models/userModel");
+const JobPost = require("../models/jobPostModel");
+const AppliedJob = require("../models/appliedJobModel");
+const AssessmentModel = require("../models/assessmentModel");
+const RecruiterAssessment = require("../models/recruiterAssessmentModel");
+const AtsReport = require("../models/atsReportModel");
+const Message = require("../models/messageModel");
+const ConnectionRequest = require("../models/connectionRequestModel");
+
+const ADMIN_EMAIL = "hirelinknp@gmail.com";
+
+const isAdmin = (user) =>
+  user &&
+  (String(user.role || "").toLowerCase() === "admin" ||
+    String(user.email || "").toLowerCase() === ADMIN_EMAIL);
 
 // Handle user registration request
 exports.registerUser = async (req, res, next) => {
@@ -94,6 +108,14 @@ exports.loginUser = async (req, res, next) => {
       });
     }
 
+    if (error.message.includes("blocked")) {
+      return res.status(403).json({
+        success: false,
+        message: error.message,
+        code: "ACCOUNT_BLOCKED",
+      });
+    }
+
     // Handle validation errors
     if (error.message.includes("required") || error.message.includes("valid")) {
       return res.status(400).json({
@@ -122,3 +144,486 @@ exports.listCandidates = async (req, res, next) => {
     next(error);
   }
 };
+
+// Admin: list candidates/recruiters with filters and pagination
+exports.listUsersForAdmin = async (req, res, next) => {
+  try {
+    if (!isAdmin(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only admin can access this resource",
+      });
+    }
+
+    const search = String(req.query.search || "").trim();
+    const role = String(req.query.role || "all").toLowerCase();
+    const status = String(req.query.status || "all").toLowerCase();
+
+    const filter = {
+      email: { $ne: ADMIN_EMAIL },
+      role: { $in: ["candidate", "recruiter"] },
+    };
+
+    if (role === "candidate" || role === "recruiter") {
+      filter.role = role;
+    }
+
+    if (status === "active") {
+      filter.isBlocked = false;
+    } else if (status === "blocked") {
+      filter.isBlocked = true;
+    }
+
+    if (search) {
+      filter.$or = [
+        { fullName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const users = await User.find(filter)
+      .select(
+        "fullName email role isBlocked createdAt updatedAt lastLoginAt profilePicture",
+      )
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      users,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Admin: block/unblock user
+exports.updateUserStatusByAdmin = async (req, res, next) => {
+  try {
+    if (!isAdmin(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only admin can access this resource",
+      });
+    }
+
+    const { userId } = req.params;
+    const { action } = req.body;
+    const normalizedAction = String(action || "").toLowerCase();
+
+    if (!["block", "unblock"].includes(normalizedAction)) {
+      return res.status(400).json({
+        success: false,
+        message: "Action must be block or unblock",
+      });
+    }
+
+    const targetUser = await User.findById(userId);
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (String(targetUser.email || "").toLowerCase() === ADMIN_EMAIL) {
+      return res.status(400).json({
+        success: false,
+        message: "Admin account cannot be blocked",
+      });
+    }
+
+    targetUser.isBlocked = normalizedAction === "block";
+    await targetUser.save();
+
+    res.status(200).json({
+      success: true,
+      message:
+        normalizedAction === "block"
+          ? "User blocked successfully"
+          : "User unblocked successfully",
+      user: {
+        id: targetUser._id,
+        isBlocked: targetUser.isBlocked,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Admin: change user role candidate <-> recruiter
+exports.updateUserRoleByAdmin = async (req, res, next) => {
+  try {
+    if (!isAdmin(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only admin can access this resource",
+      });
+    }
+
+    const { userId } = req.params;
+    const { role } = req.body;
+    const normalizedRole = String(role || "").toLowerCase();
+
+    if (!["candidate", "recruiter"].includes(normalizedRole)) {
+      return res.status(400).json({
+        success: false,
+        message: "Role must be candidate or recruiter",
+      });
+    }
+
+    const targetUser = await User.findById(userId);
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (String(targetUser.email || "").toLowerCase() === ADMIN_EMAIL) {
+      return res.status(400).json({
+        success: false,
+        message: "Admin role cannot be changed",
+      });
+    }
+
+    targetUser.role = normalizedRole;
+    await targetUser.save();
+
+    res.status(200).json({
+      success: true,
+      message: "User role updated successfully",
+      user: {
+        id: targetUser._id,
+        role: targetUser.role,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Admin: dashboard insights
+exports.getAdminDashboardStats = async (req, res, next) => {
+  try {
+    if (!isAdmin(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only admin can access this resource",
+      });
+    }
+
+    const toDateParam = req.query.to ? new Date(req.query.to) : new Date();
+    const fromDateParam = req.query.from ? new Date(req.query.from) : null;
+    const isValidTo = !Number.isNaN(toDateParam.getTime());
+    const inferredToDate = isValidTo ? toDateParam : new Date();
+    const inferredFromDate =
+      fromDateParam && !Number.isNaN(fromDateParam.getTime())
+        ? fromDateParam
+        : new Date(inferredToDate.getTime() - 29 * 24 * 60 * 60 * 1000);
+
+    const rangeStart = new Date(inferredFromDate);
+    rangeStart.setHours(0, 0, 0, 0);
+    const rangeEnd = new Date(inferredToDate);
+    rangeEnd.setHours(23, 59, 59, 999);
+
+    const dateRangeQuery = { $gte: rangeStart, $lte: rangeEnd };
+    const userRangeBase = {
+      email: { $ne: ADMIN_EMAIL },
+      createdAt: dateRangeQuery,
+    };
+
+    const rangeDays = Math.max(
+      1,
+      Math.round((rangeEnd.getTime() - rangeStart.getTime()) / 86400000) + 1,
+    );
+    const labels = Array.from({ length: rangeDays }, (_, i) => {
+      const date = new Date(rangeStart);
+      date.setDate(date.getDate() + i);
+      return date.toISOString().slice(0, 10);
+    });
+
+    const toSeriesMap = (rows, key = "_id") =>
+      rows.reduce((acc, row) => {
+        acc[row[key]] = row.count;
+        return acc;
+      }, {});
+
+    const [usersSeriesAgg, jobsSeriesAgg, applicationsSeriesAgg] =
+      await Promise.all([
+        User.aggregate([
+          { $match: { ...userRangeBase } },
+          {
+            $group: {
+              _id: {
+                $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+              },
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { _id: 1 } },
+        ]),
+        JobPost.aggregate([
+          { $match: { createdAt: dateRangeQuery } },
+          {
+            $group: {
+              _id: {
+                $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+              },
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { _id: 1 } },
+        ]),
+        AppliedJob.aggregate([
+          { $match: { createdAt: dateRangeQuery } },
+          {
+            $group: {
+              _id: {
+                $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+              },
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { _id: 1 } },
+        ]),
+      ]);
+
+    const usersSeriesMap = toSeriesMap(usersSeriesAgg);
+    const jobsSeriesMap = toSeriesMap(jobsSeriesAgg);
+    const applicationsSeriesMap = toSeriesMap(applicationsSeriesAgg);
+
+    const [totalUsers, totalCandidates, totalRecruiters, blockedUsers, activeUsers] =
+      await Promise.all([
+        User.countDocuments({ email: { $ne: ADMIN_EMAIL } }),
+        User.countDocuments({ role: "candidate", email: { $ne: ADMIN_EMAIL } }),
+        User.countDocuments({ role: "recruiter", email: { $ne: ADMIN_EMAIL } }),
+        User.countDocuments({ isBlocked: true, email: { $ne: ADMIN_EMAIL } }),
+        User.countDocuments({ isBlocked: false, email: { $ne: ADMIN_EMAIL } }),
+      ]);
+
+    const [
+      totalJobs,
+      activeJobs,
+      inactiveJobs,
+      totalApplications,
+      submittedApplications,
+      interviewApplications,
+      hiredApplications,
+      rejectedApplications,
+      adminAssessments,
+      recruiterAssessments,
+      atsReportsCount,
+      totalMessages,
+      unreadMessages,
+      pendingConnections,
+      acceptedConnections,
+      recentUsers,
+      recentJobs,
+      jobTypeAgg,
+      workModeAgg,
+      applicationStatusAgg,
+      topCompaniesAgg,
+    ] = await Promise.all([
+      JobPost.countDocuments({ createdAt: dateRangeQuery }),
+      JobPost.countDocuments({ isActive: true, createdAt: dateRangeQuery }),
+      JobPost.countDocuments({ isActive: false, createdAt: dateRangeQuery }),
+      AppliedJob.countDocuments({ createdAt: dateRangeQuery }),
+      AppliedJob.countDocuments({
+        status: "submitted",
+        createdAt: dateRangeQuery,
+      }),
+      AppliedJob.countDocuments({
+        status: "interview",
+        createdAt: dateRangeQuery,
+      }),
+      AppliedJob.countDocuments({ status: "hired", createdAt: dateRangeQuery }),
+      AppliedJob.countDocuments({
+        status: "rejected",
+        createdAt: dateRangeQuery,
+      }),
+      AssessmentModel.countDocuments({ createdAt: dateRangeQuery }),
+      RecruiterAssessment.countDocuments({ createdAt: dateRangeQuery }),
+      AtsReport.countDocuments({ createdAt: dateRangeQuery }),
+      Message.countDocuments({ createdAt: dateRangeQuery }),
+      Message.countDocuments({ readAt: null, createdAt: dateRangeQuery }),
+      ConnectionRequest.countDocuments({
+        status: "pending",
+        createdAt: dateRangeQuery,
+      }),
+      ConnectionRequest.countDocuments({
+        status: "accepted",
+        createdAt: dateRangeQuery,
+      }),
+      User.find({ ...userRangeBase })
+        .select("fullName email role createdAt lastLoginAt isBlocked")
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean(),
+      JobPost.find({ createdAt: dateRangeQuery })
+        .select("jobTitle location createdAt isActive")
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean(),
+      JobPost.aggregate([
+        { $match: { createdAt: dateRangeQuery } },
+        {
+          $group: {
+            _id: {
+              $cond: [
+                { $in: ["$jobType", [null, ""]] },
+                "Not specified",
+                "$jobType",
+              ],
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]),
+      JobPost.aggregate([
+        { $match: { createdAt: dateRangeQuery } },
+        {
+          $group: {
+            _id: {
+              $cond: [
+                { $in: ["$workMode", [null, ""]] },
+                "Not specified",
+                "$workMode",
+              ],
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]),
+      AppliedJob.aggregate([
+        { $match: { createdAt: dateRangeQuery } },
+        {
+          $group: {
+            _id: {
+              $cond: [
+                { $in: ["$status", [null, ""]] },
+                "unknown",
+                "$status",
+              ],
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]),
+      JobPost.aggregate([
+        { $match: { createdAt: dateRangeQuery } },
+        {
+          $group: {
+            _id: "$recruiterId",
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "_id",
+            foreignField: "_id",
+            as: "recruiter",
+          },
+        },
+        {
+          $addFields: {
+            recruiterName: {
+              $ifNull: [{ $arrayElemAt: ["$recruiter.fullName", 0] }, "Unknown company"],
+            },
+          },
+        },
+        {
+          $project: {
+            _id: "$recruiterName",
+            count: 1,
+          },
+        },
+        { $sort: { count: -1 } },
+        { $limit: 5 },
+      ]),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      stats: {
+        users: {
+          total: totalUsers,
+          candidates: totalCandidates,
+          recruiters: totalRecruiters,
+          active: activeUsers,
+          blocked: blockedUsers,
+        },
+        jobs: {
+          total: totalJobs,
+          active: activeJobs,
+          inactive: inactiveJobs,
+        },
+        applications: {
+          total: totalApplications,
+          submitted: submittedApplications,
+          interview: interviewApplications,
+          hired: hiredApplications,
+          rejected: rejectedApplications,
+        },
+        assessments: {
+          total: adminAssessments + recruiterAssessments,
+          adminCreated: adminAssessments,
+          recruiterCreated: recruiterAssessments,
+        },
+        ats: {
+          reports: atsReportsCount,
+        },
+        messaging: {
+          totalMessages,
+          unreadMessages,
+        },
+        connections: {
+          pending: pendingConnections,
+          accepted: acceptedConnections,
+        },
+        trends: {
+          labels,
+          usersCreated: labels.map((label) => usersSeriesMap[label] || 0),
+          jobsPosted: labels.map((label) => jobsSeriesMap[label] || 0),
+          applications: labels.map((label) => applicationsSeriesMap[label] || 0),
+        },
+        distributions: {
+          jobTypes: {
+            labels: jobTypeAgg.map((item) => item._id),
+            values: jobTypeAgg.map((item) => item.count),
+          },
+          workModes: {
+            labels: workModeAgg.map((item) => item._id),
+            values: workModeAgg.map((item) => item.count),
+          },
+          applicationStatuses: {
+            labels: applicationStatusAgg.map((item) => item._id),
+            values: applicationStatusAgg.map((item) => item.count),
+          },
+          userRoles: {
+            labels: ["Candidates", "Recruiters"],
+            values: [totalCandidates, totalRecruiters],
+          },
+        },
+        topCompanies: topCompaniesAgg.map((item) => ({
+          name: item._id,
+          jobs: item.count,
+        })),
+      },
+      dateRange: {
+        from: rangeStart.toISOString(),
+        to: rangeEnd.toISOString(),
+      },
+      recentUsers,
+      recentJobs,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

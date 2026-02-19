@@ -101,6 +101,11 @@ interface Review {
 }
 
 type ConnectionState = "none" | "pending" | "friend";
+type MutualConnection = {
+  id: string;
+  fullName: string;
+  profilePicture?: string;
+};
 
 const EmployerDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -135,6 +140,7 @@ const EmployerDetailsPage = () => {
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionState>("none");
   const [sendingConnection, setSendingConnection] = useState(false);
+  const [mutualConnections, setMutualConnections] = useState<MutualConnection[]>([]);
   const userDataStr = localStorage.getItem("userData");
   const currentUser = userDataStr ? JSON.parse(userDataStr) : null;
   const currentUserId =
@@ -376,6 +382,44 @@ const EmployerDetailsPage = () => {
     };
 
     fetchConnectionStatus();
+  }, [company?.id, currentUserId, isAllowedRole]);
+
+  useEffect(() => {
+    const fetchMutualConnections = async () => {
+      if (!company?.id || !currentUserId || company.id === currentUserId) {
+        setMutualConnections([]);
+        return;
+      }
+      if (!isAllowedRole) {
+        setMutualConnections([]);
+        return;
+      }
+
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setMutualConnections([]);
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `http://localhost:5000/api/connections/mutual/${company.id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        const data = await res.json();
+        if (!res.ok) {
+          setMutualConnections([]);
+          return;
+        }
+        setMutualConnections(data?.mutualConnections || []);
+      } catch {
+        setMutualConnections([]);
+      }
+    };
+
+    fetchMutualConnections();
   }, [company?.id, currentUserId, isAllowedRole]);
 
   const toggleSave = () => {
@@ -899,30 +943,51 @@ const EmployerDetailsPage = () => {
                     <p>Find your dream job at {company.name}</p>
                   </div>
                   {!isSelfProfile && isAllowedRole && (
-                    <div className="employer-details-hero-actions">
-                      <button
-                        type="button"
-                        className={`employer-details-hero-btn ${
-                          connectionStatus === "pending"
-                            ? "is-pending"
-                            : connectionStatus === "friend"
-                              ? "is-friend"
-                              : ""
-                        }`}
-                        disabled={sendingConnection || connectionStatus !== "none"}
-                        onClick={handleSendConnection}
-                      >
-                        <img src={connectionActionIcon} alt={connectionLabel} />
-                        <span>{connectionLabel}</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="employer-details-hero-btn"
-                        onClick={handleSendMessage}
-                      >
-                        <img src={messageIcon} alt="Message" />
-                        <span>Message</span>
-                      </button>
+                    <div className="employer-details-hero-side">
+                      <div className="employer-details-hero-actions">
+                        <button
+                          type="button"
+                          className={`employer-details-hero-btn ${
+                            connectionStatus === "pending"
+                              ? "is-pending"
+                              : connectionStatus === "friend"
+                                ? "is-friend"
+                                : ""
+                          }`}
+                          disabled={sendingConnection || connectionStatus !== "none"}
+                          onClick={handleSendConnection}
+                        >
+                          <img src={connectionActionIcon} alt={connectionLabel} />
+                          <span>{connectionLabel}</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="employer-details-hero-btn"
+                          onClick={handleSendMessage}
+                        >
+                          <img src={messageIcon} alt="Message" />
+                          <span>Message</span>
+                        </button>
+                      </div>
+                      {mutualConnections.length > 0 && (
+                        <div className="employer-details-mutuals">
+                          <div className="employer-details-mutual-avatars">
+                            {mutualConnections.slice(0, 4).map((item) => (
+                              <img
+                                key={item.id}
+                                src={getProfileImageUrl(item.profilePicture)}
+                                alt={item.fullName}
+                                title={item.fullName}
+                                onError={handleImageError}
+                              />
+                            ))}
+                          </div>
+                          <span>
+                            {mutualConnections.length} mutual connection
+                            {mutualConnections.length > 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </>
