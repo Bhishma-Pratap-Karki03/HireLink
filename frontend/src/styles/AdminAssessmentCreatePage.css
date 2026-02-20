@@ -141,15 +141,69 @@
   color: #9aa9bf;
 }
 
+.admin-assessment-form-group .ql-editor ol,
+.admin-assessment-form-group .ql-editor ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.admin-assessment-form-group .ql-editor ol {
+  list-style-type: decimal;
+}
+
+.admin-assessment-form-group .ql-editor ul {
+  list-style-type: disc;
+}
+
+.admin-assessment-form-group .ql-editor li {
+  display: list-item;
+  margin: 0.2rem 0;
+}
+
+.admin-assessment-form-group .ql-toolbar.ql-snow .ql-picker,
 .admin-assessment-form-group .ql-toolbar.ql-snow .ql-picker-label,
-.admin-assessment-form-group .ql-toolbar.ql-snow .ql-stroke,
-.admin-assessment-form-group .ql-toolbar.ql-snow .ql-fill {
+.admin-assessment-form-group .ql-toolbar.ql-snow .ql-picker-item {
   color: #51607a;
+}
+
+.admin-assessment-form-group .ql-toolbar.ql-snow .ql-stroke {
   stroke: #51607a;
+}
+
+.admin-assessment-form-group .ql-toolbar.ql-snow .ql-fill {
+  fill: #51607a;
 }
 
 .admin-assessment-form-group .ql-toolbar.ql-snow .ql-picker-label {
   padding: 0 6px;
+}
+
+.admin-assessment-form-group .ql-toolbar.ql-snow .ql-formats {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 10px;
+}
+
+.admin-assessment-form-group .ql-toolbar.ql-snow button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  vertical-align: middle;
+}
+
+.admin-assessment-form-group .ql-toolbar.ql-snow .ql-picker-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+.admin-assessment-form-group .ql-toolbar.ql-snow button svg {
+  width: 16px;
+  height: 16px;
 }
 
 .admin-assessment-form-group .ql-toolbar.ql-snow .ql-picker-options {

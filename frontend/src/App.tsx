@@ -36,6 +36,8 @@ import AssessmentPreviewPage from "./pages/AssessmentPreviewPage";
 import AdminAssessmentCreatePage from "./pages/adminpages/AdminAssessmentCreatePage";
 import AdminAssessmentEditPage from "./pages/adminpages/AdminAssessmentEditPage";
 import AdminAssessmentsPage from "./pages/adminpages/AdminAssessmentsPage";
+import AdminAssessmentAttemptsPage from "./pages/adminpages/AdminAssessmentAttemptsPage";
+import AdminAssessmentAttemptDetailPage from "./pages/adminpages/AdminAssessmentAttemptDetailPage";
 import CandidateFriendRequestsPage from "./pages/candidatepages/CandidateFriendRequestsPage";
 import RecruiterFriendRequestsPage from "./pages/recruiterpages/RecruiterFriendRequestsPage";
 import CandidateMessagesPage from "./pages/candidatepages/CandidateMessagesPage";
@@ -342,6 +344,22 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <AdminAssessmentEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/assessments/attempts"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminAssessmentAttemptsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/assessments/attempts/:attemptId"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminAssessmentAttemptDetailPage />
             </ProtectedRoute>
           }
         />

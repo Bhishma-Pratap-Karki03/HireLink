@@ -1,6 +1,6 @@
 import CandidateSidebar from "../../components/candidatecomponents/CandidateSidebar";
 import CandidateTopBar from "../../components/candidatecomponents/CandidateTopBar";
-import SettingsContent from "../../components/settings/SettingsContent";
+import SettingsContent from "../../components/settingsContent/SettingsContent";
 import "../../styles/SettingsPage.css";
 
 const CandidateSettingsPage = () => {

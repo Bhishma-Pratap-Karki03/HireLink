@@ -6,6 +6,21 @@ const assessmentAttemptController = require("../controllers/assessmentAttemptCon
 
 router.get("/", adminAssessmentController.listAssessments);
 router.get("/mine", protect, adminAssessmentController.listAssessments);
+router.get(
+  "/admin/attempts",
+  protect,
+  adminAssessmentController.listAssessmentAttempts,
+);
+router.get(
+  "/admin/attempts/:attemptId",
+  protect,
+  adminAssessmentController.getAssessmentAttemptDetail,
+);
+router.delete(
+  "/admin/attempts/:attemptId",
+  protect,
+  adminAssessmentController.dismissAssessmentAttempt,
+);
 router.get("/available", protect, assessmentAttemptController.listAvailableAssessments);
 router.get("/attempts/:attemptId", protect, assessmentAttemptController.getAttempt);
 router.get("/:id", adminAssessmentController.getAssessmentById);

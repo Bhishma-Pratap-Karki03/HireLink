@@ -246,7 +246,8 @@ const AdminAssessmentEditPage: React.FC = () => {
     }
     if (form.type === "task" || form.type === "code") {
       if (!stripHtml(form.codeProblem)) missing.push("Problem Statement");
-      if (form.codeLanguages.length === 0) missing.push("Allowed Languages");
+      if (form.codeLanguages.filter((item) => item.trim()).length === 0)
+        missing.push("Allowed Languages");
       if (!form.codeSubmission) missing.push("Submission Format");
       if (!stripHtml(form.codeEvaluation))
         missing.push("Evaluation Guidelines");
@@ -367,15 +368,22 @@ const AdminAssessmentEditPage: React.FC = () => {
     );
   };
 
-  const toggleLanguage = (language: string) => {
-    if (form.codeLanguages.includes(language)) {
-      updateForm(
-        "codeLanguages",
-        form.codeLanguages.filter((item) => item !== language),
-      );
-    } else {
-      updateForm("codeLanguages", [...form.codeLanguages, language]);
-    }
+  const addCodeLanguage = () => {
+    updateForm("codeLanguages", [...form.codeLanguages, ""]);
+  };
+
+  const updateCodeLanguage = (index: number, value: string) => {
+    updateForm(
+      "codeLanguages",
+      form.codeLanguages.map((item, i) => (i === index ? value : item)),
+    );
+  };
+
+  const removeCodeLanguage = (index: number) => {
+    updateForm(
+      "codeLanguages",
+      form.codeLanguages.filter((_, i) => i !== index),
+    );
   };
 
   const normalizePayload = (value: AssessmentForm) => ({
@@ -397,7 +405,10 @@ const AdminAssessmentEditPage: React.FC = () => {
     writingInstructions: value.writingInstructions.trim(),
     writingFormat: value.writingFormat,
     codeProblem: value.codeProblem.trim(),
-    codeLanguages: [...value.codeLanguages].sort(),
+    codeLanguages: value.codeLanguages
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .sort(),
     codeSubmission: value.codeSubmission,
     codeEvaluation: value.codeEvaluation.trim(),
   });
@@ -472,7 +483,7 @@ const AdminAssessmentEditPage: React.FC = () => {
           writingInstructions: form.writingInstructions,
           writingFormat: form.writingFormat,
           codeProblem: form.codeProblem,
-          codeLanguages: form.codeLanguages,
+          codeLanguages: form.codeLanguages.filter((item) => item.trim()),
           codeSubmission: form.codeSubmission,
           codeEvaluation: form.codeEvaluation,
         }),
@@ -947,25 +958,45 @@ const AdminAssessmentEditPage: React.FC = () => {
                         </div>
                         <div className="admin-assessment-form-group">
                           <label>Relevant Tools / Languages</label>
-                          <div className="admin-assessment-checkbox-grid">
-                            {[
-                              "JavaScript",
-                              "TypeScript",
-                              "Python",
-                              "Java",
-                              "C++",
-                            ].map((language) => (
-                              <label key={language}>
+                          <div className="admin-assessment-skill-list">
+                            {(form.codeLanguages.length > 0
+                              ? form.codeLanguages
+                              : [""]
+                            ).map((language, index) => (
+                              <div
+                                key={`code-lang-${index}`}
+                                className="admin-assessment-option-row"
+                              >
                                 <input
-                                  type="checkbox"
-                                  checked={form.codeLanguages.includes(
-                                    language,
-                                  )}
-                                  onChange={() => toggleLanguage(language)}
+                                  type="text"
+                                  value={language}
+                                  onChange={(e) =>
+                                    updateCodeLanguage(index, e.target.value)
+                                  }
+                                  placeholder="e.g. React, Figma, Node.js"
                                 />
-                                {language}
-                              </label>
+                                <button
+                                  type="button"
+                                  className="admin-assessment-option-remove"
+                                  onClick={() => removeCodeLanguage(index)}
+                                  disabled={
+                                    (form.codeLanguages.length > 0
+                                      ? form.codeLanguages.length
+                                      : 1) === 1
+                                  }
+                                >
+                                  <img src={deleteIcon} alt="Remove language" />
+                                </button>
+                              </div>
                             ))}
+                            <button
+                              type="button"
+                              className="admin-assessment-option-add"
+                              onClick={addCodeLanguage}
+                            >
+                              <img src={addIcon} alt="" />
+                              Add Tool / Language
+                            </button>
                           </div>
                         </div>
                         <div className="admin-assessment-form-group">

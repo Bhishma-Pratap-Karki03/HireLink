@@ -4,6 +4,7 @@ import {
   CategoryScale,
   Chart as ChartJS,
   Filler,
+  BarElement,
   Legend,
   LinearScale,
   Title,
@@ -20,6 +21,7 @@ import statsTotalUsersIcon from "../../images/Candidate Profile Page Images/stat
 import statsTotalJobsIcon from "../../images/Candidate Profile Page Images/stats-applied-icon.svg";
 import statsApplicationsIcon from "../../images/Candidate Profile Page Images/statsCandidatesIcon.png";
 import statsBlockedUsersIcon from "../../images/Candidate Profile Page Images/stats-reject.svg";
+import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
 import "../../styles/AdminDashboard.css";
 
 ChartJS.register(
@@ -27,6 +29,7 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
   ArcElement,
   Title,
   Tooltip,
@@ -58,6 +61,18 @@ type DashboardStats = {
     total: number;
     adminCreated: number;
     recruiterCreated: number;
+    adminInsights?: {
+      active: number;
+      inactive: number;
+      totalAttempts: number;
+      avgQuizScore: number;
+      distributions: {
+        types: { labels: string[]; values: number[] };
+        difficulty: { labels: string[]; values: number[] };
+        attempts: { labels: string[]; values: number[] };
+      };
+      topAssessmentsByAttempts: Array<{ title: string; attempts: number }>;
+    };
   };
   ats: {
     reports: number;
@@ -82,7 +97,7 @@ type DashboardStats = {
     applicationStatuses: { labels: string[]; values: number[] };
     userRoles: { labels: string[]; values: number[] };
   };
-  topCompanies: Array<{ name: string; jobs: number }>;
+  topCompanies: Array<{ name: string; jobs: number; logo?: string }>;
 };
 
 type RecentUser = {
@@ -90,6 +105,7 @@ type RecentUser = {
   fullName: string;
   email: string;
   role: string;
+  profilePicture?: string;
   isBlocked: boolean;
   createdAt: string;
   lastLoginAt?: string | null;
@@ -114,7 +130,23 @@ const emptyStats: DashboardStats = {
   users: { total: 0, candidates: 0, recruiters: 0, active: 0, blocked: 0 },
   jobs: { total: 0, active: 0, inactive: 0 },
   applications: { total: 0, submitted: 0, interview: 0, hired: 0, rejected: 0 },
-  assessments: { total: 0, adminCreated: 0, recruiterCreated: 0 },
+  assessments: {
+    total: 0,
+    adminCreated: 0,
+    recruiterCreated: 0,
+    adminInsights: {
+      active: 0,
+      inactive: 0,
+      totalAttempts: 0,
+      avgQuizScore: 0,
+      distributions: {
+        types: { labels: [], values: [] },
+        difficulty: { labels: [], values: [] },
+        attempts: { labels: [], values: [] },
+      },
+      topAssessmentsByAttempts: [],
+    },
+  },
   ats: { reports: 0 },
   messaging: { totalMessages: 0, unreadMessages: 0 },
   connections: { pending: 0, accepted: 0 },
@@ -133,6 +165,12 @@ const formatDate = (value?: string | null) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
   return date.toLocaleDateString();
+};
+
+const resolveImage = (value?: string) => {
+  if (!value) return defaultAvatar;
+  if (value.startsWith("http")) return value;
+  return `http://localhost:5000${value}`;
 };
 
 const chartColors = [
@@ -324,7 +362,11 @@ const AdminDashboard = () => {
         y: {
           beginAtZero: true,
           grid: { color: "rgba(131, 151, 177, 0.20)" },
-          ticks: { color: "#6a829d", precision: 0, font: { size: 13, weight: 600 } },
+          ticks: {
+            color: "#6a829d",
+            precision: 0,
+            font: { size: 13, weight: 600 },
+          },
         },
       },
     }),
@@ -351,7 +393,9 @@ const AdminDashboard = () => {
       label,
       value: values[index] || 0,
       percent: percentageLabel(values[index] || 0, total),
-      color: applicationStatusColors[index] || chartColors[index % chartColors.length],
+      color:
+        applicationStatusColors[index] ||
+        chartColors[index % chartColors.length],
     }));
   }, [stats.distributions.applicationStatuses, applicationStatusColors]);
 
@@ -366,6 +410,21 @@ const AdminDashboard = () => {
       color: roleSplitColors[index % roleSplitColors.length],
     }));
   }, [stats.distributions.userRoles]);
+
+  const assessmentTypeData = useMemo(
+    () => ({
+      labels: stats.assessments.adminInsights?.distributions.types.labels || [],
+      datasets: [
+        {
+          data:
+            stats.assessments.adminInsights?.distributions.types.values || [],
+          backgroundColor: ["#1459b8", "#14b8a6", "#f59e0b", "#8b5cf6"],
+          borderWidth: 0,
+        },
+      ],
+    }),
+    [stats.assessments.adminInsights],
+  );
 
   const toggleTrendSeries = (
     key: "usersCreated" | "jobsPosted" | "applications",
@@ -481,6 +540,34 @@ const AdminDashboard = () => {
                       className="admin-dashboard-stat-icon"
                     />
                   </article>
+                  <article className="admin-dashboard-stat-card">
+                    <div className="admin-dashboard-stat-content">
+                      <h3>Admin Assessments</h3>
+                      <p>{stats.assessments.adminCreated}</p>
+                      <small>
+                        {stats.assessments.adminInsights?.active || 0} active /{" "}
+                        {stats.assessments.adminInsights?.inactive || 0}{" "}
+                        inactive
+                      </small>
+                    </div>
+                    <img
+                      src={statsApplicationsIcon}
+                      alt="Admin assessments"
+                      className="admin-dashboard-stat-icon"
+                    />
+                  </article>
+                  <article className="admin-dashboard-stat-card">
+                    <div className="admin-dashboard-stat-content">
+                      <h3>Total Assessment Attempts</h3>
+                      <p>{stats.assessments.adminInsights?.totalAttempts || 0}</p>
+                      <small>All attempts in selected date range</small>
+                    </div>
+                    <img
+                      src={statsTotalJobsIcon}
+                      alt="Total assessment attempts"
+                      className="admin-dashboard-stat-icon"
+                    />
+                  </article>
                 </div>
 
                 <div className="admin-dashboard-chart-stack">
@@ -524,6 +611,14 @@ const AdminDashboard = () => {
                               <span className="admin-dashboard-ranking-rank">
                                 #{index + 1}
                               </span>
+                              <img
+                                src={resolveImage(company.logo)}
+                                alt={company.name}
+                                className="admin-dashboard-ranking-avatar admin-dashboard-avatar-recruiter"
+                                onError={(event) => {
+                                  event.currentTarget.src = defaultAvatar;
+                                }}
+                              />
                               <span className="admin-dashboard-ranking-name">
                                 {company.name}
                               </span>
@@ -579,7 +674,10 @@ const AdminDashboard = () => {
                     <h2>User Role Split</h2>
                     <div className="admin-dashboard-donut-layout">
                       <div className="admin-dashboard-donut-chart-wrap">
-                        <Doughnut data={roleSplitData} options={doughnutOptions} />
+                        <Doughnut
+                          data={roleSplitData}
+                          options={doughnutOptions}
+                        />
                       </div>
                       <div className="admin-dashboard-donut-legend">
                         {roleLegendItems.map((item) => (
@@ -606,6 +704,95 @@ const AdminDashboard = () => {
                   </section>
                 </div>
 
+                <div className="admin-dashboard-chart-grid">
+                  <section className="admin-dashboard-panel admin-dashboard-chart-panel admin-dashboard-donut-panel">
+                    <h2>Admin Assessment Type Split</h2>
+                    <div className="admin-dashboard-donut-layout">
+                      <div className="admin-dashboard-donut-chart-wrap admin-dashboard-assessment-donut-chart-wrap">
+                        <Doughnut
+                          data={assessmentTypeData}
+                          options={doughnutOptions}
+                        />
+                      </div>
+                      <div className="admin-dashboard-donut-legend">
+                        {(
+                          stats.assessments.adminInsights?.distributions.types
+                            .labels || []
+                        ).map((label, index) => {
+                          const value =
+                            stats.assessments.adminInsights?.distributions.types
+                              .values[index] || 0;
+                          const total = (
+                            stats.assessments.adminInsights?.distributions.types
+                              .values || []
+                          ).reduce((sum, item) => sum + item, 0);
+                          const colors = [
+                            "#1459b8",
+                            "#14b8a6",
+                            "#f59e0b",
+                            "#8b5cf6",
+                          ];
+                          return (
+                            <div
+                              key={`assessment-type-${label}`}
+                              className="admin-dashboard-donut-legend-item"
+                            >
+                              <span className="admin-dashboard-donut-legend-left">
+                                <span
+                                  className="admin-dashboard-donut-legend-dot"
+                                  style={{
+                                    backgroundColor:
+                                      colors[index % colors.length],
+                                  }}
+                                />
+                                <span className="admin-dashboard-donut-legend-label">
+                                  {label}
+                                </span>
+                              </span>
+                              <span className="admin-dashboard-donut-legend-value">
+                                {percentageLabel(value, total)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="admin-dashboard-panel admin-dashboard-chart-panel">
+                    <h2>Top Admin Assessments by Attempts</h2>
+                    {stats.assessments.adminInsights?.topAssessmentsByAttempts
+                      ?.length ? (
+                      <div className="admin-dashboard-ranking-list">
+                        {stats.assessments.adminInsights.topAssessmentsByAttempts.map(
+                          (assessment, index) => (
+                            <div
+                              key={`${assessment.title}-${index}`}
+                              className="admin-dashboard-ranking-item"
+                            >
+                              <div className="admin-dashboard-ranking-left">
+                                <span className="admin-dashboard-ranking-rank">
+                                  #{index + 1}
+                                </span>
+                                <span className="admin-dashboard-ranking-name">
+                                  {assessment.title}
+                                </span>
+                              </div>
+                              <span className="admin-dashboard-ranking-count">
+                                {assessment.attempts} attempts
+                              </span>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    ) : (
+                      <div className="admin-dashboard-empty-chart">
+                        No admin assessment attempts in selected date range.
+                      </div>
+                    )}
+                  </section>
+                </div>
+
                 <div className="admin-dashboard-summary-grid">
                   <section className="admin-dashboard-panel">
                     <h2>Recent Users</h2>
@@ -615,9 +802,23 @@ const AdminDashboard = () => {
                           key={user._id}
                           className="admin-dashboard-list-item"
                         >
-                          <div>
-                            <h4>{user.fullName}</h4>
-                            <p>{user.email}</p>
+                          <div className="admin-dashboard-list-user-info">
+                            <img
+                              src={resolveImage(user.profilePicture)}
+                              alt={user.fullName}
+                              className={`admin-dashboard-list-avatar ${
+                                user.role === "recruiter"
+                                  ? "admin-dashboard-avatar-recruiter"
+                                  : ""
+                              }`}
+                              onError={(event) => {
+                                event.currentTarget.src = defaultAvatar;
+                              }}
+                            />
+                            <div>
+                              <h4>{user.fullName}</h4>
+                              <p>{user.email}</p>
+                            </div>
                           </div>
                           <div className="admin-dashboard-list-meta">
                             <span>{user.role}</span>
@@ -678,4 +879,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-

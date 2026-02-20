@@ -5,7 +5,8 @@ const userService = require("../services/userService");
 const User = require("../models/userModel");
 const JobPost = require("../models/jobPostModel");
 const AppliedJob = require("../models/appliedJobModel");
-const AssessmentModel = require("../models/assessmentModel");
+const AdminAssessment = require("../models/adminAssessmentModel");
+const AssessmentAttempt = require("../models/assessmentAttemptModel");
 const RecruiterAssessment = require("../models/recruiterAssessmentModel");
 const AtsReport = require("../models/atsReportModel");
 const Message = require("../models/messageModel");
@@ -425,6 +426,11 @@ exports.getAdminDashboardStats = async (req, res, next) => {
       workModeAgg,
       applicationStatusAgg,
       topCompaniesAgg,
+      adminAssessmentActive,
+      adminAssessmentInactive,
+      adminAssessmentTypeAgg,
+      adminAssessmentDifficultyAgg,
+      adminAssessmentIds,
     ] = await Promise.all([
       JobPost.countDocuments({ createdAt: dateRangeQuery }),
       JobPost.countDocuments({ isActive: true, createdAt: dateRangeQuery }),
@@ -443,7 +449,7 @@ exports.getAdminDashboardStats = async (req, res, next) => {
         status: "rejected",
         createdAt: dateRangeQuery,
       }),
-      AssessmentModel.countDocuments({ createdAt: dateRangeQuery }),
+      AdminAssessment.countDocuments({ createdAt: dateRangeQuery }),
       RecruiterAssessment.countDocuments({ createdAt: dateRangeQuery }),
       AtsReport.countDocuments({ createdAt: dateRangeQuery }),
       Message.countDocuments({ createdAt: dateRangeQuery }),
@@ -457,7 +463,7 @@ exports.getAdminDashboardStats = async (req, res, next) => {
         createdAt: dateRangeQuery,
       }),
       User.find({ ...userRangeBase })
-        .select("fullName email role createdAt lastLoginAt isBlocked")
+        .select("fullName email role createdAt lastLoginAt isBlocked profilePicture")
         .sort({ createdAt: -1 })
         .limit(5)
         .lean(),
@@ -535,18 +541,114 @@ exports.getAdminDashboardStats = async (req, res, next) => {
             recruiterName: {
               $ifNull: [{ $arrayElemAt: ["$recruiter.fullName", 0] }, "Unknown company"],
             },
+            recruiterPicture: {
+              $ifNull: [{ $arrayElemAt: ["$recruiter.profilePicture", 0] }, ""],
+            },
           },
         },
         {
           $project: {
             _id: "$recruiterName",
             count: 1,
+            logo: "$recruiterPicture",
           },
         },
         { $sort: { count: -1 } },
         { $limit: 5 },
       ]),
+      AdminAssessment.countDocuments({
+        createdAt: dateRangeQuery,
+        status: "active",
+      }),
+      AdminAssessment.countDocuments({
+        createdAt: dateRangeQuery,
+        status: "inactive",
+      }),
+      AdminAssessment.aggregate([
+        { $match: { createdAt: dateRangeQuery } },
+        {
+          $group: {
+            _id: { $ifNull: ["$type", "unknown"] },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]),
+      AdminAssessment.aggregate([
+        { $match: { createdAt: dateRangeQuery } },
+        {
+          $group: {
+            _id: { $ifNull: ["$difficulty", "unknown"] },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]),
+      AdminAssessment.find({ createdAt: dateRangeQuery })
+        .select("_id type title")
+        .lean(),
     ]);
+
+    const adminAssessmentIdValues = adminAssessmentIds.map((item) => item._id);
+
+    const [adminAttemptStatusAgg, adminTopAssessmentAttemptsAgg, adminQuizScoreAgg] =
+      await Promise.all([
+        AssessmentAttempt.aggregate([
+          {
+            $match: {
+              assessmentSource: "admin",
+              assessment: { $in: adminAssessmentIdValues },
+              createdAt: dateRangeQuery,
+            },
+          },
+          {
+            $group: {
+              _id: { $ifNull: ["$status", "unknown"] },
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { count: -1 } },
+        ]),
+        AssessmentAttempt.aggregate([
+          {
+            $match: {
+              assessmentSource: "admin",
+              assessment: { $in: adminAssessmentIdValues },
+              status: "submitted",
+              createdAt: dateRangeQuery,
+            },
+          },
+          { $group: { _id: "$assessment", attempts: { $sum: 1 } } },
+          { $sort: { attempts: -1 } },
+          { $limit: 5 },
+        ]),
+        AssessmentAttempt.aggregate(
+          [
+            {
+              $match: {
+                assessmentSource: "admin",
+                assessment: {
+                  $in: adminAssessmentIds
+                    .filter((item) => item.type === "quiz")
+                    .map((item) => item._id),
+                },
+                status: "submitted",
+                createdAt: dateRangeQuery,
+              },
+            },
+            { $group: { _id: null, avgScore: { $avg: "$score" } } },
+          ],
+        ),
+      ]);
+
+    const totalAttemptCount = adminAttemptStatusAgg.reduce(
+      (sum, item) => sum + (item.count || 0),
+      0,
+    );
+    const adminAssessmentTitleMap = adminAssessmentIds.reduce((acc, item) => {
+      acc[String(item._id)] = item.title || "Untitled assessment";
+      return acc;
+    }, {});
 
     return res.status(200).json({
       success: true,
@@ -574,6 +676,33 @@ exports.getAdminDashboardStats = async (req, res, next) => {
           total: adminAssessments + recruiterAssessments,
           adminCreated: adminAssessments,
           recruiterCreated: recruiterAssessments,
+          adminInsights: {
+            active: adminAssessmentActive,
+            inactive: adminAssessmentInactive,
+            totalAttempts: totalAttemptCount,
+            avgQuizScore:
+              adminQuizScoreAgg.length > 0
+                ? Number((adminQuizScoreAgg[0].avgScore || 0).toFixed(1))
+                : 0,
+            distributions: {
+              types: {
+                labels: adminAssessmentTypeAgg.map((item) => item._id),
+                values: adminAssessmentTypeAgg.map((item) => item.count),
+              },
+              difficulty: {
+                labels: adminAssessmentDifficultyAgg.map((item) => item._id),
+                values: adminAssessmentDifficultyAgg.map((item) => item.count),
+              },
+              attempts: {
+                labels: adminAttemptStatusAgg.map((item) => item._id),
+                values: adminAttemptStatusAgg.map((item) => item.count),
+              },
+            },
+            topAssessmentsByAttempts: adminTopAssessmentAttemptsAgg.map((item) => ({
+              title: adminAssessmentTitleMap[String(item._id)] || "Untitled assessment",
+              attempts: item.attempts || 0,
+            })),
+          },
         },
         ats: {
           reports: atsReportsCount,
@@ -613,6 +742,7 @@ exports.getAdminDashboardStats = async (req, res, next) => {
         topCompanies: topCompaniesAgg.map((item) => ({
           name: item._id,
           jobs: item.count,
+          logo: item.logo || "",
         })),
       },
       dateRange: {

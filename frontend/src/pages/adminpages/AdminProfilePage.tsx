@@ -248,8 +248,7 @@ const AdminProfilePage: React.FC = () => {
 
   // Handle change password
   const handleChangePassword = () => {
-    // Navigate to change password page or open modal
-    alert("Change password functionality to be implemented");
+    navigate("/admin/settings");
   };
 
   // Get profile image URL

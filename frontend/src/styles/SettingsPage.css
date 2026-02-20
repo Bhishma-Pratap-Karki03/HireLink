@@ -1,3 +1,47 @@
+.admin-profile-layout,
+.recruiter-profile-layout,
+.candidate-dashboard-container {
+  display: flex;
+  min-height: 100vh;
+  background: #eff3f7;
+}
+
+.admin-profile-main-area,
+.recruiter-profile-main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-profile-topbar-wrapper,
+.recruiter-profile-topbar-wrapper {
+  position: fixed;
+  top: 0;
+  left: 290px;
+  right: 0;
+  z-index: 100;
+  background: #ffffff;
+  border-bottom: 1px solid #dcdcdc;
+}
+
+.admin-profile-scrollable-content,
+.recruiter-profile-scrollable-content {
+  flex: 1;
+  background: #eff3f7;
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+
+.admin-profile-content-wrapper,
+.recruiter-profile-content-wrapper {
+  padding: 40px;
+  padding-top: 124px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 .candidate-settings-main,
 .recruiter-settings-main,
 .admin-settings-main {
@@ -177,5 +221,18 @@
 @media (max-width: 1200px) {
   .settings-page-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .admin-profile-topbar-wrapper,
+  .recruiter-profile-topbar-wrapper {
+    left: 0;
+  }
+
+  .admin-profile-content-wrapper,
+  .recruiter-profile-content-wrapper {
+    padding: 20px;
+    padding-top: 104px;
   }
 }
