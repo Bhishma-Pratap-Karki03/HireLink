@@ -11,6 +11,7 @@ const {
   updateUserStatusByAdmin,
   updateUserRoleByAdmin,
   getAdminDashboardStats,
+  getRecruiterDashboardStats,
 } = require("../controllers/userController");
 
 // POST /api/users/register - Register a new user
@@ -24,6 +25,7 @@ router.get("/candidates", listCandidates);
 // Admin user management
 router.get("/admin/list", protect, listUsersForAdmin);
 router.get("/admin/dashboard-stats", protect, getAdminDashboardStats);
+router.get("/recruiter/dashboard-stats", protect, getRecruiterDashboardStats);
 router.patch("/admin/:userId/status", protect, updateUserStatusByAdmin);
 router.patch("/admin/:userId/role", protect, updateUserRoleByAdmin);
 

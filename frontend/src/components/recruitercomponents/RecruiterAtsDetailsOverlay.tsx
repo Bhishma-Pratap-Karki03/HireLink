@@ -1,4 +1,5 @@
 import RecruiterOverlay from "./RecruiterOverlay";
+import "../../styles/RecruiterAtsRankingPage.css";
 
 type AssessmentSummary = {
   attached: boolean;

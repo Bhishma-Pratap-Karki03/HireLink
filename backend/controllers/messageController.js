@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Message = require("../models/messageModel");
 const User = require("../models/userModel");
 const ConnectionRequest = require("../models/connectionRequestModel");
+const { getIO } = require("../socket");
 
 const ALLOWED_ROLES = new Set(["candidate", "recruiter"]);
 
@@ -172,16 +173,24 @@ exports.getConversationMessages = async (req, res, next) => {
       .sort({ createdAt: 1 })
       .lean();
 
-    await Message.updateMany(
+    const readAt = new Date();
+    const readResult = await Message.updateMany(
       {
         sender: otherUserId,
         receiver: userId,
         readAt: null,
       },
       {
-        $set: { readAt: new Date() },
+        $set: { readAt },
       }
     );
+
+    if ((readResult?.modifiedCount || 0) > 0) {
+      const io = getIO();
+      io
+        ?.to(`user:${otherUserId}`)
+        .emit("message:read", { byUserId: userId, readAt: readAt.toISOString() });
+    }
 
     return res.status(200).json({
       success: true,
@@ -256,15 +265,23 @@ exports.sendMessage = async (req, res, next) => {
       content: trimmed,
     });
 
+    const payload = {
+      id: message._id.toString(),
+      senderId,
+      receiverId,
+      content: message.content,
+      createdAt: message.createdAt,
+      sender: normalizeUser(sender),
+      receiver: normalizeUser(receiver),
+    };
+
+    const io = getIO();
+    io?.to(`user:${receiverId}`).emit("message:new", payload);
+    io?.to(`user:${senderId}`).emit("message:new", payload);
+
     return res.status(201).json({
       success: true,
-      message: {
-        id: message._id.toString(),
-        senderId,
-        receiverId,
-        content: message.content,
-        createdAt: message.createdAt,
-      },
+      message: payload,
     });
   } catch (error) {
     next(error);

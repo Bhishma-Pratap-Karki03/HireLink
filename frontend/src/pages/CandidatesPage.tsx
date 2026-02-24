@@ -14,6 +14,8 @@ import pendingIcon from "../images/Employers Page Images/pending-icon.png";
 import friendIcon from "../images/Employers Page Images/friend-icon.png";
 import messageIcon from "../images/Employers Page Images/message-icon.png";
 import viewProfileIcon from "../images/Employers Page Images/view-profile-icon.png";
+import prevIcon from "../images/Employers Page Images/Prev Icon.svg";
+import nextIcon from "../images/Employers Page Images/Next Icon.svg";
 
 type CandidateSkill = {
   skillName: string;
@@ -71,6 +73,7 @@ const getExperienceYears = (experience?: CandidateExperience[]) => {
 };
 
 const CandidatesPage = () => {
+  const ITEMS_PER_PAGE = 9;
   const navigate = useNavigate();
   const [candidates, setCandidates] = useState<CandidateItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -79,6 +82,7 @@ const CandidatesPage = () => {
   const [locationFilter, setLocationFilter] = useState("");
   const [skillFilter, setSkillFilter] = useState("");
   const [minExperience, setMinExperience] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [connectionStatuses, setConnectionStatuses] = useState<
     Record<string, ConnectionState>
   >({});
@@ -261,6 +265,31 @@ const CandidatesPage = () => {
     });
   }, [candidates, search, locationFilter, skillFilter, minExperience]);
 
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredCandidates.length / ITEMS_PER_PAGE),
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, locationFilter, skillFilter, minExperience]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedCandidates = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredCandidates.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredCandidates, currentPage]);
+  const visiblePages = useMemo(
+    () =>
+      Array.from({ length: Math.min(totalPages, 7) }, (_, index) => index + 1),
+    [totalPages],
+  );
+
   return (
     <div className="candidates-page">
       <Navbar />
@@ -319,109 +348,162 @@ const CandidatesPage = () => {
           </div>
         </aside>
 
-        <div className="candidates-grid">
-          {loading && <div className="candidates-state">Loading...</div>}
-          {error && !loading && (
-            <div className="candidates-state error">{error}</div>
-          )}
-          {!loading && !error && filteredCandidates.length === 0 && (
-            <div className="candidates-state">No candidates found.</div>
-          )}
+        <div className="candidates-results">
+          <div className="candidates-grid">
+            {loading && <div className="candidates-state">Loading...</div>}
+            {error && !loading && (
+              <div className="candidates-state error">{error}</div>
+            )}
+            {!loading && !error && filteredCandidates.length === 0 && (
+              <div className="candidates-state">No candidates found.</div>
+            )}
 
-          {filteredCandidates.map((candidate) => {
-            const cardId = candidate.id || candidate._id || candidate.email;
-            const connectionId = candidate.id || candidate._id || "";
-            const isSelfCard = Boolean(
-              currentUserId && connectionId === currentUserId,
-            );
-            const isConnectionDisabled =
-              !connectionId ||
-              isSelfCard ||
-              sendingConnectionId === connectionId ||
-              (connectionStatuses[connectionId] || "none") !== "none";
-            const statusClass =
-              connectionStatuses[connectionId] === "friend"
-                ? "is-friend"
-                : connectionStatuses[connectionId] === "pending"
-                  ? "is-pending"
-                  : "";
+            {paginatedCandidates.map((candidate) => {
+              const cardId = candidate.id || candidate._id || candidate.email;
+              const connectionId = candidate.id || candidate._id || "";
+              const isSelfCard = Boolean(
+                currentUserId && connectionId === currentUserId,
+              );
+              const isConnectionDisabled =
+                !connectionId ||
+                isSelfCard ||
+                sendingConnectionId === connectionId ||
+                (connectionStatuses[connectionId] || "none") !== "none";
+              const statusClass =
+                connectionStatuses[connectionId] === "friend"
+                  ? "is-friend"
+                  : connectionStatuses[connectionId] === "pending"
+                    ? "is-pending"
+                    : "";
 
-            return (
-              <article
-                key={cardId}
-                className="candidates-card"
-                onClick={() => navigate(`/candidate/${cardId}`)}
-                role="button"
-              >
-                <div className="candidates-card-header">
-                  <img
-                    src={resolveAvatar(candidate.profilePicture)}
-                    alt={candidate.fullName}
-                  />
-                  <div>
-                    <h3>{candidate.fullName}</h3>
-                    <p>{candidate.currentJobTitle || "Candidate"}</p>
-                    <span>{candidate.address || "Location not specified"}</span>
-                  </div>
-                </div>
-                <div className="candidates-card-meta">
-                  <div>
-                    <span>Email</span>
-                    <strong>{candidate.email}</strong>
-                  </div>
-                </div>
-                <div
-                  className={`candidates-card-actions ${isSelfCard ? "is-single" : ""}`}
+              return (
+                <article
+                  key={cardId}
+                  className="candidates-card"
+                  onClick={() => navigate(`/candidate/${cardId}`)}
+                  role="button"
                 >
-                  {isSelfCard ? (
-                    <button
-                      type="button"
-                      title="View profile"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        navigate(`/candidate/${cardId}`);
-                      }}
+                  <div className="candidates-card-header">
+                    <img
+                      src={resolveAvatar(candidate.profilePicture)}
+                      alt={candidate.fullName}
+                    />
+                    <div>
+                      <h3>{candidate.fullName}</h3>
+                      <p>{candidate.currentJobTitle || "Candidate"}</p>
+                      <span>{candidate.address || "Location not specified"}</span>
+                    </div>
+                  </div>
+                  <div className="candidates-card-meta">
+                    <div>
+                      <span>Email</span>
+                      <strong>{candidate.email}</strong>
+                    </div>
+                  </div>
+                  <div
+                    className={`candidates-card-actions ${isSelfCard ? "is-single" : ""}`}
+                  >
+                    {isSelfCard ? (
+                      <button
+                        type="button"
+                        title="View profile"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(`/candidate/${cardId}`);
+                        }}
+                      >
+                        <img src={viewProfileIcon} alt="View profile" />
+                        <span>View Profile</span>
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          title="Send connection request"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (!connectionId) return;
+                            handleSendConnection(connectionId);
+                          }}
+                          disabled={isConnectionDisabled}
+                          className={statusClass}
+                        >
+                          <img
+                            src={getConnectionIcon(connectionId)}
+                            alt={getConnectionLabel(connectionId)}
+                          />
+                          <span>{getConnectionLabel(connectionId)}</span>
+                        </button>
+                        <button
+                          type="button"
+                          title="Message"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (!connectionId) return;
+                            openMessages(connectionId);
+                          }}
+                        >
+                          <img src={messageIcon} alt="Message" />
+                          <span>Message</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          {!loading && !error && filteredCandidates.length > 0 && (
+            <div className="candidates-pagination">
+              <div className="candidates-page-controls">
+                <button
+                  type="button"
+                  className="candidates-page-nav"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <img src={prevIcon} alt="Previous" />
+                </button>
+                <div className="candidates-page-numbers">
+                  {visiblePages.map((pageNumber) => (
+                    <span
+                      key={pageNumber}
+                      className={`candidates-page-num ${
+                        pageNumber === currentPage ? "candidates-active" : ""
+                      }`}
+                      onClick={() => setCurrentPage(pageNumber)}
+                      role="button"
                     >
-                      <img src={viewProfileIcon} alt="View profile" />
-                      <span>View Profile</span>
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        title="Send connection request"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          if (!connectionId) return;
-                          handleSendConnection(connectionId);
-                        }}
-                        disabled={isConnectionDisabled}
-                        className={statusClass}
-                      >
-                        <img
-                          src={getConnectionIcon(connectionId)}
-                          alt={getConnectionLabel(connectionId)}
-                        />
-                        <span>{getConnectionLabel(connectionId)}</span>
-                      </button>
-                      <button
-                        type="button"
-                        title="Message"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          if (!connectionId) return;
-                          openMessages(connectionId);
-                        }}
-                      >
-                        <img src={messageIcon} alt="Message" />
-                        <span>Message</span>
-                      </button>
-                    </>
+                      {pageNumber}
+                    </span>
+                  ))}
+                  {totalPages > 7 && (
+                    <span className="candidates-page-num candidates-dots">
+                      ...
+                    </span>
                   )}
                 </div>
-              </article>
-            );
-          })}
+                <button
+                  type="button"
+                  className="candidates-page-nav"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  <img src={nextIcon} alt="Next" />
+                </button>
+              </div>
+              <div className="candidates-page-info">
+                Showing{" "}
+                {paginatedCandidates.length
+                  ? (currentPage - 1) * ITEMS_PER_PAGE + 1
+                  : 0}{" "}
+                to {(currentPage - 1) * ITEMS_PER_PAGE + paginatedCandidates.length}{" "}
+                of {filteredCandidates.length}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

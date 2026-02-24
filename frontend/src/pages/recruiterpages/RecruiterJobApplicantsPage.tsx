@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import RecruiterSidebar from "../../components/recruitercomponents/RecruiterSidebar";
 import RecruiterTopBar from "../../components/recruitercomponents/RecruiterTopBar";
-import RecruiterOverlay from "../../components/recruitercomponents/RecruiterOverlay";
+import RecruiterAtsDetailsOverlay from "../../components/recruitercomponents/RecruiterAtsDetailsOverlay";
 import "../../styles/RecruiterJobApplicantsPage.css";
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
 import actionMessageIcon from "../../images/Candidate Profile Page Images/message-icon.svg";
@@ -21,7 +21,7 @@ type AssessmentSummary = {
   attached: boolean;
   required: boolean;
   source: "admin" | "recruiter" | null;
-    type: "quiz" | "writing" | "task" | "code" | null;
+  type: "quiz" | "writing" | "task" | "code" | null;
   title: string;
   submitted: boolean;
   submittedAt: string | null;
@@ -53,6 +53,21 @@ type JobInfo = {
   assessmentRequired?: boolean;
 };
 
+type ReportItem = {
+  _id: string;
+  application?: string | { _id: string };
+  candidate: CandidateInfo;
+  score: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+  skillsScore?: number;
+  experienceScore?: number;
+  experienceMatch?: boolean;
+  extracted?: {
+    experienceYears?: number;
+  };
+};
+
 const resolveAvatar = (profilePicture?: string) => {
   if (!profilePicture) return defaultAvatar;
   if (profilePicture.startsWith("http")) return profilePicture;
@@ -66,20 +81,29 @@ const formatDate = (value?: string) => {
   return date.toLocaleDateString();
 };
 
+const getApplicationId = (report: ReportItem) => {
+  if (!report.application) return "";
+  return typeof report.application === "string"
+    ? report.application
+    : report.application._id;
+};
+
+const getCandidateId = (candidate?: CandidateInfo) => candidate?.id || candidate?._id || "";
+
 const RecruiterJobApplicantsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [job, setJob] = useState<JobInfo | null>(null);
   const [applications, setApplications] = useState<ApplicantItem[]>([]);
+  const [reports, setReports] = useState<ReportItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [scanMessage, setScanMessage] = useState("");
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
-  const [selectedApplicant, setSelectedApplicant] = useState<ApplicantItem | null>(
-    null,
-  );
+  const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
 
-  const openApplicantOverlay = (applicant: ApplicantItem) => {
-    setSelectedApplicant(applicant);
+  const openApplicantOverlay = (report: ReportItem) => {
+    setSelectedReport(report);
   };
 
   const openCandidateMessage = (candidateId?: string) => {
@@ -88,7 +112,11 @@ const RecruiterJobApplicantsPage = () => {
   };
 
   useEffect(() => {
-    const fetchApplicants = async () => {
+    const fetchApplicantsWithAts = async () => {
+      if (!id) {
+        setError("Invalid job id");
+        return;
+      }
       const token = localStorage.getItem("authToken");
       if (!token) {
         navigate("/login");
@@ -97,15 +125,39 @@ const RecruiterJobApplicantsPage = () => {
       try {
         setLoading(true);
         setError("");
-        const res = await fetch(`http://localhost:5000/api/applications/job/${id}`, {
+
+        const scanRes = await fetch(`http://localhost:5000/api/ats/scan/${id}`, {
+          method: "POST",
           headers: { Authorization: `Bearer ${token}` },
         });
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.message || "Failed to load applicants");
+        const scanData = await scanRes.json();
+        if (!scanRes.ok) {
+          throw new Error(scanData?.message || "Failed to run ATS scan");
         }
-        setJob(data.job || null);
-        setApplications(data.applications || []);
+        setScanMessage(scanData?.message || "ATS scan completed and applicants ranked.");
+
+        const [applicationsRes, atsRes] = await Promise.all([
+          fetch(`http://localhost:5000/api/applications/job/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`http://localhost:5000/api/ats/results/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        const applicationsData = await applicationsRes.json();
+        const atsData = await atsRes.json();
+
+        if (!applicationsRes.ok) {
+          throw new Error(applicationsData?.message || "Failed to load applicants");
+        }
+        if (!atsRes.ok) {
+          throw new Error(atsData?.message || "Failed to load ATS ranking");
+        }
+
+        setJob(applicationsData.job || atsData.job || null);
+        setApplications(applicationsData.applications || []);
+        setReports(atsData.reports || []);
       } catch (err: any) {
         setError(err?.message || "Failed to load applicants");
       } finally {
@@ -113,7 +165,7 @@ const RecruiterJobApplicantsPage = () => {
       }
     };
 
-    fetchApplicants();
+    fetchApplicantsWithAts();
   }, [id, navigate]);
 
   const handleStatusChange = async (applicationId: string, nextStatus: string) => {
@@ -145,15 +197,48 @@ const RecruiterJobApplicantsPage = () => {
           app.id === applicationId ? { ...app, status: nextStatus } : app,
         ),
       );
-      setSelectedApplicant((prev) =>
-        prev && prev.id === applicationId ? { ...prev, status: nextStatus } : prev,
-      );
     } catch (err: any) {
       setError(err?.message || "Failed to update status");
     } finally {
       setStatusUpdating(null);
     }
   };
+
+  const reportsByApplicationId = reports.reduce(
+    (acc: Record<string, ReportItem>, report) => {
+      const applicationId = getApplicationId(report);
+      if (applicationId) acc[applicationId] = report;
+      return acc;
+    },
+    {},
+  );
+
+  const rankedApplications = [...applications]
+    .sort((a, b) => {
+      const scoreA = reportsByApplicationId[a.id]?.score || 0;
+      const scoreB = reportsByApplicationId[b.id]?.score || 0;
+      return scoreB - scoreA;
+    })
+    .map((application, index) => ({
+      application,
+      rank: index + 1,
+      report:
+        reportsByApplicationId[application.id] ||
+        ({
+          _id: `fallback-${application.id}`,
+          application: application.id,
+          candidate: application.candidate,
+          score: 0,
+          matchedSkills: [],
+          missingSkills: [],
+          experienceMatch: false,
+          extracted: { experienceYears: 0 },
+        } as ReportItem),
+    }));
+
+  const selectedApplication = selectedReport
+    ? applications.find((application) => application.id === getApplicationId(selectedReport))
+    : undefined;
 
   return (
     <div className="recruiter-applicants-layout">
@@ -179,17 +264,10 @@ const RecruiterJobApplicantsPage = () => {
             </button>
           </div>
 
-          <div className="recruiter-applicants-ats-callout">
-            <div>
-              <h2>Rank applicants with ATS</h2>
-              <p>Use the ATS Resume Scanner to score and rank candidates for this job.</p>
-            </div>
-            <button
-              className="recruiter-applicants-ats-btn"
-              onClick={() => navigate("/recruiter/scanner")}
-            >
-              Go to ATS Scanner
-            </button>
+          <div className={`recruiter-applicants-state ${scanMessage ? "success" : ""}`}>
+            {scanMessage
+              ? `${scanMessage}. Applicants are listed with latest ATS score, status controls, and quick actions.`
+              : "ATS ranking is auto-run when this page opens. Applicants are listed with latest ATS score, status controls, and quick actions."}
           </div>
 
           {loading && <div className="recruiter-applicants-state">Loading...</div>}
@@ -201,30 +279,34 @@ const RecruiterJobApplicantsPage = () => {
           )}
 
           <div className="recruiter-applicants-list">
-            {applications.map((app) => {
-              const candidateId = app.candidate.id || app.candidate._id || "";
+            {rankedApplications.map(({ application, report, rank }) => {
+              const candidateId =
+                getCandidateId(report.candidate) || getCandidateId(application.candidate);
               return (
-                <article key={app.id} className="recruiter-applicant-card">
-                  <div className="recruiter-applicant-info">
+                <article key={application.id} className="recruiter-applicant-card">
+                  <div className="recruiter-applicant-info recruiter-ats-top-row">
                     <div className="recruiter-applicant-left">
+                      <div className="recruiter-ats-rank">#{rank}</div>
                       <img
-                        src={resolveAvatar(app.candidate.profilePicture)}
-                        alt={app.candidate.fullName}
+                        src={resolveAvatar(report.candidate.profilePicture)}
+                        alt={report.candidate.fullName}
                         className="recruiter-applicant-avatar"
                       />
                       <div className="recruiter-applicant-user">
-                        <h3>{app.candidate.fullName}</h3>
-                        <p>{app.candidate.currentJobTitle || "Candidate"}</p>
-                        <span>{app.candidate.email}</span>
+                        <h3>{report.candidate.fullName}</h3>
+                        <p>{report.candidate.currentJobTitle || "Candidate"}</p>
+                        <span>{report.candidate.email}</span>
                       </div>
                     </div>
                     <div className="recruiter-applicant-status-inline">
                       <span>Status</span>
                       <div className="recruiter-applicant-status-control">
                         <select
-                          value={app.status}
-                          onChange={(e) => handleStatusChange(app.id, e.target.value)}
-                          disabled={statusUpdating === app.id}
+                          value={application.status}
+                          onChange={(e) =>
+                            handleStatusChange(application.id, e.target.value)
+                          }
+                          disabled={statusUpdating === application.id}
                         >
                           <option value="submitted">Submitted</option>
                           <option value="reviewed">Reviewed</option>
@@ -235,14 +317,18 @@ const RecruiterJobApplicantsPage = () => {
                         </select>
                       </div>
                     </div>
+                    <div className="recruiter-applicant-score recruiter-ats-score">
+                      <span>Score</span>
+                      <strong>{report.score || 0}</strong>
+                    </div>
                     <div className="recruiter-applicant-top-actions">
                       <button
                         type="button"
                         className="recruiter-applicant-icon-btn"
-                        onClick={() => openApplicantOverlay(app)}
-                        title="View application details"
+                        onClick={() => openApplicantOverlay(report)}
+                        title="View ATS details"
                       >
-                        <img src={actionEyeIcon} alt="View application details" />
+                        <img src={actionEyeIcon} alt="View ATS details" />
                       </button>
                       <button
                         type="button"
@@ -260,99 +346,17 @@ const RecruiterJobApplicantsPage = () => {
           </div>
         </div>
 
-        <RecruiterOverlay
-          open={Boolean(selectedApplicant)}
-          title={selectedApplicant?.candidate.fullName || "Applicant details"}
-          onClose={() => setSelectedApplicant(null)}
-        >
-          {selectedApplicant && (
-            <>
-              <div className="recruiter-applicant-overlay-grid">
-                <div>
-                  <span>Applied</span>
-                  <strong>{formatDate(selectedApplicant.appliedAt)}</strong>
-                </div>
-                <div>
-                  <span>Status</span>
-                  <div className="recruiter-applicant-status-control">
-                    <select
-                      value={selectedApplicant.status}
-                      onChange={(e) =>
-                        handleStatusChange(selectedApplicant.id, e.target.value)
-                      }
-                      disabled={statusUpdating === selectedApplicant.id}
-                    >
-                      <option value="submitted">Submitted</option>
-                      <option value="reviewed">Reviewed</option>
-                      <option value="shortlisted">Shortlisted</option>
-                      <option value="interview">Interview</option>
-                      <option value="rejected">Rejected</option>
-                      <option value="hired">Hired</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <span>Resume</span>
-                  <a
-                    href={`http://localhost:5000${selectedApplicant.resumeUrl}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    View Resume
-                  </a>
-                </div>
-                <div>
-                  <span>Assessment</span>
-                  {!selectedApplicant.assessment?.attached && (
-                    <small>No assessment linked to this job</small>
-                  )}
-                  {selectedApplicant.assessment?.attached &&
-                    !selectedApplicant.assessment?.submitted && (
-                      <small>
-                        Not submitted
-                        {selectedApplicant.assessment.required ? "" : " (optional)"}
-                      </small>
-                    )}
-                  {selectedApplicant.assessment?.attached &&
-                    selectedApplicant.assessment.submitted && (
-                      <div className="recruiter-applicant-overlay-assessment">
-                        <small>
-                          Submitted
-                          {selectedApplicant.assessment.required ? "" : " (optional)"}
-                        </small>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            navigate(
-                              `/recruiter/job-postings/${id}/applicants/${selectedApplicant.id}/assessment`,
-                            )
-                          }
-                          className="recruiter-applicant-assessment-btn"
-                        >
-                          View Assessment
-                        </button>
-                        <small>
-                          Submitted{" "}
-                          {formatDate(
-                            selectedApplicant.assessment.submittedAt || undefined,
-                          )}
-                        </small>
-                      </div>
-                    )}
-                </div>
-              </div>
-
-              <div className="recruiter-applicant-overlay-message">
-                <span>Candidate Message</span>
-                <p>
-                  {selectedApplicant.message?.trim()
-                    ? selectedApplicant.message
-                    : "No message was provided by the candidate while applying."}
-                </p>
-              </div>
-            </>
-          )}
-        </RecruiterOverlay>
+        <RecruiterAtsDetailsOverlay
+          open={Boolean(selectedReport)}
+          report={selectedReport}
+          application={selectedApplication}
+          statusUpdating={statusUpdating}
+          onClose={() => setSelectedReport(null)}
+          onStatusChange={handleStatusChange}
+          onViewAssessment={(applicationId) =>
+            navigate(`/recruiter/job-postings/${id}/applicants/${applicationId}/assessment`)
+          }
+        />
       </main>
     </div>
   );

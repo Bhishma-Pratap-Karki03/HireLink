@@ -18,8 +18,6 @@ import RecruiterJobPostPage from "./pages/recruiterpages/RecruiterJobPostPage";
 import RecruiterJobPostingsListPage from "./pages/recruiterpages/RecruiterJobPostingsListPage";
 import RecruiterJobApplicantsPage from "./pages/recruiterpages/RecruiterJobApplicantsPage";
 import RecruiterApplicantAssessmentPage from "./pages/recruiterpages/RecruiterApplicantAssessmentPage";
-import RecruiterScannerPage from "./pages/recruiterpages/RecruiterScannerPage";
-import RecruiterAtsRankingPage from "./pages/recruiterpages/RecruiterAtsRankingPage";
 import AdminProfilePage from "./pages/adminpages/AdminProfilePage";
 import AdminDashboard from "./pages/adminpages/AdminDashboard";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -462,23 +460,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/recruiter/scanner"
-          element={
-            <ProtectedRoute allowedRoles={["recruiter"]}>
-              <RecruiterScannerPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/recruiter/scanner/:jobId/ranking"
-          element={
-            <ProtectedRoute allowedRoles={["recruiter"]}>
-              <RecruiterAtsRankingPage />
-            </ProtectedRoute>
-          }
-        />
-
         {/* CANDIDATE PAGES */}
         <Route
           path="/candidate/resume"

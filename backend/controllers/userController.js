@@ -2,6 +2,7 @@
 // Now uses User Service for business logic, making the controller cleaner
 
 const userService = require("../services/userService");
+const mongoose = require("mongoose");
 const User = require("../models/userModel");
 const JobPost = require("../models/jobPostModel");
 const AppliedJob = require("../models/appliedJobModel");
@@ -751,6 +752,424 @@ exports.getAdminDashboardStats = async (req, res, next) => {
       },
       recentUsers,
       recentJobs,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Recruiter: dashboard insights
+exports.getRecruiterDashboardStats = async (req, res, next) => {
+  try {
+    if (!req.user || String(req.user.role || "").toLowerCase() !== "recruiter") {
+      return res.status(403).json({
+        success: false,
+        message: "Only recruiters can access this resource",
+      });
+    }
+
+    const recruiterId = req.user.id;
+    const recruiterObjectId = new mongoose.Types.ObjectId(recruiterId);
+    const toDateParam = req.query.to ? new Date(req.query.to) : new Date();
+    const fromDateParam = req.query.from ? new Date(req.query.from) : null;
+    const isValidTo = !Number.isNaN(toDateParam.getTime());
+    const inferredToDate = isValidTo ? toDateParam : new Date();
+    const inferredFromDate =
+      fromDateParam && !Number.isNaN(fromDateParam.getTime())
+        ? fromDateParam
+        : new Date(inferredToDate.getTime() - 29 * 24 * 60 * 60 * 1000);
+
+    const rangeStart = new Date(inferredFromDate);
+    rangeStart.setHours(0, 0, 0, 0);
+    const rangeEnd = new Date(inferredToDate);
+    rangeEnd.setHours(23, 59, 59, 999);
+    const dateRangeQuery = { $gte: rangeStart, $lte: rangeEnd };
+
+    const rangeDays = Math.max(
+      1,
+      Math.round((rangeEnd.getTime() - rangeStart.getTime()) / 86400000) + 1,
+    );
+    const labels = Array.from({ length: rangeDays }, (_, i) => {
+      const date = new Date(rangeStart);
+      date.setDate(date.getDate() + i);
+      return date.toISOString().slice(0, 10);
+    });
+
+    const toSeriesMap = (rows, key = "_id") =>
+      rows.reduce((acc, row) => {
+        acc[row[key]] = row.count;
+        return acc;
+      }, {});
+
+    const recruiterJobIds = await JobPost.find({ recruiterId })
+      .select("_id")
+      .lean();
+    const recruiterJobIdValues = recruiterJobIds.map((item) => item._id);
+    const hasRecruiterJobs = recruiterJobIdValues.length > 0;
+
+    const [
+      jobsTotal,
+      jobsActive,
+      jobsInactive,
+      jobsInRange,
+      applicationsTotal,
+      applicationsReviewed,
+      applicationsShortlisted,
+      applicationsInterview,
+      applicationsHired,
+      applicationsRejected,
+      atsReportsCount,
+      recruiterAssessments,
+      recruiterAssessmentsActive,
+      recruiterAssessmentsInactive,
+      totalMessagesReceived,
+      unreadMessagesReceived,
+      pendingConnections,
+      acceptedConnections,
+      jobsSeriesAgg,
+      applicationsSeriesAgg,
+      hiredSeriesAgg,
+      jobTypeAgg,
+      workModeAgg,
+      applicationStatusAgg,
+      topJobsAgg,
+      recentApplicationsRaw,
+      recruiterAssessmentTypeAgg,
+      recruiterAssessmentIds,
+    ] = await Promise.all([
+      JobPost.countDocuments({ recruiterId }),
+      JobPost.countDocuments({ recruiterId, isActive: true }),
+      JobPost.countDocuments({ recruiterId, isActive: false }),
+      JobPost.countDocuments({ recruiterId, createdAt: dateRangeQuery }),
+      hasRecruiterJobs
+        ? AppliedJob.countDocuments({
+            job: { $in: recruiterJobIdValues },
+            createdAt: dateRangeQuery,
+          })
+        : 0,
+      hasRecruiterJobs
+        ? AppliedJob.countDocuments({
+            job: { $in: recruiterJobIdValues },
+            status: "reviewed",
+            createdAt: dateRangeQuery,
+          })
+        : 0,
+      hasRecruiterJobs
+        ? AppliedJob.countDocuments({
+            job: { $in: recruiterJobIdValues },
+            status: "shortlisted",
+            createdAt: dateRangeQuery,
+          })
+        : 0,
+      hasRecruiterJobs
+        ? AppliedJob.countDocuments({
+            job: { $in: recruiterJobIdValues },
+            status: "interview",
+            createdAt: dateRangeQuery,
+          })
+        : 0,
+      hasRecruiterJobs
+        ? AppliedJob.countDocuments({
+            job: { $in: recruiterJobIdValues },
+            status: "hired",
+            createdAt: dateRangeQuery,
+          })
+        : 0,
+      hasRecruiterJobs
+        ? AppliedJob.countDocuments({
+            job: { $in: recruiterJobIdValues },
+            status: "rejected",
+            createdAt: dateRangeQuery,
+          })
+        : 0,
+      hasRecruiterJobs
+        ? AtsReport.countDocuments({
+            job: { $in: recruiterJobIdValues },
+            createdAt: dateRangeQuery,
+          })
+        : 0,
+      RecruiterAssessment.countDocuments({
+        createdBy: recruiterId,
+        createdAt: dateRangeQuery,
+      }),
+      RecruiterAssessment.countDocuments({
+        createdBy: recruiterId,
+        status: "active",
+        createdAt: dateRangeQuery,
+      }),
+      RecruiterAssessment.countDocuments({
+        createdBy: recruiterId,
+        status: "inactive",
+        createdAt: dateRangeQuery,
+      }),
+      Message.countDocuments({
+        receiver: recruiterId,
+        createdAt: dateRangeQuery,
+      }),
+      Message.countDocuments({
+        receiver: recruiterId,
+        readAt: null,
+        createdAt: dateRangeQuery,
+      }),
+      ConnectionRequest.countDocuments({
+        recipient: recruiterId,
+        status: "pending",
+        createdAt: dateRangeQuery,
+      }),
+      ConnectionRequest.countDocuments({
+        $or: [{ requester: recruiterId }, { recipient: recruiterId }],
+        status: "accepted",
+        createdAt: dateRangeQuery,
+      }),
+      JobPost.aggregate([
+        { $match: { recruiterId: recruiterObjectId, createdAt: dateRangeQuery } },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      hasRecruiterJobs
+        ? AppliedJob.aggregate([
+            { $match: { job: { $in: recruiterJobIdValues }, createdAt: dateRangeQuery } },
+            {
+              $group: {
+                _id: {
+                  $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+                },
+                count: { $sum: 1 },
+              },
+            },
+            { $sort: { _id: 1 } },
+          ])
+        : [],
+      hasRecruiterJobs
+        ? AppliedJob.aggregate([
+            {
+              $match: {
+                job: { $in: recruiterJobIdValues },
+                status: "hired",
+                updatedAt: dateRangeQuery,
+              },
+            },
+            {
+              $group: {
+                _id: {
+                  $dateToString: { format: "%Y-%m-%d", date: "$updatedAt" },
+                },
+                count: { $sum: 1 },
+              },
+            },
+            { $sort: { _id: 1 } },
+          ])
+        : [],
+      JobPost.aggregate([
+        { $match: { recruiterId: recruiterObjectId, createdAt: dateRangeQuery } },
+        {
+          $group: {
+            _id: {
+              $cond: [{ $in: ["$jobType", [null, ""]] }, "Not specified", "$jobType"],
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]),
+      JobPost.aggregate([
+        { $match: { recruiterId: recruiterObjectId, createdAt: dateRangeQuery } },
+        {
+          $group: {
+            _id: {
+              $cond: [{ $in: ["$workMode", [null, ""]] }, "Not specified", "$workMode"],
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]),
+      hasRecruiterJobs
+        ? AppliedJob.aggregate([
+            { $match: { job: { $in: recruiterJobIdValues }, createdAt: dateRangeQuery } },
+            {
+              $group: {
+                _id: { $cond: [{ $in: ["$status", [null, ""]] }, "unknown", "$status"] },
+                count: { $sum: 1 },
+              },
+            },
+            { $sort: { count: -1 } },
+          ])
+        : [],
+      hasRecruiterJobs
+        ? AppliedJob.aggregate([
+            { $match: { job: { $in: recruiterJobIdValues }, createdAt: dateRangeQuery } },
+            { $group: { _id: "$job", applicants: { $sum: 1 } } },
+            {
+              $lookup: {
+                from: "jobposts",
+                localField: "_id",
+                foreignField: "_id",
+                as: "job",
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                jobId: "$_id",
+                title: { $ifNull: [{ $arrayElemAt: ["$job.jobTitle", 0] }, "Untitled role"] },
+                applicants: 1,
+              },
+            },
+            { $sort: { applicants: -1 } },
+            { $limit: 5 },
+          ])
+        : [],
+      hasRecruiterJobs
+        ? AppliedJob.find({ job: { $in: recruiterJobIdValues }, createdAt: dateRangeQuery })
+            .select("status createdAt candidate job")
+            .sort({ createdAt: -1 })
+            .limit(6)
+            .populate({ path: "candidate", select: "fullName email profilePicture" })
+            .populate({ path: "job", select: "jobTitle" })
+            .lean()
+        : [],
+      RecruiterAssessment.aggregate([
+        { $match: { createdBy: recruiterObjectId, createdAt: dateRangeQuery } },
+        {
+          $group: {
+            _id: { $ifNull: ["$type", "unknown"] },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]),
+      RecruiterAssessment.find({ createdBy: recruiterId, createdAt: dateRangeQuery })
+        .select("_id title")
+        .lean(),
+    ]);
+
+    const jobsSeriesMap = toSeriesMap(jobsSeriesAgg);
+    const applicationsSeriesMap = toSeriesMap(applicationsSeriesAgg);
+    const hiredSeriesMap = toSeriesMap(hiredSeriesAgg);
+    const recruiterAssessmentIdValues = recruiterAssessmentIds.map((item) => item._id);
+
+    const recruiterAttemptsAgg = recruiterAssessmentIdValues.length
+      ? await AssessmentAttempt.aggregate([
+          {
+            $match: {
+              assessmentSource: "recruiter",
+              assessment: { $in: recruiterAssessmentIdValues },
+              status: "submitted",
+              createdAt: dateRangeQuery,
+            },
+          },
+          {
+            $group: {
+              _id: "$assessment",
+              attempts: { $sum: 1 },
+            },
+          },
+          { $sort: { attempts: -1 } },
+          { $limit: 5 },
+        ])
+      : [];
+
+    const totalAssessmentAttempts = recruiterAssessmentIdValues.length
+      ? await AssessmentAttempt.countDocuments({
+          assessmentSource: "recruiter",
+          assessment: { $in: recruiterAssessmentIdValues },
+          status: "submitted",
+          createdAt: dateRangeQuery,
+        })
+      : 0;
+
+    const assessmentTitleMap = recruiterAssessmentIds.reduce((acc, item) => {
+      acc[String(item._id)] = item.title || "Untitled assessment";
+      return acc;
+    }, {});
+
+    const recentApplications = recentApplicationsRaw.map((item) => ({
+      id: item._id,
+      candidateName: item.candidate?.fullName || "Candidate",
+      candidateEmail: item.candidate?.email || "-",
+      candidatePicture: item.candidate?.profilePicture || "",
+      jobTitle: item.job?.jobTitle || "Untitled role",
+      status: item.status || "submitted",
+      appliedAt: item.createdAt,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      stats: {
+        jobs: {
+          total: jobsTotal,
+          active: jobsActive,
+          inactive: jobsInactive,
+          inRange: jobsInRange,
+        },
+        applications: {
+          total: applicationsTotal,
+          reviewed: applicationsReviewed,
+          shortlisted: applicationsShortlisted,
+          interview: applicationsInterview,
+          hired: applicationsHired,
+          rejected: applicationsRejected,
+        },
+        ats: { reports: atsReportsCount },
+        assessments: {
+          total: recruiterAssessments,
+          active: recruiterAssessmentsActive,
+          inactive: recruiterAssessmentsInactive,
+          attempts: totalAssessmentAttempts,
+          distributions: {
+            types: {
+              labels: recruiterAssessmentTypeAgg.map((item) => item._id),
+              values: recruiterAssessmentTypeAgg.map((item) => item.count),
+            },
+          },
+          topAssessmentsByAttempts: recruiterAttemptsAgg.map((item) => ({
+            title: assessmentTitleMap[String(item._id)] || "Untitled assessment",
+            attempts: item.attempts || 0,
+          })),
+        },
+        messaging: {
+          totalReceived: totalMessagesReceived,
+          unreadReceived: unreadMessagesReceived,
+        },
+        connections: {
+          pending: pendingConnections,
+          accepted: acceptedConnections,
+        },
+        trends: {
+          labels,
+          jobsPosted: labels.map((label) => jobsSeriesMap[label] || 0),
+          applicationsReceived: labels.map((label) => applicationsSeriesMap[label] || 0),
+          hires: labels.map((label) => hiredSeriesMap[label] || 0),
+        },
+        distributions: {
+          jobTypes: {
+            labels: jobTypeAgg.map((item) => item._id),
+            values: jobTypeAgg.map((item) => item.count),
+          },
+          workModes: {
+            labels: workModeAgg.map((item) => item._id),
+            values: workModeAgg.map((item) => item.count),
+          },
+          applicationStatuses: {
+            labels: applicationStatusAgg.map((item) => item._id),
+            values: applicationStatusAgg.map((item) => item.count),
+          },
+        },
+        topJobs: topJobsAgg,
+      },
+      dateRange: {
+        from: rangeStart.toISOString(),
+        to: rangeEnd.toISOString(),
+      },
+      recentApplications,
     });
   } catch (error) {
     next(error);

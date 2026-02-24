@@ -52,13 +52,6 @@ import reviewIllustration from "../images/Employers Page Images/3af141ed60825886
 // Default logo
 import defaultLogo from "../images/Register Page Images/Default Profile.webp";
 
-// Import user service to get user profile picture
-import {
-  getProfileImageUrl,
-  fetchUserProfile,
-  UserProfile,
-} from "../utils/userService";
-
 // Define interface for Company details
 interface CompanyDetails {
   id: string;
@@ -133,7 +126,6 @@ const EmployerDetailsPage = () => {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [isCheckingReview, setIsCheckingReview] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -152,11 +144,6 @@ const EmployerDetailsPage = () => {
     const token = localStorage.getItem("authToken");
     console.log("Token from localStorage:", token); // Debug log
     setIsLoggedIn(!!token);
-
-    // Fetch user profile if logged in
-    if (token) {
-      fetchUserProfileData();
-    }
   }, []);
 
   useEffect(() => {
@@ -166,16 +153,6 @@ const EmployerDetailsPage = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [jobsError, setJobsError] = useState<string | null>(null);
-
-  // Fetch user profile data
-  const fetchUserProfileData = async () => {
-    try {
-      const profile = await fetchUserProfile();
-      setUserProfile(profile);
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-    }
-  };
 
   // Fetch company details from backend
   const fetchCompanyDetails = async () => {
@@ -519,6 +496,12 @@ const EmployerDetailsPage = () => {
     if (!logo) return defaultLogo;
     if (logo.startsWith("http")) return logo;
     return `http://localhost:5000${logo.startsWith("/") ? "" : "/"}${logo}`;
+  };
+
+  const resolveProfileImage = (profilePicture?: string) => {
+    if (!profilePicture || profilePicture.trim() === "") return defaultLogo;
+    if (profilePicture.startsWith("http")) return profilePicture;
+    return `http://localhost:5000${profilePicture.startsWith("/") ? "" : "/"}${profilePicture}`;
   };
 
   // Review form handlers
@@ -975,7 +958,7 @@ const EmployerDetailsPage = () => {
                             {mutualConnections.slice(0, 4).map((item) => (
                               <img
                                 key={item.id}
-                                src={getProfileImageUrl(item.profilePicture)}
+                                src={resolveProfileImage(item.profilePicture)}
                                 alt={item.fullName}
                                 title={item.fullName}
                                 onError={handleImageError}

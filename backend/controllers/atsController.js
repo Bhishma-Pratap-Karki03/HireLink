@@ -1,9 +1,9 @@
-const fs = require("fs");
-const path = require("path");
-const JobPost = require("../models/jobPostModel");
-const AppliedJob = require("../models/appliedJobModel");
-const AtsReport = require("../models/atsReportModel");
-const User = require("../models/userModel");
+const fs = require("fs"); // Used to check if resume file exists
+const path = require("path"); // Used to build correct file paths
+const JobPost = require("../models/jobPostModel"); // Job post model
+const AppliedJob = require("../models/appliedJobModel"); // Application model
+const AtsReport = require("../models/atsReportModel"); // ATS report model
+const User = require("../models/userModel"); // User model
 const {
   parseResumeText,
   extractEmails,
@@ -13,15 +13,17 @@ const {
   extractEducationLevel,
   canonicalizeSkill,
   normalize,
-} = require("../utils/atsParser");
+} = require("../utils/atsParser"); // Resume parsing utilities
 
+// Extract minimum required experience (number) from job experience text
 const parseMinExperience = (experienceText) => {
-  if (!experienceText) return 0;
-  const match = experienceText.match(/(\d+)/);
+  if (!experienceText) return 0; // If empty, no requirement
+  const match = experienceText.match(/(\d+)/); // Find first number
   if (!match) return 0;
-  return Number(match[1]) || 0;
+  return Number(match[1]) || 0; // Return extracted number
 };
 
+// Education ranking system (used for comparison)
 const educationLevelRankMap = {
   "high school": 1,
   associate: 2,
@@ -30,6 +32,7 @@ const educationLevelRankMap = {
   doctorate: 5,
 };
 
+// Extract required education rank from job description text
 const parseRequiredEducationRank = (educationText) => {
   const source = normalize(educationText || "");
   if (!source) return 0;
@@ -70,9 +73,10 @@ const parseRequiredEducationRank = (educationText) => {
     return educationLevelRankMap["high school"];
   }
 
-  return 0;
+  return 0; // No requirement detected
 };
 
+// Compute ATS score based on skills, experience, and education
 const computeScore = ({
   requiredSkills,
   extractedSkills,
@@ -81,24 +85,32 @@ const computeScore = ({
   educationRank,
   minEducationRank,
 }) => {
+  // Canonicalize skills for accurate matching
   const required = requiredSkills.map((item) => canonicalizeSkill(item));
   const extracted = extractedSkills.map((item) => canonicalizeSkill(item));
+
+  // Determine matched and missing skills
   const matchedSkills = required.filter((skill) => extracted.includes(skill));
   const missingSkills = required.filter((skill) => !extracted.includes(skill));
 
+  // Skills weight = 70%
   const skillsScore = required.length
     ? (matchedSkills.length / required.length) * 70
     : 70;
 
+  // Experience weight = 20%
   let experienceScore = 20;
   let experienceMatch = true;
+
   if (minExperience > 0) {
     experienceScore = Math.min(experienceYears / minExperience, 1) * 20;
     experienceMatch = experienceYears >= minExperience;
   }
 
+  // Education weight = 10%
   let educationScore = 10;
   let educationMatch = true;
+
   if (minEducationRank > 0) {
     educationScore = Math.min(educationRank / minEducationRank, 1) * 10;
     educationMatch = educationRank >= minEducationRank;
@@ -118,11 +130,13 @@ const computeScore = ({
   };
 };
 
+// Scan all applications for a specific job
 exports.scanJobApplications = async (req, res) => {
   try {
     const userId = req.user.id;
     const { jobId } = req.params;
 
+    // Ensure only recruiter can scan
     const recruiter = await User.findById(userId).lean();
     if (!recruiter || recruiter.role !== "recruiter") {
       return res.status(403).json({
@@ -131,6 +145,7 @@ exports.scanJobApplications = async (req, res) => {
       });
     }
 
+    // Ensure job exists
     const job = await JobPost.findById(jobId).lean();
     if (!job) {
       return res.status(404).json({
@@ -139,6 +154,7 @@ exports.scanJobApplications = async (req, res) => {
       });
     }
 
+    // Ensure recruiter owns this job
     if (job.recruiterId.toString() !== userId) {
       return res.status(403).json({
         success: false,
@@ -146,6 +162,7 @@ exports.scanJobApplications = async (req, res) => {
       });
     }
 
+    // Fetch all applications for this job
     const applications = await AppliedJob.find({ job: jobId }).lean();
     if (!applications.length) {
       return res.status(200).json({
@@ -160,26 +177,32 @@ exports.scanJobApplications = async (req, res) => {
     const minEducationRank = parseRequiredEducationRank(job.education);
     const reports = [];
 
+    // Loop through each application
     for (const application of applications) {
       const resumePath = path.join(
         __dirname,
         "..",
         "public",
-        application.resumeUrl || ""
+        application.resumeUrl || "",
       );
+
       if (!fs.existsSync(resumePath)) {
-        continue;
+        continue; // Skip if resume file not found
       }
+
       let report = await AtsReport.findOne({ application: application._id });
+
+      // Parse resume content
       const resumeText = normalize(await parseResumeText(resumePath));
       const extractedSkills = extractSkills(resumeText).map((skill) =>
-        canonicalizeSkill(skill)
+        canonicalizeSkill(skill),
       );
       const experienceYears = extractExperienceYears(resumeText);
       const education = extractEducationLevel(resumeText);
       const emails = extractEmails(resumeText);
       const phones = extractPhones(resumeText);
 
+      // Create report if not exists
       if (!report) {
         report = await AtsReport.create({
           job: jobId,
@@ -203,6 +226,7 @@ exports.scanJobApplications = async (req, res) => {
           score: 0,
         });
       } else {
+        // Update extracted data if report already exists
         report.extracted = {
           skills: extractedSkills,
           emails,
@@ -213,6 +237,7 @@ exports.scanJobApplications = async (req, res) => {
         };
       }
 
+      // Compute ATS score
       const {
         totalScore,
         matchedSkills,
@@ -231,6 +256,7 @@ exports.scanJobApplications = async (req, res) => {
         minEducationRank,
       });
 
+      // Save scoring results
       report.matchedSkills = matchedSkills;
       report.missingSkills = missingSkills;
       report.skillsScore = skillsScore;
@@ -239,8 +265,10 @@ exports.scanJobApplications = async (req, res) => {
       report.experienceMatch = experienceMatch;
       report.educationMatch = educationMatch;
       report.score = totalScore;
+
       await report.save();
 
+      // Update application with ATS score reference
       await AppliedJob.findByIdAndUpdate(application._id, {
         atsScore: totalScore,
         atsReport: report._id,
@@ -264,11 +292,13 @@ exports.scanJobApplications = async (req, res) => {
   }
 };
 
+// Get ATS results sorted by score for a specific job
 exports.getAtsResultsByJob = async (req, res) => {
   try {
     const userId = req.user.id;
     const { jobId } = req.params;
 
+    // Ensure recruiter role
     const recruiter = await User.findById(userId).lean();
     if (!recruiter || recruiter.role !== "recruiter") {
       return res.status(403).json({
@@ -292,6 +322,7 @@ exports.getAtsResultsByJob = async (req, res) => {
       });
     }
 
+    // Fetch reports sorted by highest score first
     const reports = await AtsReport.find({ job: jobId })
       .populate({
         path: "candidate",

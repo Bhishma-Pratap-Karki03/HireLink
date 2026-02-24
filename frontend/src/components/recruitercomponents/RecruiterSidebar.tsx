@@ -9,7 +9,6 @@ import dashboardIcon from "../../images/Candidate Profile Page Images/261_1905.s
 import profileIcon from "../../images/Candidate Profile Page Images/My Profile.png";
 import jobPostingsIcon from "../../images/Recruiter Profile Page Images/6_312.svg";
 import messagesIcon from "../../images/Recruiter Profile Page Images/6_317.svg";
-import scannerIcon from "../../images/Recruiter Profile Page Images/6_329.svg";
 import settingsIcon from "../../images/Recruiter Profile Page Images/6_335.svg";
 import friendRequestsIcon from "../../images/Recruiter Profile Page Images/friend-request.svg";
 
@@ -156,12 +155,6 @@ const RecruiterSidebar: React.FC = () => {
       icon: messagesIcon,
     },
     {
-      id: "scanner",
-      path: "/recruiter/scanner",
-      label: "ATS Scanner",
-      icon: scannerIcon,
-    },
-    {
       id: "friend-requests",
       path: "/recruiter/friend-requests",
       label: "Friend Requests",
@@ -243,9 +236,7 @@ const RecruiterSidebar: React.FC = () => {
             location.pathname === item.path ||
             (item.id === "job-postings" &&
               (location.pathname.startsWith("/recruiter/job-postings") ||
-                location.pathname === "/recruiter/post-job")) ||
-            (item.id === "scanner" &&
-              location.pathname.startsWith("/recruiter/scanner"));
+                location.pathname === "/recruiter/post-job"));
 
           return (
             <Link

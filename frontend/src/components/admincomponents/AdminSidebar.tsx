@@ -9,7 +9,6 @@ import dashboardIcon from "../../images/Candidate Profile Page Images/261_1905.s
 import profileIcon from "../../images/Admin Profile Page Images/4_93.svg";
 import usersIcon from "../../images/Admin Profile Page Images/4_103.svg";
 import settingsIcon from "../../images/Recruiter Profile Page Images/6_335.svg";
-import reportsIcon from "../../images/Admin Profile Page Images/4_105.svg";
 import assessmentsIcon from "../../images/Admin Profile Page Images/Quiz.svg";
 import jobsIcon from "../../images/Recruiter Profile Page Images/6_312.svg";
 
@@ -144,12 +143,6 @@ const AdminSidebar: React.FC = () => {
       path: "/admin/manage-users",
       label: "Manage Users",
       icon: usersIcon,
-    },
-    {
-      id: "reports",
-      path: "/admin/reports",
-      label: "Reports",
-      icon: reportsIcon,
     },
     {
       id: "jobs",

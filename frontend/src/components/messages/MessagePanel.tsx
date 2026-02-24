@@ -3,6 +3,7 @@ import defaultAvatar from "../../images/Register Page Images/Default Profile.web
 import sendIcon from "../../images/Recruiter Job Post Page Images/sendIcon.png";
 import defaultMessageIllustration from "../../images/Recruiter Job Post Page Images/default-message-screen-icon.png";
 import searchIcon from "../../images/Recruiter Profile Page Images/search icon.svg";
+import { connectSocket, getSocket } from "../../lib/socketClient";
 
 type MessageUser = {
   id: string;
@@ -80,11 +81,6 @@ const MessagePanel = ({
   const currentUser = userDataStr ? JSON.parse(userDataStr) : null;
   const currentUserId =
     currentUser?.id || currentUser?._id || currentUser?.userId || "";
-
-  const activeConversation = useMemo(
-    () => conversations.find((item) => item.user.id === activeUserId) || null,
-    [conversations, activeUserId],
-  );
 
   const filteredConversations = useMemo(() => {
     const query = conversationSearch.trim().toLowerCase();
@@ -198,19 +194,100 @@ const MessagePanel = ({
     if (onSelectUser) onSelectUser(activeUserId);
   }, [activeUserId]);
 
-  // Near real-time updates without refresh.
-  // Poll conversations + active chat silently to keep UI fresh across browsers.
   useEffect(() => {
-    if (!token) return;
-    const intervalId = window.setInterval(() => {
-      if (document.hidden) return;
-      fetchConversations(true);
-      if (activeUserId) {
-        fetchConversationMessages(activeUserId, true);
+    if (!token || !currentUserId) return;
+
+    const socket = connectSocket(token);
+    if (!socket) return;
+
+    const handleMessageNew = (payload: any) => {
+      if (!payload?.id) return;
+
+      const senderId = String(payload.senderId || "");
+      const receiverId = String(payload.receiverId || "");
+      const isMine = senderId === currentUserId;
+      const otherUserId = isMine ? receiverId : senderId;
+      const otherUser = isMine ? payload.receiver : payload.sender;
+
+      setConversations((prev) => {
+        const idx = prev.findIndex((item) => item.user.id === otherUserId);
+        const updatedItem = {
+          user: {
+            id: otherUserId,
+            fullName: otherUser?.fullName || "User",
+            email: otherUser?.email || "",
+            role: otherUser?.role || "",
+            profilePicture: otherUser?.profilePicture || "",
+            currentJobTitle: otherUser?.currentJobTitle || "",
+          },
+          lastMessage: {
+            id: payload.id,
+            content: payload.content,
+            createdAt: payload.createdAt,
+            senderId,
+            receiverId,
+          },
+          updatedAt: payload.createdAt,
+          unreadCount:
+            !isMine && otherUserId !== activeUserId
+              ? ((idx >= 0 ? prev[idx].unreadCount || 0 : 0) + 1)
+              : 0,
+        };
+
+        let next = [...prev];
+        if (idx >= 0) {
+          next[idx] = updatedItem;
+        } else {
+          next.unshift(updatedItem);
+        }
+
+        return next.sort((a, b) => {
+          const aDate = new Date(a.updatedAt).getTime();
+          const bDate = new Date(b.updatedAt).getTime();
+          return bDate - aDate;
+        });
+      });
+
+      if (otherUserId === activeUserId) {
+        setMessages((prev) => {
+          if (prev.some((item) => item.id === payload.id)) return prev;
+          return [
+            ...prev,
+            {
+              id: payload.id,
+              senderId,
+              receiverId,
+              content: payload.content,
+              createdAt: payload.createdAt,
+              readAt: payload.readAt || null,
+            },
+          ];
+        });
       }
-    }, 2000);
-    return () => window.clearInterval(intervalId);
-  }, [token, activeUserId, selectedUserIdFromQuery]);
+    };
+
+    const handleMessageRead = (payload: any) => {
+      const byUserId = String(payload?.byUserId || "");
+      if (!byUserId || byUserId !== activeUserId) return;
+      setMessages((prev) =>
+        prev.map((item) =>
+          item.senderId === currentUserId
+            ? { ...item, readAt: payload?.readAt || new Date().toISOString() }
+            : item,
+        ),
+      );
+    };
+
+    socket.on("message:new", handleMessageNew);
+    socket.on("message:read", handleMessageRead);
+
+    return () => {
+      const connectedSocket = getSocket();
+      connectedSocket?.off("message:new", handleMessageNew);
+      connectedSocket?.off("message:read", handleMessageRead);
+    };
+  }, [token, currentUserId, activeUserId]);
+
 
   const handleSelectConversation = (userId: string) => {
     setActiveUserId(userId);
@@ -246,11 +323,15 @@ const MessagePanel = ({
 
       const createdMessage = data.message as MessageItem;
       setDraft("");
-      setMessages((prev) => [...prev, createdMessage]);
+      setMessages((prev) => {
+        if (prev.some((item) => item.id === createdMessage.id)) return prev;
+        return [...prev, createdMessage];
+      });
 
       setConversations((prev) => {
         const updated = prev.map((item) => {
           if (item.user.id !== activeUserId) return item;
+          if (item.lastMessage?.id === createdMessage.id) return item;
           return {
             ...item,
             lastMessage: {
