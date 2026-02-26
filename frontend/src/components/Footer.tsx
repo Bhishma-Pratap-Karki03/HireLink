@@ -1,4 +1,5 @@
 import "../styles/Footer.css";
+import { Link } from "react-router-dom";
 
 // Import images
 import logoImg from "../images/Register Page Images/Logo.png";
@@ -12,6 +13,7 @@ import socialBg4 from "../images/Register Page Images/1_2777.svg";
 import socialFg4 from "../images/Register Page Images/1_2778.svg";
 
 const Footer = () => {
+  const currentYear = new Date().getFullYear();
   return (
     <footer className="site-footer">
       <div className="container">
@@ -28,7 +30,7 @@ const Footer = () => {
               <h4>Company</h4>
               <ul>
                 <li>
-                  <a href="#">About us</a>
+                  <Link to="/about-us">About us</Link>
                 </li>
                 <li>
                   <a href="#">Our Team</a>
@@ -97,7 +99,7 @@ const Footer = () => {
         <hr className="footer-divider" />
         <div className="footer-bottom">
           <p className="copyright">
-            Copyright ©2021 <a href="#">HireLink</a>. All Rights Reserved
+            Copyright {String.fromCharCode(169)}{currentYear} <a href="#">HireLink</a>. All Rights Reserved
           </p>
           <div className="social-links">
             <a href="#" className="social-icon" aria-label="Facebook">
@@ -124,3 +126,4 @@ const Footer = () => {
 };
 
 export default Footer;
+

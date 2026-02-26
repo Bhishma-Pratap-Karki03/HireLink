@@ -20,6 +20,9 @@ import messageIcon from "../images/Employers Page Images/message-icon.png";
 
 type Skill = {
   skillName: string;
+  proficiencyLevel?: string;
+  yearsOfExperience?: number;
+  category?: string;
 };
 
 type Experience = {
@@ -45,7 +48,11 @@ type Education = {
 type Certification = {
   certificationName?: string;
   issuingOrganization?: string;
+  credentialId?: string;
   issueDate?: string;
+  expirationDate?: string | null;
+  doesNotExpire?: boolean;
+  credentialUrl?: string;
 };
 
 type Language = {
@@ -54,6 +61,8 @@ type Language = {
 };
 
 type Project = {
+  _id?: string;
+  id?: string;
   projectTitle?: string;
   description?: string;
   technologies?: string;
@@ -84,11 +93,36 @@ type CandidateProfile = {
   projects?: Project[];
 };
 
+type ShowcaseAssessment = {
+  attemptId: string;
+  assessmentId: string;
+  assessmentSource: "admin" | "recruiter";
+  title: string;
+  type: "quiz" | "writing" | "task" | "code";
+  difficulty?: string;
+  submittedAt?: string;
+  score: number;
+  quizTotal: number;
+};
+
+type ProjectReview = {
+  id: string;
+  rating: number;
+  text: string;
+  title?: string;
+  reviewerName: string;
+  reviewerRole?: string;
+  reviewerUserType?: string;
+  reviewerAvatar?: string;
+  date?: string;
+};
+
 type ConnectionState = "none" | "pending" | "friend";
 type MutualConnection = {
   id: string;
   fullName: string;
   profilePicture?: string;
+  role?: string;
 };
 
 const formatDate = (value?: string | null) => {
@@ -155,9 +189,32 @@ const CandidateDetailsPage = () => {
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isPrivateProfile, setIsPrivateProfile] = useState(false);
+  const [privateNotice, setPrivateNotice] = useState("");
   const [connectionStatus, setConnectionStatus] = useState<ConnectionState>("none");
   const [sendingConnection, setSendingConnection] = useState(false);
   const [mutualConnections, setMutualConnections] = useState<MutualConnection[]>([]);
+  const [projectReviews, setProjectReviews] = useState<
+    Record<string, ProjectReview[]>
+  >({});
+  const [myProjectReviews, setMyProjectReviews] = useState<
+    Record<string, ProjectReview | null>
+  >({});
+  const [projectReviewForms, setProjectReviewForms] = useState<
+    Record<string, { rating: number; description: string }>
+  >({});
+  const [projectReviewErrors, setProjectReviewErrors] = useState<
+    Record<string, string>
+  >({});
+  const [projectReviewSaving, setProjectReviewSaving] = useState<
+    Record<string, boolean>
+  >({});
+  const [projectReviewFormOpen, setProjectReviewFormOpen] = useState<
+    Record<string, boolean>
+  >({});
+  const [showcaseAssessments, setShowcaseAssessments] = useState<
+    ShowcaseAssessment[]
+  >([]);
   const userDataStr = localStorage.getItem("userData");
   const currentUser = userDataStr ? JSON.parse(userDataStr) : null;
   const currentUserId =
@@ -171,9 +228,51 @@ const CandidateDetailsPage = () => {
       try {
         setLoading(true);
         setError("");
+        setIsPrivateProfile(false);
+        setPrivateNotice("");
+
         const res = await fetch(`http://localhost:5000/api/profile/user/${id}`);
         const data = await res.json();
         if (!res.ok) {
+          if (res.status === 403) {
+            setIsPrivateProfile(true);
+            setPrivateNotice(
+              data?.message ||
+                "This profile is private. Candidate details are visible only when the profile is set to public."
+            );
+
+            // Keep hero card visible by loading basic candidate data.
+            const basicRes = await fetch("http://localhost:5000/api/users/candidates");
+            const basicData = await basicRes.json();
+            if (basicRes.ok && Array.isArray(basicData?.candidates)) {
+              const matched = basicData.candidates.find((item: any) => {
+                const itemId = item?.id || item?._id || "";
+                return String(itemId) === String(id);
+              });
+              if (matched) {
+                setProfile({
+                  id: matched.id || matched._id,
+                  fullName: matched.fullName || "Candidate",
+                  email: matched.email || "",
+                  currentJobTitle: matched.currentJobTitle || "",
+                  address: matched.address || "",
+                  profilePicture: matched.profilePicture || "",
+                  about: "",
+                  skills: [],
+                  experience: [],
+                  education: [],
+                  certifications: [],
+                  languages: [],
+                  projects: [],
+                });
+                return;
+              }
+            }
+            throw new Error("Candidate profile not found.");
+          }
+          if (res.status === 404) {
+            throw new Error("Candidate profile not found.");
+          }
           throw new Error(data?.message || "Failed to load candidate profile");
         }
         setProfile(data.user);
@@ -290,6 +389,9 @@ const CandidateDetailsPage = () => {
         ? pendingIcon
         : connectIcon;
   const isSelfProfile = Boolean(profile?.id && profile.id === currentUserId);
+  const canReviewProject = !isSelfProfile && isAllowedRole && connectionStatus === "friend";
+
+  const getProjectKey = (project: Project) => project._id || project.id || "";
 
   const handleOpenMessages = () => {
     if (!profile?.id) return;
@@ -302,6 +404,186 @@ const CandidateDetailsPage = () => {
     const role = currentUser?.role;
     if (role !== "candidate" && role !== "recruiter") return;
     navigate(`/${role}/messages?user=${profile.id}`);
+  };
+
+  useEffect(() => {
+    const fetchShowcaseAssessments = async () => {
+      if (!profile?.id || isPrivateProfile) {
+        setShowcaseAssessments([]);
+        return;
+      }
+
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setShowcaseAssessments([]);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `http://localhost:5000/api/assessments/candidate/${profile.id}/showcase`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+        const data = await response.json();
+        if (!response.ok) {
+          setShowcaseAssessments([]);
+          return;
+        }
+        setShowcaseAssessments(data?.submissions || []);
+      } catch {
+        setShowcaseAssessments([]);
+      }
+    };
+
+    fetchShowcaseAssessments();
+  }, [profile?.id, isPrivateProfile]);
+
+  useEffect(() => {
+    const fetchProjectReviewData = async () => {
+      if (isPrivateProfile || !profile?.id || !profile.projects?.length) {
+        setProjectReviews({});
+        setMyProjectReviews({});
+        setProjectReviewForms({});
+        return;
+      }
+
+      const token = localStorage.getItem("authToken");
+      const reviewsMap: Record<string, ProjectReview[]> = {};
+      const mineMap: Record<string, ProjectReview | null> = {};
+      const formMap: Record<string, { rating: number; description: string }> = {};
+
+      await Promise.all(
+        profile.projects.map(async (project) => {
+          const projectKey = getProjectKey(project);
+          if (!projectKey) return;
+
+          try {
+            const response = await fetch(
+              `http://localhost:5000/api/reviews/project/${profile.id}/${projectKey}`,
+            );
+            const data = await response.json();
+            reviewsMap[projectKey] = data?.reviews || [];
+          } catch {
+            reviewsMap[projectKey] = [];
+          }
+
+          if (token && canReviewProject) {
+            try {
+              const response = await fetch(
+                `http://localhost:5000/api/reviews/project/${profile.id}/${projectKey}/my-review`,
+                { headers: { Authorization: `Bearer ${token}` } },
+              );
+              const data = await response.json();
+              if (response.ok && data?.review) {
+                mineMap[projectKey] = data.review;
+                formMap[projectKey] = {
+                  rating: data.review.rating || 5,
+                  description: data.review.text || "",
+                };
+              } else {
+                mineMap[projectKey] = null;
+                formMap[projectKey] = { rating: 5, description: "" };
+              }
+            } catch {
+              mineMap[projectKey] = null;
+              formMap[projectKey] = { rating: 5, description: "" };
+            }
+          } else {
+            mineMap[projectKey] = null;
+            formMap[projectKey] = { rating: 5, description: "" };
+          }
+        }),
+      );
+
+      setProjectReviews(reviewsMap);
+      setMyProjectReviews(mineMap);
+      setProjectReviewForms(formMap);
+    };
+
+    fetchProjectReviewData();
+  }, [profile?.id, profile?.projects, canReviewProject, isPrivateProfile]);
+
+  const setProjectReviewField = (
+    projectKey: string,
+    field: "rating" | "description",
+    value: number | string,
+  ) => {
+    setProjectReviewForms((prev) => ({
+      ...prev,
+      [projectKey]: {
+        rating: prev[projectKey]?.rating || 5,
+        description: prev[projectKey]?.description || "",
+        [field]: value,
+      },
+    }));
+    setProjectReviewErrors((prev) => ({ ...prev, [projectKey]: "" }));
+  };
+
+  const submitProjectReview = async (project: Project) => {
+    const projectKey = getProjectKey(project);
+    if (!profile?.id || !projectKey || !canReviewProject) return;
+
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    const payload = projectReviewForms[projectKey] || { rating: 5, description: "" };
+    if (!payload.description.trim() || payload.description.trim().length < 10) {
+      setProjectReviewErrors((prev) => ({
+        ...prev,
+        [projectKey]: "Review should be at least 10 characters.",
+      }));
+      return;
+    }
+
+    try {
+      setProjectReviewSaving((prev) => ({ ...prev, [projectKey]: true }));
+      const existing = myProjectReviews[projectKey];
+      const url = existing
+        ? `http://localhost:5000/api/reviews/${existing.id}`
+        : `http://localhost:5000/api/reviews/project/${profile.id}/${projectKey}`;
+      const method = existing ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          rating: payload.rating,
+          description: payload.description.trim(),
+          title: "",
+          reviewerRole: currentUser?.currentJobTitle || currentUser?.role || "",
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to save review");
+      }
+
+      setMyProjectReviews((prev) => ({ ...prev, [projectKey]: data.review }));
+      setProjectReviews((prev) => {
+        const others = (prev[projectKey] || []).filter(
+          (item) => item.id !== data.review.id,
+        );
+        return { ...prev, [projectKey]: [data.review, ...others] };
+      });
+      setProjectReviewFormOpen((prev) => ({ ...prev, [projectKey]: false }));
+    } catch (err: any) {
+      setProjectReviewErrors((prev) => ({
+        ...prev,
+        [projectKey]: err?.message || "Failed to save review",
+      }));
+    } finally {
+      setProjectReviewSaving((prev) => ({ ...prev, [projectKey]: false }));
+    }
   };
 
   return (
@@ -370,6 +652,11 @@ const CandidateDetailsPage = () => {
                             src={resolveAvatar(item.profilePicture)}
                             alt={item.fullName}
                             title={item.fullName}
+                            className={
+                              item.role === "recruiter"
+                                ? "candidate-details-mutual-logo"
+                                : ""
+                            }
                           />
                         ))}
                       </div>
@@ -391,9 +678,10 @@ const CandidateDetailsPage = () => {
       </section>
 
       <section className="candidate-details-content">
-        {profile && (
-          <div className="candidate-details-grid">
-            <div className="candidate-details-column">
+        {profile && !isPrivateProfile && (
+          <>
+            <div className="candidate-details-grid">
+              <div className="candidate-details-column">
               <div className="candidate-details-card">
                 <h3>About</h3>
                 <div
@@ -444,16 +732,33 @@ const CandidateDetailsPage = () => {
           <div className="candidate-details-column">
             <div className="candidate-details-card">
               <h3>Skills</h3>
-              <div className="candidate-details-tags">
-                  {profile.skills && profile.skills.length > 0 ? (
-                    profile.skills.map((skill, index) => (
-                      <span key={index}>{skill.skillName}</span>
-                    ))
-                  ) : (
-                    <span className="empty">Skills not added</span>
-                  )}
+              {profile.skills && profile.skills.length > 0 ? (
+                <div className="candidate-skill-list">
+                  {profile.skills.map((skill, index) => (
+                    <div key={index} className="candidate-skill-card">
+                      <div className="candidate-skill-top">
+                        <h4>{skill.skillName}</h4>
+                        <span className="candidate-skill-level">
+                          {skill.proficiencyLevel || "Intermediate"}
+                        </span>
+                      </div>
+                      <div className="candidate-skill-meta">
+                        <span>{skill.category || "Technical"}</span>
+                        <span>
+                          {typeof skill.yearsOfExperience === "number"
+                            ? `${skill.yearsOfExperience} yr${
+                                skill.yearsOfExperience === 1 ? "" : "s"
+                              }`
+                            : "1 yr"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <p>No skills added.</p>
+              )}
+            </div>
 
               <div className="candidate-details-card">
                 <h3>Resume</h3>
@@ -482,18 +787,94 @@ const CandidateDetailsPage = () => {
               </div>
 
               <div className="candidate-details-card">
+                <h3>Quiz / Assessments</h3>
+                {showcaseAssessments.length > 0 ? (
+                  <div className="candidate-quiz-list">
+                    {showcaseAssessments.slice(0, 5).map((item) => (
+                      <div key={item.attemptId} className="candidate-quiz-item">
+                        <div className="candidate-quiz-header">
+                          <h4>{item.title}</h4>
+                          {item.type === "quiz" ? (
+                            <span className="candidate-quiz-score candidate-score-passed">
+                              {item.score}/{item.quizTotal}
+                            </span>
+                          ) : (
+                            <span className="candidate-quiz-type-badge">
+                              {item.type === "task" ? "Task-Based" : "Writing"}
+                            </span>
+                          )}
+                        </div>
+                        <p className="candidate-quiz-status">
+                          Submitted{" "}
+                          {item.submittedAt
+                            ? new Date(item.submittedAt).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
+                            : ""}
+                        </p>
+                        <button
+                          type="button"
+                          className="candidate-quiz-view-btn"
+                          onClick={() =>
+                            navigate(
+                              `/candidate/${profile.id}/assessments/${item.attemptId}`,
+                            )
+                          }
+                        >
+                          View Submission
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No showcased assessments yet.</p>
+                )}
+              </div>
+
+              <div className="candidate-details-card">
                 <h3>Certifications</h3>
                 {profile.certifications && profile.certifications.length > 0 ? (
-                  <ul>
+                  <div className="candidate-cert-list">
                     {profile.certifications.map((item, index) => (
-                      <li key={index}>
-                        {item.certificationName || "Certification"}{" "}
-                        {item.issuingOrganization
-                          ? `• ${item.issuingOrganization}`
-                          : ""}
-                      </li>
+                      <div key={index} className="candidate-cert-item">
+                        <div className="candidate-cert-header">
+                          <div className="candidate-cert-title-row">
+                            <h4 className="candidate-cert-name">
+                              {item.certificationName || "Certification"}
+                            </h4>
+                          </div>
+                          <p className="candidate-sub-text">
+                            {item.issuingOrganization || "Issuing Organization"}
+                            {item.credentialId ? ` | ID: ${item.credentialId}` : ""}
+                          </p>
+                        </div>
+                        <p className="candidate-meta-text">
+                          Issued {formatDate(item.issueDate) || "N/A"}
+                          {!item.doesNotExpire && item.expirationDate
+                            ? ` | Expires ${formatDate(item.expirationDate)}`
+                            : ""}
+                          {item.doesNotExpire ? " | No expiration" : ""}
+                        </p>
+                        {item.credentialUrl && (
+                          <a
+                            href={
+                              item.credentialUrl.startsWith("http")
+                                ? item.credentialUrl
+                                : `http://localhost:5000${item.credentialUrl}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="candidate-show-credential-btn"
+                          >
+                            <span>Show Credential</span>
+                            <img src={arrowIcon} alt="Arrow" />
+                          </a>
+                        )}
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 ) : (
                   <p>No certifications added.</p>
                 )}
@@ -552,6 +933,7 @@ const CandidateDetailsPage = () => {
                 ) : (
                   <p>No education added.</p>
                 )}
+              </div>
               </div>
             </div>
 
@@ -636,6 +1018,132 @@ const CandidateDetailsPage = () => {
                             }}
                           />
                         )}
+
+                        <div className="candidate-project-reviews">
+                          {projectReviews[getProjectKey(item)]?.length ? (
+                            <>
+                              <h5>Project Reviews</h5>
+                              <div className="candidate-project-review-list">
+                                {projectReviews[getProjectKey(item)].map((review) => (
+                                  <div key={review.id} className="candidate-project-review-item">
+                                    <div className="candidate-project-review-header">
+                                      <div className="candidate-project-review-author">
+                                        <img
+                                          src={review.reviewerAvatar || defaultAvatar}
+                                          alt={review.reviewerName}
+                                          className={
+                                            review.reviewerUserType === "recruiter" ||
+                                            review.reviewerRole?.toLowerCase() === "recruiter"
+                                              ? "candidate-project-review-logo"
+                                              : ""
+                                          }
+                                        />
+                                        <div>
+                                          <strong>{review.reviewerName}</strong>
+                                          <span>{review.reviewerRole || "User"}</span>
+                                        </div>
+                                      </div>
+                                      <div className="candidate-project-review-meta">
+                                        <div className="candidate-project-review-stars">
+                                          {Array.from({ length: 5 }).map((_, i) => (
+                                            <img
+                                              key={i}
+                                              src={i < review.rating ? starIcon : emptyStarIcon}
+                                              alt="star"
+                                            />
+                                          ))}
+                                        </div>
+                                        <small>{review.date || ""}</small>
+                                      </div>
+                                    </div>
+                                    <p>{review.text}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          ) : null}
+
+                          {canReviewProject && getProjectKey(item) && (
+                            <div className="candidate-project-review-actions">
+                              <button
+                                type="button"
+                                className="candidate-project-review-toggle"
+                                onClick={() =>
+                                  setProjectReviewFormOpen((prev) => ({
+                                    ...prev,
+                                    [getProjectKey(item)]:
+                                      !prev[getProjectKey(item)],
+                                  }))
+                                }
+                              >
+                                {projectReviewFormOpen[getProjectKey(item)]
+                                  ? "Cancel"
+                                  : myProjectReviews[getProjectKey(item)]
+                                    ? "Edit Your Review"
+                                    : "Write a Review"}
+                              </button>
+
+                              {projectReviewFormOpen[getProjectKey(item)] && (
+                                <div className="candidate-project-review-form">
+                                  <div className="candidate-project-rating-input">
+                                    {Array.from({ length: 5 }).map((_, i) => {
+                                      const currentRating =
+                                        projectReviewForms[getProjectKey(item)]?.rating || 5;
+                                      return (
+                                        <button
+                                          key={i}
+                                          type="button"
+                                          onClick={() =>
+                                            setProjectReviewField(
+                                              getProjectKey(item),
+                                              "rating",
+                                              i + 1,
+                                            )
+                                          }
+                                        >
+                                          <img
+                                            src={i < currentRating ? starIcon : emptyStarIcon}
+                                            alt="star"
+                                          />
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                  <textarea
+                                    value={
+                                      projectReviewForms[getProjectKey(item)]?.description || ""
+                                    }
+                                    onChange={(e) =>
+                                      setProjectReviewField(
+                                        getProjectKey(item),
+                                        "description",
+                                        e.target.value,
+                                      )
+                                    }
+                                    placeholder="Write your review for this project..."
+                                  />
+                                  {projectReviewErrors[getProjectKey(item)] && (
+                                    <p className="candidate-project-review-error">
+                                      {projectReviewErrors[getProjectKey(item)]}
+                                    </p>
+                                  )}
+                                  <button
+                                    type="button"
+                                    className="candidate-project-review-submit"
+                                    onClick={() => submitProjectReview(item)}
+                                    disabled={projectReviewSaving[getProjectKey(item)]}
+                                  >
+                                    {projectReviewSaving[getProjectKey(item)]
+                                      ? "Saving..."
+                                      : myProjectReviews[getProjectKey(item)]
+                                        ? "Update Review"
+                                        : "Submit Review"}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -644,6 +1152,12 @@ const CandidateDetailsPage = () => {
                 <p>No projects added.</p>
               )}
             </div>
+          </>
+        )}
+        {profile && isPrivateProfile && (
+          <div className="candidate-details-state">
+            {privateNotice ||
+              "This candidate has set their profile to private. Only basic profile information is visible."}
           </div>
         )}
       </section>

@@ -1,5 +1,7 @@
 const RecruiterAssessment = require("../models/recruiterAssessmentModel");
 const AssessmentAttempt = require("../models/assessmentAttemptModel");
+const fs = require("fs");
+const path = require("path");
 
 const parseMinutes = (value) => {
   if (!value) return 60;
@@ -29,6 +31,51 @@ const autoSubmitIfExpired = async (attempt, assessment) => {
   attempt.score = score;
   await attempt.save();
   return attempt;
+};
+
+const parseArrayField = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string") return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_error) {
+    return [];
+  }
+};
+
+const normalizeAnswerPayload = (raw = {}) => ({
+  quizAnswers: parseArrayField(raw.quizAnswers)
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item)),
+  writingResponse:
+    typeof raw.writingResponse === "string" ? raw.writingResponse : "",
+  writingLink: typeof raw.writingLink === "string" ? raw.writingLink : "",
+  codeResponse: typeof raw.codeResponse === "string" ? raw.codeResponse : "",
+  codeLink: typeof raw.codeLink === "string" ? raw.codeLink : "",
+});
+
+const removeUploadedFileIfExists = (url) => {
+  if (!url || typeof url !== "string" || !url.startsWith("/uploads/")) return;
+  const relativePath = url.replace(/^\/uploads\//, "");
+  const absolutePath = path.join(__dirname, "..", "public", "uploads", relativePath);
+  if (fs.existsSync(absolutePath)) {
+    try {
+      fs.unlinkSync(absolutePath);
+    } catch (_error) {
+      // Do not fail request on cleanup error
+    }
+  }
+};
+
+const mapUploadedCodeFile = (file) => {
+  if (!file?.filename) return null;
+  return {
+    codeFileUrl: `/uploads/assessment-submissions/${file.filename}`,
+    codeFileName: file.originalname || file.filename,
+    codeFileMimeType: file.mimetype || "",
+    codeFileSize: typeof file.size === "number" ? file.size : 0,
+  };
 };
 
 const startRecruiterAttempt = async (req, res) => {
@@ -93,6 +140,10 @@ const startRecruiterAttempt = async (req, res) => {
         writingLink: "",
         codeResponse: "",
         codeLink: "",
+        codeFileUrl: "",
+        codeFileName: "",
+        codeFileMimeType: "",
+        codeFileSize: 0,
       },
     });
 
@@ -131,11 +182,23 @@ const saveRecruiterAnswers = async (req, res) => {
       });
     }
 
+    const normalizedBody = normalizeAnswerPayload(req.body || {});
+    const uploadedCodeFile = mapUploadedCodeFile(req.file);
+    const previousFileUrl = attempt.answers?.codeFileUrl || "";
+
     attempt.answers = {
       ...attempt.answers,
-      ...req.body,
+      ...normalizedBody,
+      ...(uploadedCodeFile || {}),
     };
+    if (uploadedCodeFile) {
+      attempt.answers.codeResponse = "";
+      attempt.answers.codeLink = "";
+    }
     await attempt.save();
+    if (uploadedCodeFile && previousFileUrl && previousFileUrl !== uploadedCodeFile.codeFileUrl) {
+      removeUploadedFileIfExists(previousFileUrl);
+    }
 
     res.status(200).json({ success: true });
   } catch (error) {
@@ -168,10 +231,30 @@ const submitRecruiterAttempt = async (req, res) => {
       return res.status(200).json({ success: true, attempt });
     }
 
+    const normalizedBody = normalizeAnswerPayload(req.body || {});
+    const uploadedCodeFile = mapUploadedCodeFile(req.file);
+    const previousFileUrl = attempt.answers?.codeFileUrl || "";
+
     attempt.answers = {
       ...attempt.answers,
-      ...req.body,
+      ...normalizedBody,
+      ...(uploadedCodeFile || {}),
     };
+    if (uploadedCodeFile) {
+      attempt.answers.codeResponse = "";
+      attempt.answers.codeLink = "";
+    }
+
+    if (
+      (assessment.type === "task" || assessment.type === "code") &&
+      assessment.codeSubmission === "file" &&
+      !attempt.answers?.codeFileUrl
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload a file (PDF, DOC, DOCX, or ZIP) before submitting.",
+      });
+    }
 
     attempt.status = "submitted";
     attempt.submittedAt = new Date();
@@ -187,6 +270,9 @@ const submitRecruiterAttempt = async (req, res) => {
     }
 
     await attempt.save();
+    if (uploadedCodeFile && previousFileUrl && previousFileUrl !== uploadedCodeFile.codeFileUrl) {
+      removeUploadedFileIfExists(previousFileUrl);
+    }
 
     res.status(200).json({ success: true, attempt });
   } catch (error) {

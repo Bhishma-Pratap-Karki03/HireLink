@@ -27,9 +27,22 @@ export interface Project {
 // Define the props interface for the component
 interface ProjectEditorProps {
   project: Project | null; // Current project data (null for adding new)
+  candidateId?: string;
   isOpen: boolean; // Whether the modal is open
   onClose: () => void; // Function to close the modal
   onSave: (projectData: FormData) => Promise<void>; // Function to save the project
+}
+
+interface ManagedProjectReview {
+  id: string;
+  rating: number;
+  text: string;
+  reviewerName: string;
+  reviewerRole?: string;
+  reviewerAvatar?: string;
+  reviewerUserType?: string;
+  status: "published" | "hidden";
+  date?: string;
 }
 
 /**
@@ -38,6 +51,7 @@ interface ProjectEditorProps {
  */
 const ProjectEditor: React.FC<ProjectEditorProps> = ({
   project,
+  candidateId,
   isOpen,
   onClose,
   onSave,
@@ -56,6 +70,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [reviews, setReviews] = useState<ManagedProjectReview[]>([]);
+  const [isReviewsLoading, setIsReviewsLoading] = useState(false);
+  const [reviewActionLoadingId, setReviewActionLoadingId] = useState<string | null>(null);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
+  const [activeReviewTab, setActiveReviewTab] = useState<"all" | "published" | "hidden">("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize state when modal opens
@@ -93,8 +112,60 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({
       setIsSaving(false);
       setError(null);
       setShowRemoveConfirm(false);
+      setReviews([]);
+      setReviewsError(null);
+      setActiveReviewTab("all");
     }
   }, [isOpen, project]);
+
+  const reviewCounts = {
+    all: reviews.length,
+    published: reviews.filter((item) => item.status === "published").length,
+    hidden: reviews.filter((item) => item.status === "hidden").length,
+  };
+
+  const filteredReviews =
+    activeReviewTab === "all"
+      ? reviews
+      : reviews.filter((item) => item.status === activeReviewTab);
+
+  const resolveReviewerAvatar = (avatar?: string) => {
+    if (!avatar) return "";
+    if (avatar.startsWith("http")) return avatar;
+    return `http://localhost:5000${avatar.startsWith("/") ? "" : "/"}${avatar}`;
+  };
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!isOpen || !project?._id || !candidateId) return;
+      const token = localStorage.getItem("authToken");
+      if (!token) return;
+
+      try {
+        setIsReviewsLoading(true);
+        setReviewsError(null);
+        const response = await fetch(
+          `http://localhost:5000/api/reviews/project/${candidateId}/${project._id}/manage`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.message || "Failed to load project reviews");
+        }
+        setReviews(Array.isArray(data?.reviews) ? data.reviews : []);
+      } catch (err: any) {
+        setReviewsError(err?.message || "Failed to load project reviews");
+      } finally {
+        setIsReviewsLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, [isOpen, project?._id, candidateId]);
 
   // Handle Escape key to close modal
   useEffect(() => {
@@ -272,6 +343,69 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({
       );
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleToggleReviewStatus = async (
+    reviewId: string,
+    nextStatus: "published" | "hidden",
+  ) => {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+
+    try {
+      setReviewActionLoadingId(reviewId);
+      const response = await fetch(
+        `http://localhost:5000/api/reviews/${reviewId}/status`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status: nextStatus }),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to update review status");
+      }
+      setReviews((prev) =>
+        prev.map((item) =>
+          item.id === reviewId ? { ...item, status: nextStatus } : item,
+        ),
+      );
+    } catch (err: any) {
+      setReviewsError(err?.message || "Failed to update review status");
+    } finally {
+      setReviewActionLoadingId(null);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+
+    try {
+      setReviewActionLoadingId(reviewId);
+      const response = await fetch(
+        `http://localhost:5000/api/reviews/${reviewId}/manage`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to delete review");
+      }
+      setReviews((prev) => prev.filter((item) => item.id !== reviewId));
+    } catch (err: any) {
+      setReviewsError(err?.message || "Failed to delete review");
+    } finally {
+      setReviewActionLoadingId(null);
     }
   };
 
@@ -604,6 +738,114 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({
                   disabled={isSaving}
                 />
               </div>
+
+              {project?._id && candidateId && (
+                <div className="project-showcase-reviews-panel">
+                  <div className="project-showcase-reviews-header">
+                    <h3>Project Reviews</h3>
+                    <span>{reviews.length} total</span>
+                  </div>
+                  <div className="project-showcase-review-tabs">
+                    <button
+                      type="button"
+                      className={`project-showcase-review-tab ${activeReviewTab === "all" ? "active" : ""}`}
+                      onClick={() => setActiveReviewTab("all")}
+                    >
+                      All ({reviewCounts.all})
+                    </button>
+                    <button
+                      type="button"
+                      className={`project-showcase-review-tab ${activeReviewTab === "published" ? "active" : ""}`}
+                      onClick={() => setActiveReviewTab("published")}
+                    >
+                      Published ({reviewCounts.published})
+                    </button>
+                    <button
+                      type="button"
+                      className={`project-showcase-review-tab ${activeReviewTab === "hidden" ? "active" : ""}`}
+                      onClick={() => setActiveReviewTab("hidden")}
+                    >
+                      Hidden ({reviewCounts.hidden})
+                    </button>
+                  </div>
+
+                  {isReviewsLoading ? (
+                    <p className="project-showcase-reviews-empty">Loading reviews...</p>
+                  ) : filteredReviews.length === 0 ? (
+                    <p className="project-showcase-reviews-empty">
+                      No reviews found.
+                    </p>
+                  ) : (
+                    <div className="project-showcase-reviews-list">
+                      {filteredReviews.map((review) => (
+                        <div key={review.id} className="project-showcase-review-item">
+                          <div className="project-showcase-review-top">
+                            <div className="project-showcase-review-author">
+                              {review.reviewerAvatar ? (
+                                <img
+                                  src={resolveReviewerAvatar(review.reviewerAvatar)}
+                                  alt={review.reviewerName}
+                                  className={`project-showcase-review-avatar ${
+                                    review.reviewerUserType === "recruiter"
+                                      ? "project-showcase-review-avatar-recruiter"
+                                      : ""
+                                  }`}
+                                />
+                              ) : (
+                                <div className="project-showcase-review-avatar project-showcase-review-avatar-fallback">
+                                  {review.reviewerName?.charAt(0)?.toUpperCase() || "U"}
+                                </div>
+                              )}
+                              <div className="project-showcase-review-title">
+                                <strong>{review.reviewerName}</strong>
+                                {review.reviewerRole ? (
+                                  <span>{review.reviewerRole}</span>
+                                ) : null}
+                              </div>
+                            </div>
+                            <span
+                              className={`project-showcase-review-status ${
+                                review.status === "published" ? "published" : "hidden"
+                              }`}
+                            >
+                              {review.status}
+                            </span>
+                          </div>
+                          <p className="project-showcase-review-message">{review.text}</p>
+                          <div className="project-showcase-review-actions">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleToggleReviewStatus(
+                                  review.id,
+                                  review.status === "published" ? "hidden" : "published",
+                                )
+                              }
+                              disabled={reviewActionLoadingId === review.id}
+                            >
+                              {review.status === "published" ? "Hide" : "Show"}
+                            </button>
+                            <button
+                              type="button"
+                              className="danger"
+                              onClick={() => handleDeleteReview(review.id)}
+                              disabled={reviewActionLoadingId === review.id}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {reviewsError && (
+                <div className="project-showcase-error-message">
+                  <span className="project-showcase-error-text">{reviewsError}</span>
+                </div>
+              )}
 
               {/* Error Message */}
               {error && (

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminSidebar from "../../components/admincomponents/AdminSidebar";
 import AdminTopBar from "../../components/admincomponents/AdminTopBar";
@@ -7,6 +7,7 @@ import statsTotalJobsIcon from "../../images/Candidate Profile Page Images/stats
 import statsActiveJobsIcon from "../../images/Candidate Profile Page Images/stats-offer-icon.svg";
 import statsInactiveJobsIcon from "../../images/Candidate Profile Page Images/stats-reject.svg";
 import statsApplicantsIcon from "../../images/Candidate Profile Page Images/statsCandidatesIcon.png";
+import dropdownArrow from "../../images/Register Page Images/1_2307.svg";
 
 type AdminJobItem = {
   _id: string;
@@ -29,6 +30,8 @@ const AdminManageJobsPage = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [actingJobId, setActingJobId] = useState("");
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const token = localStorage.getItem("authToken") || "";
 
@@ -59,6 +62,20 @@ const AdminManageJobsPage = () => {
   useEffect(() => {
     fetchJobs();
   }, [statusFilter]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsStatusOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   const onSearchSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -162,14 +179,57 @@ const AdminManageJobsPage = () => {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
+              <div
+                className="admin-manage-jobs-filter-dropdown"
+                ref={statusDropdownRef}
               >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+                <button
+                  type="button"
+                  className={`admin-manage-jobs-filter-trigger ${
+                    isStatusOpen ? "open" : ""
+                  }`}
+                  onClick={() => setIsStatusOpen((prev) => !prev)}
+                >
+                  <span>
+                    {statusFilter === "active"
+                      ? "Active"
+                      : statusFilter === "inactive"
+                        ? "Inactive"
+                        : "All Status"}
+                  </span>
+                  <img
+                    src={dropdownArrow}
+                    alt=""
+                    aria-hidden="true"
+                    className={`admin-manage-jobs-filter-caret ${
+                      isStatusOpen ? "open" : ""
+                    }`}
+                  />
+                </button>
+                {isStatusOpen && (
+                  <div className="admin-manage-jobs-filter-menu" role="listbox">
+                    {[
+                      { value: "all", label: "All Status" },
+                      { value: "active", label: "Active" },
+                      { value: "inactive", label: "Inactive" },
+                    ].map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        className={`admin-manage-jobs-filter-option ${
+                          statusFilter === item.value ? "active" : ""
+                        }`}
+                        onClick={() => {
+                          setStatusFilter(item.value);
+                          setIsStatusOpen(false);
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button type="submit">Search</button>
             </form>
 

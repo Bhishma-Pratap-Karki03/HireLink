@@ -17,7 +17,7 @@ type Assessment = {
   writingFormat?: "text" | "file" | "link";
   codeProblem?: string;
   codeLanguages?: string[];
-  codeSubmission?: "file" | "repo" | "link";
+  codeSubmission?: "file" | "link";
   codeEvaluation?: string;
 };
 
@@ -33,19 +33,28 @@ type Attempt = {
     writingLink?: string;
     codeResponse?: string;
     codeLink?: string;
+    codeFileUrl?: string;
+    codeFileName?: string;
+    codeFileMimeType?: string;
+    codeFileSize?: number;
   };
 };
 
 const AssessmentAttemptPage = () => {
-  const { assessmentId, attemptId } = useParams<{
+  const { assessmentId, attemptId, candidateId } = useParams<{
     assessmentId: string;
     attemptId: string;
+    candidateId: string;
   }>();
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const fromJob = searchParams.get("fromJob");
-  const backTarget = fromJob ? `/jobs/${fromJob}` : "/assessments";
+  const backTarget = fromJob
+    ? `/jobs/${fromJob}`
+    : candidateId
+      ? `/candidate/${candidateId}`
+      : "/assessments";
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [loading, setLoading] = useState(false);
@@ -62,6 +71,10 @@ const AssessmentAttemptPage = () => {
   const [writingLink, setWritingLink] = useState("");
   const [codeResponse, setCodeResponse] = useState("");
   const [codeLink, setCodeLink] = useState("");
+  const [codeFileUrl, setCodeFileUrl] = useState("");
+  const [codeFileName, setCodeFileName] = useState("");
+  const [codeFileSize, setCodeFileSize] = useState(0);
+  const [selectedCodeFile, setSelectedCodeFile] = useState<File | null>(null);
 
   const submitGuard = useRef(false);
   const autosaveTimer = useRef<number | null>(null);
@@ -77,7 +90,9 @@ const AssessmentAttemptPage = () => {
       setLoading(true);
       setError("");
       const response = await fetch(
-        `http://localhost:5000/api/assessments/attempts/${attemptId}`,
+        candidateId
+          ? `http://localhost:5000/api/assessments/candidate/${candidateId}/attempts/${attemptId}`
+          : `http://localhost:5000/api/assessments/attempts/${attemptId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -105,7 +120,10 @@ const AssessmentAttemptPage = () => {
         writingFormat: assessmentData.writingFormat || "text",
         codeProblem: assessmentData.codeProblem || "",
         codeLanguages: assessmentData.codeLanguages || [],
-        codeSubmission: assessmentData.codeSubmission || "file",
+        codeSubmission:
+          assessmentData.codeSubmission === "repo"
+            ? "link"
+            : assessmentData.codeSubmission || "file",
         codeEvaluation: assessmentData.codeEvaluation || "",
       });
       setAttempt({
@@ -123,6 +141,10 @@ const AssessmentAttemptPage = () => {
       setWritingLink(attemptData.answers?.writingLink || "");
       setCodeResponse(attemptData.answers?.codeResponse || "");
       setCodeLink(attemptData.answers?.codeLink || "");
+      setCodeFileUrl(attemptData.answers?.codeFileUrl || "");
+      setCodeFileName(attemptData.answers?.codeFileName || "");
+      setCodeFileSize(attemptData.answers?.codeFileSize || 0);
+      setSelectedCodeFile(null);
 
       const endTime = new Date(attemptData.endTime).getTime();
       setRemainingMs(Math.max(endTime - Date.now(), 0));
@@ -135,7 +157,7 @@ const AssessmentAttemptPage = () => {
 
   useEffect(() => {
     fetchAttempt();
-  }, [attemptId]);
+  }, [attemptId, candidateId]);
 
   useEffect(() => {
     if (!attempt || attempt.status !== "in_progress") return;
@@ -152,6 +174,13 @@ const AssessmentAttemptPage = () => {
 
   const scheduleAutosave = () => {
     if (!attempt || attempt.status !== "in_progress") return;
+    if (
+      assessment &&
+      (assessment.type === "task" || assessment.type === "code") &&
+      assessment.codeSubmission === "file"
+    ) {
+      return;
+    }
     if (autosaveTimer.current) {
       window.clearTimeout(autosaveTimer.current);
     }
@@ -162,7 +191,15 @@ const AssessmentAttemptPage = () => {
 
   useEffect(() => {
     scheduleAutosave();
-  }, [quizAnswers, writingResponse, writingLink, codeResponse, codeLink]);
+  }, [
+    quizAnswers,
+    writingResponse,
+    writingLink,
+    codeResponse,
+    codeLink,
+    assessment?.codeSubmission,
+    assessment?.type,
+  ]);
 
   const handleAutosave = async () => {
     if (!attemptId || !assessmentId) return;
@@ -203,13 +240,46 @@ const AssessmentAttemptPage = () => {
     const token = localStorage.getItem("authToken");
     if (!token) return;
     try {
+      if (
+        assessment &&
+        (assessment.type === "task" || assessment.type === "code") &&
+        assessment.codeSubmission === "file" &&
+        !selectedCodeFile &&
+        !codeFileUrl
+      ) {
+        setMessage("Please upload a PDF, DOC, DOCX, or ZIP file before submitting.");
+        submitGuard.current = false;
+        return;
+      }
       const base =
         attemptSource === "recruiter"
           ? "http://localhost:5000/api/recruiter-assessments"
           : "http://localhost:5000/api/assessments";
-      const response = await fetch(
-        `${base}/${assessmentId}/attempts/${attemptId}/submit`,
-        {
+      const endpoint = `${base}/${assessmentId}/attempts/${attemptId}/submit`;
+      let response: Response;
+      if (
+        assessment &&
+        (assessment.type === "task" || assessment.type === "code") &&
+        assessment.codeSubmission === "file"
+      ) {
+        const formData = new FormData();
+        formData.append("quizAnswers", JSON.stringify(quizAnswers));
+        formData.append("writingResponse", writingResponse);
+        formData.append("writingLink", writingLink);
+        formData.append("codeResponse", codeResponse);
+        formData.append("codeLink", codeLink);
+        if (selectedCodeFile) {
+          formData.append("codeFile", selectedCodeFile);
+        }
+        response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+      } else {
+        response = await fetch(endpoint, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -222,12 +292,16 @@ const AssessmentAttemptPage = () => {
             codeResponse,
             codeLink,
           }),
-        },
-      );
+        });
+      }
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data?.message || "Failed to submit");
       }
+      setCodeFileUrl(data?.attempt?.answers?.codeFileUrl || codeFileUrl);
+      setCodeFileName(data?.attempt?.answers?.codeFileName || codeFileName);
+      setCodeFileSize(data?.attempt?.answers?.codeFileSize || codeFileSize);
+      setSelectedCodeFile(null);
       setAttempt((prev) =>
         prev
           ? {
@@ -243,6 +317,7 @@ const AssessmentAttemptPage = () => {
       }, 1200);
     } catch (err: any) {
       setMessage(err?.message || "Failed to submit assessment.");
+      submitGuard.current = false;
     }
   };
 
@@ -279,6 +354,13 @@ const AssessmentAttemptPage = () => {
       return `${hours}h ${minutes}m ${seconds}s`;
     }
     return `${minutes}m ${seconds}s`;
+  };
+
+  const formatFileSize = (size: number) => {
+    if (!size || size <= 0) return "";
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const isReadOnly = attempt?.status !== "in_progress";
@@ -333,7 +415,15 @@ const AssessmentAttemptPage = () => {
                     <>
                       <span>Time left</span>
                       <strong>{formatTime(remainingMs)}</strong>
-                      <p>{saving ? "Saving..." : "Autosaved"}</p>
+                      <p>
+                        {assessment &&
+                        (assessment.type === "task" || assessment.type === "code") &&
+                        assessment.codeSubmission === "file"
+                          ? "File uploads are sent on submit"
+                          : saving
+                            ? "Saving..."
+                            : "Autosaved"}
+                      </p>
                     </>
                   )}
                 </div>
@@ -448,11 +538,11 @@ const AssessmentAttemptPage = () => {
                   </div>
                   <div className="writing-block assessment-submission-block">
                     <h3>
-                      {assessment.codeSubmission === "repo" || assessment.codeSubmission === "link"
+                      {assessment.codeSubmission === "link"
                         ? "Submitted Task Link"
-                        : "Submitted Content"}
+                        : "Submitted File"}
                     </h3>
-                    {assessment.codeSubmission === "repo" || assessment.codeSubmission === "link" ? (
+                    {assessment.codeSubmission === "link" ? (
                       isReadOnly && codeLink ? (
                         <a
                           className="assessment-link-output"
@@ -472,33 +562,82 @@ const AssessmentAttemptPage = () => {
                         />
                       )
                     ) : (
-                      <textarea
-                        className="assessment-textarea"
-                        placeholder="Write or paste your code here..."
-                        value={codeResponse}
-                        disabled={isReadOnly}
-                        onChange={(e) => setCodeResponse(e.target.value)}
-                      />
+                      <div>
+                        {!isReadOnly ? (
+                          <>
+                            <input
+                              className="assessment-input"
+                              type="file"
+                              accept=".pdf,.doc,.docx,.zip,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip,application/x-zip-compressed"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0] || null;
+                                setSelectedCodeFile(file);
+                              }}
+                            />
+                            <p>
+                              Allowed file types: PDF, DOC, DOCX, ZIP (max 10MB).
+                            </p>
+                            {selectedCodeFile && (
+                              <p>
+                                Selected: {selectedCodeFile.name}
+                                {selectedCodeFile.size
+                                  ? ` (${formatFileSize(selectedCodeFile.size)})`
+                                  : ""}
+                              </p>
+                            )}
+                            {!selectedCodeFile && codeFileUrl && (
+                              <p>
+                                Current upload:{" "}
+                                <a
+                                  className="assessment-link-output"
+                                  href={`http://localhost:5000${codeFileUrl}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  {codeFileName || "View uploaded file"}
+                                </a>
+                              </p>
+                            )}
+                          </>
+                        ) : codeFileUrl ? (
+                          <a
+                            className="assessment-link-output"
+                            href={`http://localhost:5000${codeFileUrl}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {codeFileName || "View uploaded file"}
+                            {codeFileSize ? ` (${formatFileSize(codeFileSize)})` : ""}
+                          </a>
+                        ) : (
+                          <p>No file uploaded.</p>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
               )}
 
               <div className="assessment-attempt-actions">
-                <button
-                  className="assessment-submit-btn"
-                  type="button"
-                  disabled={isReadOnly}
-                  onClick={handleSubmit}
-                >
-                  Submit Assessment
-                </button>
+                {!isReadOnly && (
+                  <button
+                    className="assessment-submit-btn"
+                    type="button"
+                    onClick={handleSubmit}
+                  >
+                    Submit Assessment
+                  </button>
+                )}
                 <button
                   className="assessment-cancel-btn"
                   type="button"
                   onClick={() => navigate(backTarget)}
                 >
-                  {fromJob ? "Back to Job Details" : "Back to list"}
+                  {fromJob
+                    ? "Back to Job Details"
+                    : candidateId
+                      ? "Back to Candidate Profile"
+                      : "Back to list"}
                 </button>
               </div>
             </div>

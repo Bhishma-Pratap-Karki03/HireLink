@@ -40,6 +40,12 @@ type CandidateItem = {
 };
 
 type ConnectionState = "none" | "pending" | "friend";
+type MutualConnection = {
+  id: string;
+  fullName: string;
+  profilePicture?: string;
+  role?: string;
+};
 
 const resolveAvatar = (profilePicture?: string) => {
   if (!profilePicture) return defaultAvatar;
@@ -89,6 +95,8 @@ const CandidatesPage = () => {
   const [sendingConnectionId, setSendingConnectionId] = useState<string | null>(
     null,
   );
+  const [mutualConnectionsByCandidate, setMutualConnectionsByCandidate] =
+    useState<Record<string, MutualConnection[]>>({});
   const userDataStr = localStorage.getItem("userData");
   const currentUser = userDataStr ? JSON.parse(userDataStr) : null;
   const currentUserId =
@@ -284,6 +292,57 @@ const CandidatesPage = () => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredCandidates.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredCandidates, currentPage]);
+
+  useEffect(() => {
+    const fetchMutualConnections = async () => {
+      const token = localStorage.getItem("authToken");
+      const role = currentUser?.role;
+      const isAllowed = role === "candidate" || role === "recruiter";
+
+      if (!token || !isAllowed) {
+        setMutualConnectionsByCandidate({});
+        return;
+      }
+
+      const targetIds = paginatedCandidates
+        .map((candidate) => candidate.id || candidate._id || "")
+        .filter((id) => Boolean(id) && id !== currentUserId);
+
+      if (targetIds.length === 0) {
+        setMutualConnectionsByCandidate({});
+        return;
+      }
+
+      try {
+        const results = await Promise.all(
+          targetIds.map(async (targetId) => {
+            const res = await fetch(
+              `http://localhost:5000/api/connections/mutual/${targetId}`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              },
+            );
+            const data = await res.json();
+            return {
+              targetId,
+              mutualConnections: res.ok ? data?.mutualConnections || [] : [],
+            };
+          }),
+        );
+
+        const mapped: Record<string, MutualConnection[]> = {};
+        results.forEach((item) => {
+          mapped[item.targetId] = item.mutualConnections;
+        });
+        setMutualConnectionsByCandidate(mapped);
+      } catch {
+        setMutualConnectionsByCandidate({});
+      }
+    };
+
+    fetchMutualConnections();
+  }, [paginatedCandidates, currentUser?.role, currentUserId]);
+
   const visiblePages = useMemo(
     () =>
       Array.from({ length: Math.min(totalPages, 7) }, (_, index) => index + 1),
@@ -375,12 +434,16 @@ const CandidatesPage = () => {
                   : connectionStatuses[connectionId] === "pending"
                     ? "is-pending"
                     : "";
+              const mutualConnections =
+                mutualConnectionsByCandidate[connectionId] || [];
 
               return (
                 <article
                   key={cardId}
                   className="candidates-card"
-                  onClick={() => navigate(`/candidate/${cardId}`)}
+                  onClick={() =>
+                    navigate(isSelfCard ? "/candidate-profile" : `/candidate/${cardId}`)
+                  }
                   role="button"
                 >
                   <div className="candidates-card-header">
@@ -400,6 +463,28 @@ const CandidatesPage = () => {
                       <strong>{candidate.email}</strong>
                     </div>
                   </div>
+                  {!isSelfCard && mutualConnections.length > 0 && (
+                    <div className="candidates-mutuals">
+                      <div className="candidates-mutual-avatars">
+                        {mutualConnections.slice(0, 4).map((item) => (
+                          <img
+                            key={item.id}
+                            src={resolveAvatar(item.profilePicture)}
+                            alt={item.fullName}
+                            className={
+                              item.role === "recruiter"
+                                ? "candidates-mutual-logo"
+                                : ""
+                            }
+                          />
+                        ))}
+                      </div>
+                      <span>
+                        {mutualConnections.length} mutual connection
+                        {mutualConnections.length > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  )}
                   <div
                     className={`candidates-card-actions ${isSelfCard ? "is-single" : ""}`}
                   >
@@ -409,7 +494,7 @@ const CandidatesPage = () => {
                         title="View profile"
                         onClick={(event) => {
                           event.stopPropagation();
-                          navigate(`/candidate/${cardId}`);
+                          navigate("/candidate-profile");
                         }}
                       >
                         <img src={viewProfileIcon} alt="View profile" />

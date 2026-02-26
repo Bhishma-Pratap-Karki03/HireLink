@@ -451,6 +451,7 @@ const getAssessmentAttemptDetail = async (req, res) => {
         id: assessment._id,
         title: assessment.title,
         type: assessment.type,
+        codeSubmission: assessment.codeSubmission || "",
         description: assessment.description || "",
         quizTotal:
           assessment.type === "quiz" && Array.isArray(assessment.quizQuestions)
@@ -466,6 +467,10 @@ const getAssessmentAttemptDetail = async (req, res) => {
         codeEvaluation: assessment.codeEvaluation || "",
         codeResponse: answers.codeResponse || "",
         codeLink: answers.codeLink || "",
+        codeFileUrl: answers.codeFileUrl || "",
+        codeFileName: answers.codeFileName || "",
+        codeFileMimeType: answers.codeFileMimeType || "",
+        codeFileSize: typeof answers.codeFileSize === "number" ? answers.codeFileSize : 0,
       },
     });
   } catch (error) {

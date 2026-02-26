@@ -120,12 +120,20 @@ class EmployerService {
       role: "recruiter",
     })
       .select(
-        "fullName profilePicture address companySize foundedYear websiteUrl email phone about workspaceImages linkedinUrl instagramUrl facebookUrl"
+        "fullName profilePicture address companySize foundedYear websiteUrl email phone about workspaceImages linkedinUrl instagramUrl facebookUrl profileVisibility"
       )
       .lean();
 
     if (!recruiter) {
       throw new Error("Recruiter not found");
+    }
+
+    if (recruiter.profileVisibility === "private") {
+      const error = new Error(
+        "This employer has set their profile to private. Details are not available."
+      );
+      error.statusCode = 403;
+      throw error;
     }
 
     // Get full profile picture URL

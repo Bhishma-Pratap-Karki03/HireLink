@@ -58,6 +58,13 @@ exports.updateProfile = async (req, res) => {
       });
     }
 
+    if (error.message.includes("visibility must be public or private")) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
     // Handle any other unexpected errors
     res.status(500).json({
       success: false,
@@ -232,6 +239,20 @@ exports.getUserProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("Get user profile error:", error);
+
+    if (error.statusCode === 404 || error.message === "User not found") {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (error.statusCode === 403) {
+      return res.status(403).json({
+        success: false,
+        message: error.message,
+      });
+    }
 
     // Handle any unexpected errors
     res.status(500).json({

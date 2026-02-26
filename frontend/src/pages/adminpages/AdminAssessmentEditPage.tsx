@@ -32,7 +32,7 @@ type AssessmentForm = {
   writingFormat: "text" | "file" | "link";
   codeProblem: string;
   codeLanguages: string[];
-  codeSubmission: "file" | "repo" | "link";
+  codeSubmission: "file" | "link";
   codeEvaluation: string;
 };
 
@@ -122,7 +122,10 @@ const AdminAssessmentEditPage: React.FC = () => {
           codeLanguages: Array.isArray(assessment.codeLanguages)
             ? assessment.codeLanguages
             : [],
-          codeSubmission: assessment.codeSubmission || "file",
+          codeSubmission:
+            assessment.codeSubmission === "repo"
+              ? "link"
+              : assessment.codeSubmission || "file",
           codeEvaluation: assessment.codeEvaluation || "",
         });
 
@@ -164,7 +167,10 @@ const AdminAssessmentEditPage: React.FC = () => {
           codeLanguages: Array.isArray(assessment.codeLanguages)
             ? assessment.codeLanguages
             : [],
-          codeSubmission: assessment.codeSubmission || "file",
+          codeSubmission:
+            assessment.codeSubmission === "repo"
+              ? "link"
+              : assessment.codeSubmission || "file",
           codeEvaluation: assessment.codeEvaluation || "",
         });
       } catch (err: any) {
@@ -1003,8 +1009,7 @@ const AdminAssessmentEditPage: React.FC = () => {
                           <label>Submission Format *</label>
                           <div className="admin-assessment-pill-group">
                             {[
-                              { value: "file", label: "File" },
-                              { value: "repo", label: "Repository Link" },
+                              { value: "file", label: "File Upload" },
                               { value: "link", label: "Task Link" },
                             ].map((item) => (
                               <button

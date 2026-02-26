@@ -32,7 +32,7 @@ type AssessmentForm = {
   writingFormat: "text" | "file" | "link";
   codeProblem: string;
   codeLanguages: string[];
-  codeSubmission: "file" | "repo" | "link";
+  codeSubmission: "file" | "link";
   codeEvaluation: string;
 };
 
@@ -822,8 +822,7 @@ const AdminAssessmentCreatePage: React.FC = () => {
                           <label>Submission Format *</label>
                           <div className="admin-assessment-pill-group">
                             {[
-                              { value: "file", label: "File" },
-                              { value: "repo", label: "Repository Link" },
+                              { value: "file", label: "File Upload" },
                               { value: "link", label: "Task Link" },
                             ].map((item) => (
                               <button

@@ -4,25 +4,34 @@ import "../../styles/RecruiterProfilePictureEditor.css";
 // Import images
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
 import closeIcon from "../../images/Candidate Profile Page Images/corss icon.png";
-import uploadIcon from "../../images/Recruiter Profile Page Images/6_10.svg";
 import cameraIcon from "../../images/Recruiter Profile Page Images/cameraIcon.svg";
 
 interface RecruiterProfilePictureEditorProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { imageFile?: File | null }) => Promise<void>; // Remove currentJobTitle from here
+  onSave: (data: {
+    imageFile?: File | null;
+    profileVisibility: "public" | "private";
+  }) => Promise<void>;
   currentImage?: string;
-  // Remove currentJobTitle from props
+  currentProfileVisibility?: "public" | "private";
 }
 
 const RecruiterProfilePictureEditor: React.FC<
   RecruiterProfilePictureEditorProps
-> = ({ isOpen, onClose, onSave, currentImage }) => {
+> = ({
+  isOpen,
+  onClose,
+  onSave,
+  currentImage,
+  currentProfileVisibility = "public",
+}) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>(
     currentImage || defaultAvatar
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [isPublicProfile, setIsPublicProfile] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Update preview when currentImage changes
@@ -31,6 +40,11 @@ const RecruiterProfilePictureEditor: React.FC<
       setPreviewUrl(currentImage);
     }
   }, [currentImage]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setIsPublicProfile(currentProfileVisibility === "public");
+  }, [isOpen, currentProfileVisibility]);
 
   // Handle file selection from input
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,6 +81,7 @@ const RecruiterProfilePictureEditor: React.FC<
           selectedFile === null && previewUrl === defaultAvatar
             ? null
             : selectedFile,
+        profileVisibility: isPublicProfile ? "public" : "private",
       });
       onClose();
     } catch (error) {
@@ -125,7 +140,45 @@ const RecruiterProfilePictureEditor: React.FC<
             </button>
           </div>
 
-          {/* REMOVED JOB TITLE INPUT SECTION */}
+          <div className="recruiter-visibility-row">
+            <span className="recruiter-visibility-label">
+              Public Profile: {isPublicProfile ? "On" : "Off"}
+            </span>
+            <button
+              type="button"
+              className="recruiter-visibility-toggle"
+              onClick={() => setIsPublicProfile((prev) => !prev)}
+              aria-label={
+                isPublicProfile
+                  ? "Turn off public profile"
+                  : "Turn on public profile"
+              }
+            >
+              {isPublicProfile ? (
+                <svg
+                  width="44"
+                  height="24"
+                  viewBox="0 0 44 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <rect width="44" height="24" rx="12" fill="#0068CE" />
+                  <circle cx="30" cy="12" r="8" fill="white" />
+                </svg>
+              ) : (
+                <svg
+                  width="44"
+                  height="24"
+                  viewBox="0 0 44 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <rect width="44" height="24" rx="12" fill="#E5E7EB" />
+                  <circle cx="14" cy="12" r="8" fill="white" />
+                </svg>
+              )}
+            </button>
+          </div>
 
           {/* File Info */}
           <div className="file-info">

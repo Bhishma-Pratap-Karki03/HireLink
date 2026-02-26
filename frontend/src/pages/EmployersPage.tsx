@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../styles/EmployersPage.css";
@@ -25,6 +25,7 @@ import pendingIcon from "../images/Employers Page Images/pending-icon.png";
 import friendIcon from "../images/Employers Page Images/friend-icon.png";
 import messageIcon from "../images/Employers Page Images/message-icon.png";
 import viewProfileIcon from "../images/Employers Page Images/view-profile-icon.png";
+import dropdownArrow from "../images/Register Page Images/1_2307.svg";
 
 // Import default logo for companies without logo
 import defaultLogo from "../images/Register Page Images/Default Profile.webp";
@@ -43,6 +44,12 @@ interface Company {
 }
 
 type ConnectionState = "none" | "pending" | "friend";
+type MutualConnection = {
+  id: string;
+  fullName: string;
+  profilePicture?: string;
+  role?: string;
+};
 
 const EmployersPage = () => {
   // State for UI controls
@@ -59,6 +66,7 @@ const EmployersPage = () => {
     {}
   );
   const [sortBy, setSortBy] = useState("");
+  const [isSortOpen, setIsSortOpen] = useState(false);
   const [page, setPage] = useState(1);
   const perPage = 20;
   const [quickSearch, setQuickSearch] = useState("");
@@ -81,6 +89,10 @@ const EmployersPage = () => {
   const [connectionStatuses, setConnectionStatuses] = useState<
     Record<string, ConnectionState>
   >({});
+  const [mutualConnectionsByCompany, setMutualConnectionsByCompany] = useState<
+    Record<string, MutualConnection[]>
+  >({});
+  const sortDropdownRef = useRef<HTMLDivElement | null>(null);
   const [sendingConnectionId, setSendingConnectionId] = useState<string | null>(
     null
   );
@@ -143,6 +155,20 @@ const EmployersPage = () => {
   // Fetch companies on component mount
   useEffect(() => {
     fetchCompanies();
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        sortDropdownRef.current &&
+        !sortDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsSortOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
   useEffect(() => {
@@ -349,6 +375,56 @@ const EmployersPage = () => {
     page * perPage,
   );
 
+  useEffect(() => {
+    const fetchMutualConnections = async () => {
+      const token = localStorage.getItem("authToken");
+      const role = currentUser?.role;
+      const isAllowed = role === "candidate" || role === "recruiter";
+
+      if (!token || !isAllowed) {
+        setMutualConnectionsByCompany({});
+        return;
+      }
+
+      const targetIds = paginatedCompanies
+        .map((company) => company.id)
+        .filter((id) => Boolean(id) && id !== currentUserId);
+
+      if (targetIds.length === 0) {
+        setMutualConnectionsByCompany({});
+        return;
+      }
+
+      try {
+        const results = await Promise.all(
+          targetIds.map(async (targetId) => {
+            const res = await fetch(
+              `http://localhost:5000/api/connections/mutual/${targetId}`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              },
+            );
+            const data = await res.json();
+            return {
+              targetId,
+              mutualConnections: res.ok ? data?.mutualConnections || [] : [],
+            };
+          }),
+        );
+
+        const mapped: Record<string, MutualConnection[]> = {};
+        results.forEach((item) => {
+          mapped[item.targetId] = item.mutualConnections;
+        });
+        setMutualConnectionsByCompany(mapped);
+      } catch {
+        setMutualConnectionsByCompany({});
+      }
+    };
+
+    fetchMutualConnections();
+  }, [paginatedCompanies, currentUser?.role, currentUserId]);
+
   const toggleSaveCompany = (id: string) => {
     setSavedCompanies((prev) => ({
       ...prev,
@@ -363,6 +439,8 @@ const EmployersPage = () => {
     { value: "lowest", label: "Lowest Number of Vacancy" },
     { value: "oldest", label: "Oldest Employers" },
   ];
+  const selectedSortLabel =
+    sortOptions.find((option) => option.value === sortBy)?.label || "Select";
 
   // Handle retry if there's an error
   const handleRetry = () => {
@@ -559,23 +637,56 @@ const EmployersPage = () => {
                   ? "Loading companies..."
                   : `All ${sortedCompanies.length} company found`}
               </span>
-              <div className="employerspublic-sort-dropdown">
+              <div className="employerspublic-sort-dropdown" ref={sortDropdownRef}>
                 <span>Sort by: </span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => {
-                    setSortBy(e.target.value);
-                    setPage(1);
-                  }}
-                  className="employerspublic-sort-select"
+                <button
+                  type="button"
+                  className={`employerspublic-sort-select employerspublic-sort-trigger ${
+                    isSortOpen ? "open" : ""
+                  }`}
+                  onClick={() => setIsSortOpen((prev) => !prev)}
+                  aria-haspopup="listbox"
+                  aria-expanded={isSortOpen}
                 >
-                  <option value="">Select</option>
-                  {sortOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                  <span>{selectedSortLabel}</span>
+                  <img
+                    src={dropdownArrow}
+                    alt=""
+                    aria-hidden="true"
+                    className={`employerspublic-sort-caret ${isSortOpen ? "open" : ""}`}
+                  />
+                </button>
+                {isSortOpen && (
+                  <div className="employerspublic-sort-menu" role="listbox">
+                    <button
+                      type="button"
+                      className={`employerspublic-sort-option ${sortBy === "" ? "active" : ""}`}
+                      onClick={() => {
+                        setSortBy("");
+                        setPage(1);
+                        setIsSortOpen(false);
+                      }}
+                    >
+                      Select
+                    </button>
+                    {sortOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`employerspublic-sort-option ${
+                          sortBy === option.value ? "active" : ""
+                        }`}
+                        onClick={() => {
+                          setSortBy(option.value);
+                          setPage(1);
+                          setIsSortOpen(false);
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -619,6 +730,8 @@ const EmployersPage = () => {
                         companyStatus !== "none";
                       const isSelfCard =
                         Boolean(currentUserId) && company.id === currentUserId;
+                      const mutualConnections =
+                        mutualConnectionsByCompany[company.id] || [];
 
                       return (
                       <article
@@ -663,6 +776,35 @@ const EmployersPage = () => {
                             <div className="employerspublic-vacancy-tag">
                               {company.vacancies} Vacancy
                             </div>
+                            {!isSelfCard && mutualConnections.length > 0 && (
+                              <div className="employerspublic-mutuals">
+                                <div className="employerspublic-mutual-avatars">
+                                  {mutualConnections.slice(0, 4).map((item) => (
+                                    <img
+                                      key={item.id}
+                                      src={
+                                        item.profilePicture
+                                          ? item.profilePicture.startsWith("http")
+                                            ? item.profilePicture
+                                            : `http://localhost:5000${item.profilePicture}`
+                                          : defaultLogo
+                                      }
+                                      alt={item.fullName}
+                                      className={
+                                        item.role === "recruiter"
+                                          ? "employerspublic-mutual-logo"
+                                          : ""
+                                      }
+                                      onError={handleImageError}
+                                    />
+                                  ))}
+                                </div>
+                                <span>
+                                  {mutualConnections.length} mutual connection
+                                  {mutualConnections.length > 1 ? "s" : ""}
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <div className="employerspublic-card-footer">
                             <div className={`employerspublic-contact-actions ${isSelfCard ? "is-single" : ""}`}>

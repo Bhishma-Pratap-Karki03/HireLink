@@ -396,6 +396,12 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+    profileVisibility: {
+      type: String,
+      enum: ["public", "private"],
+      default: "public",
+    },
+
     connectionsCount: {
       type: Number,
       default: 0,
@@ -465,6 +471,12 @@ const userSchema = new mongoose.Schema(
     languages: [languageSchema],
     certifications: [certificationSchema],
     projects: [projectSchema],
+    showcasedAssessmentAttempts: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "AssessmentAttempt",
+      },
+    ],
   },
   {
     timestamps: true,

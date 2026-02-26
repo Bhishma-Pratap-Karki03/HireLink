@@ -102,7 +102,11 @@ interface Skill {
 
 type QuizResult = {
   id: string;
+  assessmentId: string;
+  assessmentSource: "admin" | "recruiter";
   title: string;
+  type: "quiz" | "writing" | "task" | "code";
+  difficulty?: string;
   score: number;
   total: number;
   completedAt: string;
@@ -140,6 +144,7 @@ interface UserProfile {
   address: string;
   about: string;
   currentJobTitle?: string;
+  profileVisibility?: "public" | "private";
   profilePicture: string;
   resume: string;
   resumeFileName: string;
@@ -286,23 +291,36 @@ const CandidateProfilePage = () => {
     }
     try {
       setQuizLoading(true);
-      const response = await fetch("http://localhost:5000/api/assessments/available", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      if (!response.ok) {
+      const [historyResponse, showcaseResponse] = await Promise.all([
+        fetch("http://localhost:5000/api/assessments/my-submissions", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        fetch("http://localhost:5000/api/assessments/my-showcase", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      ]);
+
+      const historyData = await historyResponse.json();
+      const showcaseData = await showcaseResponse.json();
+      if (!historyResponse.ok) {
         return;
       }
-      const results = (data.assessments || [])
-        .filter((item: any) => item.type === "quiz" && item.status === "submitted")
+
+      const results = (historyData.submissions || [])
         .map((item: any) => ({
-          id: item.id,
+          id: item.attemptId,
+          assessmentId: item.assessmentId,
+          assessmentSource: item.assessmentSource || "admin",
           title: item.title,
-          score: typeof item.latestScore === "number" ? item.latestScore : 0,
+          type: item.type || "quiz",
+          difficulty: item.difficulty || "",
+          score: typeof item.score === "number" ? item.score : 0,
           total: typeof item.quizTotal === "number" ? item.quizTotal : 0,
-          completedAt: item.latestSubmittedAt || "",
+          completedAt: item.submittedAt || "",
         }))
         .sort((a: any, b: any) => {
           const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
@@ -311,11 +329,12 @@ const CandidateProfilePage = () => {
         });
 
       setAllQuizResults(results);
-      const stored = localStorage.getItem("candidateQuizVisibleIds");
-      const storedIds = stored ? JSON.parse(stored) : [];
-      const validStoredIds = Array.isArray(storedIds)
-        ? storedIds.filter((id: any) => results.some((r) => r.id === id))
+      const storedIds = Array.isArray(showcaseData?.attemptIds)
+        ? showcaseData.attemptIds
         : [];
+      const validStoredIds = storedIds.filter((id: any) =>
+        results.some((r) => r.id === id),
+      );
       const defaultIds = results.slice(0, 5).map((r) => r.id);
       const idsToUse = validStoredIds.length > 0 ? validStoredIds : defaultIds;
       setVisibleQuizIds(idsToUse);
@@ -558,11 +577,27 @@ const CandidateProfilePage = () => {
     });
   };
 
-  const handleSaveQuizVisibility = () => {
+  const handleSaveQuizVisibility = async () => {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
     const nextIds = visibleQuizIds.slice(0, 5);
-    localStorage.setItem("candidateQuizVisibleIds", JSON.stringify(nextIds));
-    setQuizResults(allQuizResults.filter((r) => nextIds.includes(r.id)).slice(0, 5));
-    setIsQuizModalOpen(false);
+    try {
+      const response = await fetch("http://localhost:5000/api/assessments/my-showcase", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ attemptIds: nextIds }),
+      });
+      if (!response.ok) return;
+      setQuizResults(
+        allQuizResults.filter((r) => nextIds.includes(r.id)).slice(0, 5),
+      );
+      setIsQuizModalOpen(false);
+    } catch (error) {
+      console.error("Failed to save showcased assessments:", error);
+    }
   };
 
   // Add function to format project date range display
@@ -681,6 +716,7 @@ const CandidateProfilePage = () => {
   const handleSaveProfilePicture = async (data: {
     imageFile?: File | null;
     currentJobTitle: string;
+    profileVisibility: "public" | "private";
   }) => {
     const token = localStorage.getItem("authToken");
 
@@ -692,29 +728,22 @@ const CandidateProfilePage = () => {
     try {
       setIsLoading(true);
 
-      // First, update the current job title if provided and not empty
-      if (
-        data.currentJobTitle !== undefined &&
-        data.currentJobTitle.trim() !== ""
-      ) {
-        const updateResponse = await fetch(
-          "http://localhost:5000/api/profile/me", // CHANGED FROM /update to /me
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              currentJobTitle: data.currentJobTitle,
-            }),
-          }
-        );
+      // Persist profile basics managed by this modal
+      const updateResponse = await fetch("http://localhost:5000/api/profile/me", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentJobTitle: data.currentJobTitle ?? "",
+          profileVisibility: data.profileVisibility,
+        }),
+      });
 
-        if (!updateResponse.ok) {
-          const errorData = await updateResponse.json();
-          throw new Error(errorData.message || "Failed to update job title");
-        }
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json();
+        throw new Error(errorData.message || "Failed to update profile settings");
       }
 
       // Then handle the profile picture if needed
@@ -1590,7 +1619,17 @@ const CandidateProfilePage = () => {
               <div className="candidate-profile-info">
                 <div className="candidate-profile-name-row">
                   <h2>{userProfile.fullName || "User"}</h2>
-                  <span className="candidate-badge-public">Public</span>
+                  <span
+                    className={
+                      userProfile.profileVisibility === "private"
+                        ? "candidate-badge-private"
+                        : "candidate-badge-public"
+                    }
+                  >
+                    {userProfile.profileVisibility === "private"
+                      ? "Private"
+                      : "Public"}
+                  </span>
                 </div>
                 {userProfile.currentJobTitle && (
                   <div className="candidate-job-title">
@@ -1971,21 +2010,23 @@ const CandidateProfilePage = () => {
                   <button
                     className="candidate-eye-btn"
                     onClick={() => setIsQuizModalOpen(true)}
-                    title="View all quiz results"
+                    title="Manage showcased assessments"
                   >
                     <img src={eyeIcon} alt="View" />
                   </button>
                 </div>
               </div>
               <p className="candidate-description-text">
-                Showing up to 5 completed admin quizzes. Click the eye to
-                view all results and choose which 5 appear here.
+                Showing up to 5 completed assessments from your history. Click
+                the eye icon to choose which assessments appear here.
               </p>
               {quizLoading ? (
-                <p className="candidate-description-text">Loading quiz results...</p>
+                <p className="candidate-description-text">
+                  Loading assessment history...
+                </p>
               ) : quizResults.length === 0 ? (
                 <p className="candidate-description-text">
-                  No completed quizzes yet. Complete a quiz to see your results.
+                  No completed assessments yet.
                 </p>
               ) : (
                 <div className="candidate-quiz-list">
@@ -1993,13 +2034,30 @@ const CandidateProfilePage = () => {
                     <div key={quiz.id} className="candidate-quiz-item">
                       <div className="candidate-quiz-header">
                         <h4>{quiz.title}</h4>
-                        <span className="candidate-quiz-score candidate-score-passed">
-                          {quiz.score}/{quiz.total}
-                        </span>
+                        {quiz.type === "quiz" ? (
+                          <span className="candidate-quiz-score candidate-score-passed">
+                            {quiz.score}/{quiz.total}
+                          </span>
+                        ) : (
+                          <span className="candidate-quiz-type-badge">
+                            {quiz.type === "task" ? "Task-Based" : "Writing"}
+                          </span>
+                        )}
                       </div>
                       <p className="candidate-quiz-status">
                         Completed {formatQuizDate(quiz.completedAt)}
                       </p>
+                      <button
+                        type="button"
+                        className="candidate-quiz-view-btn"
+                        onClick={() =>
+                          navigate(
+                            `/candidate/${userProfile?.id}/assessments/${quiz.id}`,
+                          )
+                        }
+                      >
+                        View Submission
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -2077,8 +2135,8 @@ const CandidateProfilePage = () => {
               <div className="candidate-quiz-modal">
                 <div className="candidate-quiz-modal-header">
                   <div>
-                    <h3>Quiz Results</h3>
-                    <p>Select up to 5 quizzes to show on your profile.</p>
+                    <h3>Assessment History</h3>
+                    <p>Select up to 5 submissions to show on your profile.</p>
                   </div>
                   <button
                     className="candidate-quiz-modal-close"
@@ -2091,7 +2149,7 @@ const CandidateProfilePage = () => {
                 <div className="candidate-quiz-modal-list">
                   {allQuizResults.length === 0 ? (
                     <p className="candidate-description-text">
-                      No completed quizzes yet.
+                      No completed assessments yet.
                     </p>
                   ) : (
                     allQuizResults.map((quiz) => (
@@ -2104,7 +2162,12 @@ const CandidateProfilePage = () => {
                         <div className="candidate-quiz-modal-info">
                           <span>{quiz.title}</span>
                           <span className="candidate-quiz-modal-meta">
-                            {quiz.score}/{quiz.total} ? Completed {formatQuizDate(quiz.completedAt)}
+                            {quiz.type === "quiz"
+                              ? `${quiz.score}/${quiz.total}`
+                              : quiz.type === "task"
+                                ? "Task-Based"
+                                : "Writing"}{" "}
+                            • Completed {formatQuizDate(quiz.completedAt)}
                           </span>
                         </div>
                       </label>
@@ -2328,6 +2391,7 @@ const CandidateProfilePage = () => {
         currentImage={getProfileImageUrl()}
         userName={userProfile.fullName}
         currentJobTitle={userProfile.currentJobTitle || ""}
+        currentProfileVisibility={userProfile.profileVisibility || "public"}
         isOpen={isEditorOpen}
         onClose={() => setIsEditorOpen(false)}
         onSave={handleSaveProfilePicture}
@@ -2394,6 +2458,7 @@ const CandidateProfilePage = () => {
 
       <ProjectEditor
         project={editingProject}
+        candidateId={userProfile?.id}
         isOpen={isProjectEditorOpen}
         onClose={() => setIsProjectEditorOpen(false)}
         onSave={handleSaveProject}

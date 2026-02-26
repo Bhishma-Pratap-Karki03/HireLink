@@ -17,25 +17,10 @@ import deco1123 from "../images/Public Page/1_1123.svg";
 import deco1127 from "../images/Public Page/1_1127.svg";
 import deco1133 from "../images/Public Page/1_1133.svg";
 import deco1135 from "../images/Public Page/1_1135.svg";
-
 import brandGoogle from "../images/Public Page/I1_1145_1_3394.svg";
-import brandHubspot from "../images/Public Page/I1_1145_1_3402.svg";
-import brandWalmart from "../images/Public Page/I1_1145_1_3411.svg";
-import brandDropbox from "../images/Public Page/I1_1145_1_3415.svg";
-import brandFedex from "../images/Public Page/88cd42897ec6c9a3efbf0f41524050c0dd108ebf.png";
 
-import categoryMarketing from "../images/Public Page/marketing-communication.png";
-import categoryContent from "../images/Public Page/content-writer.png";
-import categoryDirector from "../images/Public Page/marketing-director.png";
-import categoryAnalyst from "../images/Public Page/system-analyst.png";
-import categoryDesigner from "../images/Public Page/84397fb1e92a63dd32c5e324976b6f30796a4c67.png";
-import categoryResearch from "../images/Public Page/44a46996784858096d67c1cf420f0663f3061d67.png";
-import categoryHr from "../images/Public Page/fe1002e1f9c3608b2807e60cfac5c7219920f6ea.png";
 
-import tabHr from "../images/Public Page/f043860b13ecca37b379692e3809129f600ba882.png";
-import tabMarketing from "../images/Public Page/f610f60369b488e13a110d3a9043a76f51b5561b.png";
-import tabSecurity from "../images/Public Page/e8f8dcc0d0ba473ab42373a148581436fa2a6bc4.png";
-import tabResearch from "../images/Public Page/47cc530256ce7afaa7bfcc868c8fbd41fc1da0a0.png";
+
 
 import bookmarkIcon from "../images/Recruiter Job Post Page Images/bookmarkIcon.svg";
 import shareIcon from "../images/Recruiter Job Post Page Images/shareFg.svg";
@@ -70,11 +55,23 @@ type JobCard = {
   assessmentRequired?: boolean;
 };
 
+type CompanySummary = {
+  name: string;
+  logo?: string;
+  vacancies: number;
+};
+
 type ApplyModalJob = {
   jobTitle: string;
   companyName: string;
   education?: string;
   experience?: string;
+};
+
+type PricingPlan = {
+  name: string;
+  description: string;
+  features: string[];
 };
 
 const HomePage = () => {
@@ -84,6 +81,10 @@ const HomePage = () => {
   const [jobs, setJobs] = useState<JobCard[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [jobsError, setJobsError] = useState("");
+  const [featuredCompanies, setFeaturedCompanies] = useState<CompanySummary[]>(
+    [],
+  );
+  const [totalCompanyVacancies, setTotalCompanyVacancies] = useState(0);
   const [appliedJobs, setAppliedJobs] = useState<Record<string, boolean>>({});
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [applyJobId, setApplyJobId] = useState<string | null>(null);
@@ -99,6 +100,16 @@ const HomePage = () => {
   const [applyNote, setApplyNote] = useState("");
   const [confirmRequirements, setConfirmRequirements] = useState(false);
   const [confirmResume, setConfirmResume] = useState(false);
+  const [pricingAudience, setPricingAudience] = useState<
+    "candidates" | "recruiters"
+  >("candidates");
+  const fallbackCompanies: CompanySummary[] = [
+    { name: "Company A", vacancies: 12 },
+    { name: "Company B", vacancies: 10 },
+    { name: "Company C", vacancies: 8 },
+    { name: "Company D", vacancies: 6 },
+    { name: "Company E", vacancies: 4 },
+  ];
 
   const userDataStr = localStorage.getItem("userData");
   let userRole: string | null = null;
@@ -111,6 +122,34 @@ const HomePage = () => {
       userRole = null;
     }
   }
+
+  useEffect(() => {
+    const loadFeaturedCompanies = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:5000/api/jobs/companies-summary?limit=7",
+        );
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.message || "Failed to load companies");
+        }
+
+        setFeaturedCompanies(
+          (data?.companies || []).map((item: CompanySummary) => ({
+            name: item.name || "Company",
+            logo: item.logo || "",
+            vacancies: Number(item.vacancies) || 0,
+          })),
+        );
+        setTotalCompanyVacancies(Number(data?.totalVacancies) || 0);
+      } catch {
+        setFeaturedCompanies([]);
+        setTotalCompanyVacancies(0);
+      }
+    };
+
+    loadFeaturedCompanies();
+  }, []);
 
   useEffect(() => {
     const loadJobs = async () => {
@@ -200,6 +239,88 @@ const HomePage = () => {
     if (normalized === "hybrid") return "Hybrid";
     return "Remote";
   };
+
+  const displayedCompanies =
+    featuredCompanies.length > 0 ? featuredCompanies : fallbackCompanies;
+  const displayedTotalVacancies =
+    totalCompanyVacancies > 0
+      ? totalCompanyVacancies
+      : fallbackCompanies.reduce((sum, item) => sum + item.vacancies, 0);
+
+  const candidatePlans: PricingPlan[] = [
+    {
+      name: "Basic",
+      description: "Start your job search with essential tools.",
+      features: [
+        "Create and manage your profile",
+        "Apply to jobs and track status",
+        "Get smart job recommendations",
+        "Use ATS resume scanner",
+        "Connect and message recruiters",
+      ],
+    },
+    {
+      name: "Pro",
+      description: "Advanced support for faster job discovery.",
+      features: [
+        "Everything in Basic",
+        "Priority profile visibility",
+        "Advanced job filters and matching",
+        "Assessment and submission history",
+        "Enhanced candidate dashboard insights",
+      ],
+    },
+    {
+      name: "Elite",
+      description: "Complete feature access for serious job seekers.",
+      features: [
+        "Everything in Pro",
+        "Portfolio and project showcase boost",
+        "Priority support queue",
+        "Early access to new platform features",
+        "Improved networking visibility",
+      ],
+    },
+  ];
+
+  const recruiterPlans: PricingPlan[] = [
+    {
+      name: "Basic",
+      description: "Post jobs and manage hiring in one place.",
+      features: [
+        "Create and publish job postings",
+        "Review applicants and change status",
+        "Built-in candidate messaging",
+        "Company profile and branding setup",
+        "Access recruiter dashboard insights",
+      ],
+    },
+    {
+      name: "Pro",
+      description: "Smarter screening and assessment workflow.",
+      features: [
+        "Everything in Basic",
+        "ATS ranking for applicants",
+        "Assessment integration per job",
+        "Applicant detail overlays and quick actions",
+        "Improved filtering and tracking tools",
+      ],
+    },
+    {
+      name: "Enterprise",
+      description: "Full recruiting workflow for growing teams.",
+      features: [
+        "Everything in Pro",
+        "Advanced analytics and hiring trends",
+        "Role-based process visibility",
+        "Higher operational control and reporting",
+        "Priority platform support",
+      ],
+    },
+  ];
+
+  const activePlans =
+    pricingAudience === "candidates" ? candidatePlans : recruiterPlans;
 
   const handleFindNow = () => {
     const params = new URLSearchParams();
@@ -392,126 +513,35 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section id="brands">
-        <div className="container">
-          <div className="brands-wrapper">
-            <div className="brand-item">
-              <img src={brandGoogle} alt="Google" />
-            </div>
-            <div className="brand-item">
-              <img src={brandHubspot} alt="HubSpot" />
-            </div>
-            <div className="brand-item">
-              <img src={brandWalmart} alt="Walmart" />
-            </div>
-            <div className="brand-item">
-              <img src={brandDropbox} alt="Dropbox" />
-            </div>
-            <div className="brand-item">
-              <img src={brandFedex} alt="FedEx" />
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section id="categories">
         <div className="container">
           <div className="categories-header">
-            <h2 className="section-title">Browse by category</h2>
+            <h2 className="section-title">Top Hiring Companies</h2>
             <p className="section-subtitle">
-              Find the type of work you need, clearly defined and ready to
-              start. Work begins as soon as you purchase and provide
-              requirements.
+              Explore companies actively hiring on HireLink and discover how
+              many openings are currently available at each organization.
             </p>
           </div>
 
           <div className="categories-grid">
-            <div className="category-card">
-              <div className="cat-icon">
-                <img src={categoryMarketing} alt="Marketing" />
+            {displayedCompanies.map((company, index) => (
+              <div className="category-card" key={`${company.name}-${index}`}>
+                <div className="cat-icon">
+                  <img
+                    src={company.logo ? resolveLogo(company.logo) : brandGoogle}
+                    alt={company.name}
+                  />
+                </div>
+                <h3>{company.name}</h3>
+                <span className="vacancy">
+                  {company.vacancies} Available Vacancy
+                </span>
               </div>
-              <h3>
-                Marketing &<br />
-                Communication
-              </h3>
-              <span className="vacancy">156 Available Vacancy</span>
-            </div>
-
-            <div className="category-card">
-              <div className="cat-icon">
-                <img src={categoryContent} alt="Content Writer" />
-              </div>
-              <h3>
-                Content
-                <br />
-                Writer
-              </h3>
-              <span className="vacancy">268 Available Vacancy</span>
-            </div>
-
-            <div className="category-card">
-              <div className="cat-icon">
-                <img src={categoryDirector} alt="Marketing Director" />
-              </div>
-              <h3>
-                Marketing
-                <br />
-                Director
-              </h3>
-              <span className="vacancy">145 Available Vacancy</span>
-            </div>
-
-            <div className="category-card">
-              <div className="cat-icon">
-                <img src={categoryAnalyst} alt="System Analyst" />
-              </div>
-              <h3>
-                System
-                <br />
-                Analyst
-              </h3>
-              <span className="vacancy">236 Available Vacancy</span>
-            </div>
-
-            <div className="category-card">
-              <div className="cat-icon">
-                <img src={categoryDesigner} alt="Digital Designer" />
-              </div>
-              <h3>
-                Digital
-                <br />
-                Designer
-              </h3>
-              <span className="vacancy">56 Available Vacancy</span>
-            </div>
-
-            <div className="category-card">
-              <div className="cat-icon">
-                <img src={categoryResearch} alt="Market Research" />
-              </div>
-              <h3>
-                Market
-                <br />
-                Research
-              </h3>
-              <span className="vacancy">168 Available Vacancy</span>
-            </div>
-
-            <div className="category-card">
-              <div className="cat-icon">
-                <img src={categoryHr} alt="Human Resource" />
-              </div>
-              <h3>
-                Human
-                <br />
-                Resource
-              </h3>
-              <span className="vacancy">628 Available Vacancy</span>
-            </div>
+            ))}
 
             <div className="category-card cta-card">
               <div className="cta-content">
-                <h3>18,265 +</h3>
+                <h3>{displayedTotalVacancies.toLocaleString()} +</h3>
                 <p>jobs are waiting for you</p>
                 <button className="explore-btn">Explore more</button>
               </div>
@@ -524,27 +554,9 @@ const HomePage = () => {
         <div className="container">
           <div className="jobs-header">
             <div className="jobs-title">
-              <h2 className="section-title">Jobs of the day</h2>
+              <h2 className="section-title">Recent Jobs</h2>
               <div className="jobs-count">
-                <span>{jobs.length}+ Jobs Posted Today</span>
-              </div>
-            </div>
-            <div className="jobs-tabs">
-              <div className="tab active">
-                <img src={tabHr} alt="HR" />
-                <span>Human Resource</span>
-              </div>
-              <div className="tab">
-                <img src={tabMarketing} alt="Marketing" />
-                <span>Marketing & Sales</span>
-              </div>
-              <div className="tab">
-                <img src={tabSecurity} alt="Security" />
-                <span>Security Analyst</span>
-              </div>
-              <div className="tab">
-                <img src={tabResearch} alt="Research" />
-                <span>Market Research</span>
+                <span>Discover the most recently posted opportunities across active hiring companies.</span>
               </div>
             </div>
           </div>
@@ -644,14 +656,14 @@ const HomePage = () => {
         <div className="container feature-container">
           <div className="feature-text">
             <h2 className="section-title">
-              The #1 Job Board for
+              Find the Right Talent
               <br />
-              Graphic Design Jobs
+              and the Right Opportunity
             </h2>
             <p className="section-subtitle">
-              Search and connect with the right candidates faster. This talent
-              seach gives you the opportunity to find candidates who may be a
-              perfect fit for your role
+              HireLink helps recruiters discover qualified candidates and helps
+              job seekers find relevant roles through skills-based matching,
+              assessments, and a streamlined hiring workflow.
             </p>
 
             <div className="feature-actions">
@@ -778,10 +790,10 @@ const HomePage = () => {
           <div className="testimonial-copy">
             <img src={testimonialQuote} alt="quote" className="quote-icon" />
             <p>
-              This platform has completely transformed the way we manage our
-              daily tasks. The interface is intuitive and user-friendly, making
-              it easy for our team to adapt quickly. Overall, a fantastic
-              experience so far!
+              HireLink helped us speed up hiring with clearer job workflows,
+              better candidate matching, and structured assessments. We were
+              able to shortlist quality applicants faster and collaborate
+              smoothly throughout the process.
             </p>
           </div>
 
@@ -811,116 +823,57 @@ const HomePage = () => {
           <div className="pricing-header">
             <h2 className="section-title">Simple, Transparent Pricing</h2>
             <p className="section-subtitle">
-              Our pricing is completely transparent with no hidden fees. You
-              always know exactly what you&apos;re paying for. We offer flexible
-              options that fit every budget.
+              HireLink is currently free for all users. Choose a plan based on
+              your workflow needs. All features are available at no cost during
+              this phase.
             </p>
 
             <div className="pricing-toggle">
-              <span className="toggle-opt active">Candidates</span>
-              <span className="toggle-opt">Recruiters</span>
+              <span
+                className={`toggle-opt${
+                  pricingAudience === "candidates" ? " active" : ""
+                }`}
+                onClick={() => setPricingAudience("candidates")}
+              >
+                Candidates
+              </span>
+              <span
+                className={`toggle-opt${
+                  pricingAudience === "recruiters" ? " active" : ""
+                }`}
+                onClick={() => setPricingAudience("recruiters")}
+              >
+                Recruiters
+              </span>
             </div>
           </div>
 
           <div className="pricing-cards">
-            <div className="price-card">
-              <div className="price-amount">
-                <span className="amount">$80</span>
-                <span className="period">/month</span>
+            {activePlans.map((plan, index) => (
+              <div
+                key={plan.name}
+                className={`price-card${index === 1 ? " featured" : ""}`}
+              >
+                <div className="price-amount">
+                  <span className="amount">$0</span>
+                  <span className="period">/month</span>
+                </div>
+                <div className="yearly-price">
+                  <span className="amount-sm">Free</span>
+                  <span className="period-sm">for now</span>
+                </div>
+                <h3>{plan.name}</h3>
+                <p className="plan-desc">{plan.description}</p>
+                <ul className="features">
+                  {plan.features.map((feature) => (
+                    <li key={feature}>
+                      <img src={checkIcon} alt="" /> {feature}
+                    </li>
+                  ))}
+                </ul>
+                <button className="plan-btn">Choose Plan</button>
               </div>
-              <div className="yearly-price">
-                <span className="amount-sm">$280</span>
-                <span className="period-sm">/yearly</span>
-              </div>
-              <h3>Base</h3>
-              <p className="plan-desc">
-                For most business that want to otpimize web queries
-              </p>
-              <ul className="features">
-                <li>
-                  <img src={checkIcon} /> All limited links
-                </li>
-                <li>
-                  <img src={checkIcon} /> Own analytics platform
-                </li>
-                <li>
-                  <img src={checkIcon} /> Chat support
-                </li>
-                <li>
-                  <img src={checkIcon} /> Optimize hashtags
-                </li>
-                <li>
-                  <img src={checkIcon} /> Unlimited users
-                </li>
-              </ul>
-              <button className="plan-btn">Choose Plan</button>
-            </div>
-
-            <div className="price-card featured">
-              <div className="price-amount">
-                <span className="amount">$80</span>
-                <span className="period">/month</span>
-              </div>
-              <div className="yearly-price">
-                <span className="amount-sm">$280</span>
-                <span className="period-sm">/yearly</span>
-              </div>
-              <h3>Pro</h3>
-              <p className="plan-desc">
-                For most business that want to otpimize web queries
-              </p>
-              <ul className="features">
-                <li>
-                  <img src={checkIcon} /> All limited links
-                </li>
-                <li>
-                  <img src={checkIcon} /> Own analytics platform
-                </li>
-                <li>
-                  <img src={checkIcon} /> Chat support
-                </li>
-                <li>
-                  <img src={checkIcon} /> Optimize hashtags
-                </li>
-                <li>
-                  <img src={checkIcon} /> Unlimited users
-                </li>
-              </ul>
-              <button className="plan-btn">Choose Plan</button>
-            </div>
-
-            <div className="price-card">
-              <div className="price-amount">
-                <span className="amount">$260</span>
-                <span className="period">/month</span>
-              </div>
-              <div className="yearly-price">
-                <span className="amount-sm">$1180</span>
-                <span className="period-sm">/yearly</span>
-              </div>
-              <h3>Enterprise</h3>
-              <p className="plan-desc">
-                For most business that want to otpimize web queries
-              </p>
-              <ul className="features">
-                <li>
-                  <img src={checkIcon} /> All limited links
-                </li>
-                <li>
-                  <img src={checkIcon} /> Own analytics platform
-                </li>
-                <li>
-                  <img src={checkIcon} /> Chat support
-                </li>
-                <li>
-                  <img src={checkIcon} /> Optimize hashtags
-                </li>
-                <li>
-                  <img src={checkIcon} /> Unlimited users
-                </li>
-              </ul>
-              <button className="plan-btn">Choose Plan</button>
-            </div>
+            ))}
           </div>
         </div>
       </section>

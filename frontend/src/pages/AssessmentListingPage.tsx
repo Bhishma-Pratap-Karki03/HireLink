@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../styles/AssessmentListingPage.css";
 import searchIcon from "../images/Job List Page Images/search.svg";
+import dropdownArrow from "../images/Register Page Images/1_2307.svg";
 
 type AssessmentCard = {
   id: string;
@@ -30,6 +31,9 @@ const AssessmentListingPage = () => {
   const [filterType, setFilterType] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterDifficulty, setFilterDifficulty] = useState("");
+  const [isTypeOpen, setIsTypeOpen] = useState(false);
+  const [isDifficultyOpen, setIsDifficultyOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState({
     search: "",
     type: "",
@@ -42,6 +46,30 @@ const AssessmentListingPage = () => {
     ? "admin"
     : userData?.role || "candidate";
   const isCandidate = userRole === "candidate";
+  const typeDropdownRef = useRef<HTMLDivElement | null>(null);
+  const difficultyDropdownRef = useRef<HTMLDivElement | null>(null);
+  const statusDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  const typeOptions = [
+    { value: "", label: "Type" },
+    { value: "quiz", label: "MCQ" },
+    { value: "writing", label: "Writing" },
+    { value: "task", label: "Task-Based" },
+  ];
+
+  const difficultyOptions = [
+    { value: "", label: "Difficulty" },
+    { value: "beginner", label: "Beginner" },
+    { value: "intermediate", label: "Intermediate" },
+    { value: "advanced", label: "Advanced" },
+  ];
+
+  const statusOptions = [
+    { value: "", label: "Status" },
+    { value: "not_started", label: "Not started" },
+    { value: "in_progress", label: "In progress" },
+    { value: "submitted", label: "Submitted" },
+  ];
 
   const fetchAssessments = async () => {
     const token = localStorage.getItem("authToken");
@@ -79,6 +107,33 @@ const AssessmentListingPage = () => {
 
   useEffect(() => {
     fetchAssessments();
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        typeDropdownRef.current &&
+        !typeDropdownRef.current.contains(target)
+      ) {
+        setIsTypeOpen(false);
+      }
+      if (
+        difficultyDropdownRef.current &&
+        !difficultyDropdownRef.current.contains(target)
+      ) {
+        setIsDifficultyOpen(false);
+      }
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(target)
+      ) {
+        setIsStatusOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
   const formatType = (type: AssessmentCard["type"]) => {
@@ -172,7 +227,7 @@ const AssessmentListingPage = () => {
         </div>
         <div className="assessment-listing-search">
           <div className="assessment-search-pill">
-            <div className="assessment-search-field">
+            <div className="assessment-search-field assessment-search-field-main">
               <img src={searchIcon} alt="Search" />
               <input
                 type="text"
@@ -181,38 +236,138 @@ const AssessmentListingPage = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="assessment-search-field">
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-              >
-                <option value="">Type</option>
-                <option value="quiz">MCQ</option>
-                <option value="writing">Writing</option>
-                <option value="task">Task-Based</option>
-              </select>
+            <div className="assessment-search-field assessment-search-field-filter">
+              <div className="assessment-filter-dropdown" ref={typeDropdownRef}>
+                <button
+                  type="button"
+                  className={`assessment-filter-trigger ${isTypeOpen ? "open" : ""}`}
+                  onClick={() => {
+                    setIsTypeOpen((prev) => !prev);
+                    setIsDifficultyOpen(false);
+                    setIsStatusOpen(false);
+                  }}
+                  aria-haspopup="listbox"
+                  aria-expanded={isTypeOpen}
+                >
+                  <span>
+                    {typeOptions.find((option) => option.value === filterType)
+                      ?.label || "Type"}
+                  </span>
+                  <img
+                    src={dropdownArrow}
+                    alt=""
+                    aria-hidden="true"
+                    className={`assessment-filter-caret ${isTypeOpen ? "open" : ""}`}
+                  />
+                </button>
+                {isTypeOpen && (
+                  <div className="assessment-filter-menu" role="listbox">
+                    {typeOptions.map((option) => (
+                      <button
+                        key={option.value || "all-type"}
+                        type="button"
+                        className={`assessment-filter-option ${filterType === option.value ? "active" : ""}`}
+                        onClick={() => {
+                          setFilterType(option.value);
+                          setIsTypeOpen(false);
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="assessment-search-field">
-              <select
-                value={filterDifficulty}
-                onChange={(e) => setFilterDifficulty(e.target.value)}
+            <div className="assessment-search-field assessment-search-field-filter">
+              <div
+                className="assessment-filter-dropdown"
+                ref={difficultyDropdownRef}
               >
-                <option value="">Difficulty</option>
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-              </select>
+                <button
+                  type="button"
+                  className={`assessment-filter-trigger ${isDifficultyOpen ? "open" : ""}`}
+                  onClick={() => {
+                    setIsDifficultyOpen((prev) => !prev);
+                    setIsTypeOpen(false);
+                    setIsStatusOpen(false);
+                  }}
+                  aria-haspopup="listbox"
+                  aria-expanded={isDifficultyOpen}
+                >
+                  <span>
+                    {difficultyOptions.find(
+                      (option) => option.value === filterDifficulty,
+                    )?.label || "Difficulty"}
+                  </span>
+                  <img
+                    src={dropdownArrow}
+                    alt=""
+                    aria-hidden="true"
+                    className={`assessment-filter-caret ${isDifficultyOpen ? "open" : ""}`}
+                  />
+                </button>
+                {isDifficultyOpen && (
+                  <div className="assessment-filter-menu" role="listbox">
+                    {difficultyOptions.map((option) => (
+                      <button
+                        key={option.value || "all-difficulty"}
+                        type="button"
+                        className={`assessment-filter-option ${filterDifficulty === option.value ? "active" : ""}`}
+                        onClick={() => {
+                          setFilterDifficulty(option.value);
+                          setIsDifficultyOpen(false);
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="assessment-search-field">
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
-                <option value="">Status</option>
-                <option value="not_started">Not started</option>
-                <option value="in_progress">In progress</option>
-                <option value="submitted">Submitted</option>
-              </select>
+            <div className="assessment-search-field assessment-search-field-filter">
+              <div className="assessment-filter-dropdown" ref={statusDropdownRef}>
+                <button
+                  type="button"
+                  className={`assessment-filter-trigger ${isStatusOpen ? "open" : ""}`}
+                  onClick={() => {
+                    setIsStatusOpen((prev) => !prev);
+                    setIsTypeOpen(false);
+                    setIsDifficultyOpen(false);
+                  }}
+                  aria-haspopup="listbox"
+                  aria-expanded={isStatusOpen}
+                >
+                  <span>
+                    {statusOptions.find((option) => option.value === filterStatus)
+                      ?.label || "Status"}
+                  </span>
+                  <img
+                    src={dropdownArrow}
+                    alt=""
+                    aria-hidden="true"
+                    className={`assessment-filter-caret ${isStatusOpen ? "open" : ""}`}
+                  />
+                </button>
+                {isStatusOpen && (
+                  <div className="assessment-filter-menu" role="listbox">
+                    {statusOptions.map((option) => (
+                      <button
+                        key={option.value || "all-status"}
+                        type="button"
+                        className={`assessment-filter-option ${filterStatus === option.value ? "active" : ""}`}
+                        onClick={() => {
+                          setFilterStatus(option.value);
+                          setIsStatusOpen(false);
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <button className="assessment-search-btn" onClick={applyFilters}>
               Search
@@ -284,40 +439,48 @@ const AssessmentListingPage = () => {
                   </div>
                 </div>
 
-                <button
-                  className="assessment-card-action"
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isCandidate) {
-                      handleStart(assessment);
-                    } else {
-                      navigate(`/assessments/${assessment.id}/preview`);
-                    }
-                  }}
+                <div
+                  className={`assessment-card-actions ${
+                    isCandidate && assessment.status === "submitted"
+                      ? "two-buttons"
+                      : "single-button"
+                  }`}
                 >
-                  {isCandidate
-                    ? assessment.attemptsLeft <= 0
-                      ? "Unavailable"
-                      : assessment.status === "in_progress"
-                        ? "Resume"
-                        : assessment.status === "submitted"
-                          ? "Start new attempt"
-                          : "Start"
-                    : "View Questions"}
-                </button>
-                {isCandidate && assessment.status === "submitted" && (
                   <button
-                    className="assessment-card-view"
+                    className="assessment-card-action"
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleViewSubmission(assessment);
+                      if (isCandidate) {
+                        handleStart(assessment);
+                      } else {
+                        navigate(`/assessments/${assessment.id}/preview`);
+                      }
                     }}
                   >
-                    View Submission
+                    {isCandidate
+                      ? assessment.attemptsLeft <= 0
+                        ? "Unavailable"
+                        : assessment.status === "in_progress"
+                          ? "Resume"
+                          : assessment.status === "submitted"
+                            ? "Start new attempt"
+                            : "Start"
+                      : "View Questions"}
                   </button>
-                )}
+                  {isCandidate && assessment.status === "submitted" && (
+                    <button
+                      className="assessment-card-view"
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewSubmission(assessment);
+                      }}
+                    >
+                      View Submission
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
             {!loading && filteredAssessments.length === 0 && (

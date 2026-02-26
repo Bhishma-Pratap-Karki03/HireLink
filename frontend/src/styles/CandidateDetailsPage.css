@@ -184,6 +184,17 @@
   box-shadow: 0 3px 8px rgba(15, 23, 42, 0.12);
 }
 
+.candidate-details-mutual-avatars img.candidate-details-mutual-logo {
+  width: 40px;
+  height: 26px;
+  border-radius: 0 !important;
+  object-fit: contain !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none;
+  margin-left: -6px;
+}
+
 .candidate-details-mutual-avatars img:first-child {
   margin-left: 0;
 }
@@ -213,15 +224,12 @@
 }
 
 .candidate-details-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  column-count: 2;
+  column-gap: 24px;
 }
 
 .candidate-details-column {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  display: contents;
 }
 
 .candidate-details-card {
@@ -230,10 +238,20 @@
   padding: 20px;
   border: 1px solid #e6eef7;
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  break-inside: avoid;
+  width: 100%;
+  display: inline-block;
+  margin-bottom: 20px;
 }
 
 .candidate-details-card-full {
-  grid-column: 1 / -1;
+  margin-top: 4px;
+}
+
+@media (max-width: 980px) {
+  .candidate-details-grid {
+    column-count: 1;
+  }
 }
 
 .candidate-details-card h3 {
@@ -403,6 +421,216 @@
   color: #64748b;
 }
 
+.candidate-skill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.candidate-skill-card {
+  border: 1px solid #e6eef7;
+  background: #fbfdff;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.candidate-skill-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.candidate-skill-top h4 {
+  margin: 0;
+  font-size: 14px;
+  color: #0f283c;
+}
+
+.candidate-skill-level {
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: #e8f1ff;
+  color: #125aa9;
+}
+
+.candidate-skill-meta {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #5a6d84;
+  font-size: 12.5px;
+}
+
+.candidate-project-reviews {
+  margin-top: 14px;
+  border-top: 1px solid #e8edf5;
+  padding-top: 14px;
+}
+
+.candidate-project-reviews h5 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: #0f283c;
+}
+
+.candidate-project-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.candidate-project-review-item {
+  border: 1px solid #e6eef7;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fbfdff;
+}
+
+.candidate-project-review-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.candidate-project-review-author {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.candidate-project-review-author img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.candidate-project-review-author img.candidate-project-review-logo {
+  width: 52px;
+  height: 32px;
+  border-radius: 0 !important;
+  object-fit: contain !important;
+  background: transparent !important;
+  padding: 0;
+  border: none !important;
+}
+
+.candidate-project-review-author strong {
+  display: block;
+  font-size: 13px;
+  color: #0f283c;
+}
+
+.candidate-project-review-author span {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.candidate-project-review-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.candidate-project-review-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.candidate-project-review-stars img,
+.candidate-project-rating-input img {
+  width: 18px;
+  height: 18px;
+}
+
+.candidate-project-review-item p {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.candidate-project-review-empty {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.candidate-project-review-form {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.candidate-project-review-actions {
+  margin-top: 12px;
+}
+
+.candidate-project-review-toggle {
+  border: 1px solid #2c6fbe;
+  background: #ffffff;
+  color: #125aa9;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.candidate-project-rating-input {
+  display: flex;
+  gap: 4px;
+}
+
+.candidate-project-rating-input button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.candidate-project-review-form textarea {
+  width: 100%;
+  min-height: 150px;
+  border: 1px solid #7ea7dd;
+  border-radius: 10px;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #2c3a4b;
+  resize: vertical;
+}
+
+.candidate-project-review-submit {
+  align-self: flex-start;
+  border: none;
+  background: #146ac8;
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.candidate-project-review-submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.candidate-project-review-error {
+  font-size: 12px;
+  color: #c0392b;
+}
+
 .candidate-details-resume {
   display: flex;
   align-items: center;
@@ -429,6 +657,52 @@
   color: #2563eb;
   font-weight: 600;
   text-decoration: none;
+}
+
+.candidate-cert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.candidate-cert-item {
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e8eef5;
+}
+
+.candidate-cert-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.candidate-cert-header {
+  margin-bottom: 8px;
+}
+
+.candidate-cert-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.candidate-cert-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f283c;
+}
+
+.candidate-sub-text {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #334155;
+}
+
+.candidate-meta-text {
+  margin: 0;
+  font-size: 12.5px;
+  color: #64748b;
 }
 
 .candidate-details-card ul {
@@ -553,6 +827,25 @@
 }
 
 .candidate-show-project-btn img {
+  width: 14px;
+  height: 14px;
+}
+
+.candidate-show-credential-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 7px 12px;
+  border: 1px solid #2563eb;
+  border-radius: 18px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.candidate-show-credential-btn img {
   width: 14px;
   height: 14px;
 }

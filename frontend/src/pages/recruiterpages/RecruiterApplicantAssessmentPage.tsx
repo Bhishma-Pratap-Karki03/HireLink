@@ -34,9 +34,13 @@ type AssessmentDetail = {
   writingResponse: string;
   writingLink: string;
   codeProblem: string;
+  codeSubmission: "file" | "link" | "repo" | null;
   codeEvaluation: string;
   codeResponse: string;
   codeLink: string;
+  codeFileUrl: string;
+  codeFileName: string;
+  codeFileSize: number;
 };
 
 type Payload = {
@@ -282,7 +286,9 @@ const RecruiterApplicantAssessmentPage = () => {
                       />
                     </div>
                   )}
-                  {assessment.codeLink && (
+                  {(assessment.codeSubmission === "link" ||
+                    assessment.codeSubmission === "repo") &&
+                    assessment.codeLink && (
                     <div className="recruiter-assessment-page-block">
                       <span>Task Link</span>
                       <a href={assessment.codeLink} target="_blank" rel="noreferrer">
@@ -290,7 +296,24 @@ const RecruiterApplicantAssessmentPage = () => {
                       </a>
                     </div>
                   )}
-                  {assessment.codeResponse && (
+                  {assessment.codeSubmission === "file" &&
+                    assessment.codeFileUrl && (
+                      <div className="recruiter-assessment-page-block">
+                        <span>Uploaded File</span>
+                        <a
+                          href={`http://localhost:5000${assessment.codeFileUrl}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {assessment.codeFileName || "View uploaded file"}
+                          {assessment.codeFileSize
+                            ? ` (${(assessment.codeFileSize / 1024 / 1024).toFixed(2)} MB)`
+                            : ""}
+                        </a>
+                      </div>
+                    )}
+                  {assessment.codeResponse &&
+                    assessment.codeSubmission !== "file" && (
                     <div className="recruiter-assessment-page-block">
                       <span>Code Submission</span>
                       <pre>{assessment.codeResponse}</pre>

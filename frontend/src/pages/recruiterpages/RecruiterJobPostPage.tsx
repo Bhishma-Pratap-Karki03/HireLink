@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { useNavigate, useParams } from "react-router-dom";
@@ -15,7 +15,7 @@ import addResponsibilityIcon from "../../images/Recruiter Job Post Page Images/a
 import deleteRequirementIcon from "../../images/Recruiter Job Post Page Images/deleteIcon.svg";
 import addRequirementIcon from "../../images/Recruiter Job Post Page Images/addIcon.svg";
 import tagRemoveIcon from "../../images/Recruiter Job Post Page Images/tagRemove.svg";
-import currencyDropdownIcon from "../../images/Recruiter Job Post Page Images/dropdownIcon.svg";
+import dropdownArrow from "../../images/Register Page Images/1_2307.svg";
 import checkHealthIcon from "../../images/Recruiter Job Post Page Images/checkIcon.svg";
 import checkPtoIcon from "../../images/Recruiter Job Post Page Images/checkIcon.svg";
 import checkInsuranceIcon from "../../images/Recruiter Job Post Page Images/checkIcon.svg";
@@ -57,7 +57,7 @@ type AssessmentForm = {
   writingFormat: "text" | "file" | "link";
   codeProblem: string;
   codeLanguages: string[];
-  codeSubmission: "file" | "repo" | "link";
+  codeSubmission: "file" | "link";
   codeEvaluation: string;
 };
 
@@ -125,6 +125,8 @@ const RecruiterJobPostPage: React.FC = () => {
   });
   const [assessmentSubmitError, setAssessmentSubmitError] = useState("");
   const [assessmentSubmitSuccess, setAssessmentSubmitSuccess] = useState("");
+  const [isCurrencyMenuOpen, setIsCurrencyMenuOpen] = useState(false);
+  const currencyDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const quillModules = useMemo(
     () => ({
@@ -204,7 +206,10 @@ const RecruiterJobPostPage: React.FC = () => {
       assessment.codeLanguages.length > 0
         ? assessment.codeLanguages
         : [""],
-    codeSubmission: assessment?.codeSubmission || "file",
+    codeSubmission:
+      assessment?.codeSubmission === "repo"
+        ? "link"
+        : assessment?.codeSubmission || "file",
     codeEvaluation: assessment?.codeEvaluation || "",
   });
 
@@ -380,6 +385,24 @@ const RecruiterJobPostPage: React.FC = () => {
     { code: "USD", label: "USD ($)" },
     { code: "GBP", label: "GBP (£)" },
   ];
+
+  const selectedCurrencyLabel =
+    currencyOptions.find((option) => option.code === formData.currency)?.label ||
+    "Select currency";
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        currencyDropdownRef.current &&
+        !currencyDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsCurrencyMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   const handleInputChange =
     (field: keyof typeof formData) =>
@@ -960,7 +983,7 @@ const RecruiterJobPostPage: React.FC = () => {
                 </div>
 
               {/* Section 1: Basic Information */}
-              <section className="recruiter-postjob-card recruiter-postjob-card--compensation">
+              <section className="recruiter-postjob-card">
                 <div className="recruiter-postjob-card-header">
                   <h3>Basic Information</h3>
                 </div>
@@ -1336,7 +1359,7 @@ const RecruiterJobPostPage: React.FC = () => {
               </section>
 
               {/* Section 3: Compensation */}
-              <section className="recruiter-postjob-card">
+              <section className="recruiter-postjob-card recruiter-postjob-card--compensation">
                 <div className="recruiter-postjob-card-header">
                   <h3>Compensation and Benefits</h3>
                 </div>
@@ -1375,27 +1398,67 @@ const RecruiterJobPostPage: React.FC = () => {
                         Currency{" "}
                         <span className="recruiter-postjob-required">*</span>
                       </label>
-                      <div className="recruiter-postjob-input-wrapper recruiter-postjob-dropdown">
-                        <select
-                          value={formData.currency}
-                          onChange={(e) => {
-                            setFormData((prev) => ({
-                              ...prev,
-                              currency: e.target.value,
-                            }));
-                            setHasPosted(false);
-                          }}
+                      <div
+                        className="recruiter-postjob-input-wrapper recruiter-postjob-dropdown recruiter-postjob-currency-dropdown"
+                        ref={currencyDropdownRef}
+                      >
+                        <button
+                          type="button"
+                          className={`recruiter-postjob-currency-trigger ${
+                            isCurrencyMenuOpen ? "open" : ""
+                          }`}
+                          onClick={() =>
+                            setIsCurrencyMenuOpen((prev) => !prev)
+                          }
+                          aria-haspopup="listbox"
+                          aria-expanded={isCurrencyMenuOpen}
                         >
-                          <option value="" disabled>
-                            Select currency
-                          </option>
-                          {currencyOptions.map((option) => (
-                            <option key={option.code} value={option.code}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                        <img src={currencyDropdownIcon} alt="Arrow" />
+                          <span>{selectedCurrencyLabel}</span>
+                          <img
+                            src={dropdownArrow}
+                            alt=""
+                            aria-hidden="true"
+                            className={`recruiter-postjob-currency-caret ${
+                              isCurrencyMenuOpen ? "open" : ""
+                            }`}
+                          />
+                        </button>
+                        {isCurrencyMenuOpen && (
+                          <div className="recruiter-postjob-currency-menu" role="listbox">
+                            <button
+                              type="button"
+                              className={`recruiter-postjob-currency-option ${
+                                formData.currency === "" ? "active" : ""
+                              }`}
+                              onClick={() => {
+                                setFormData((prev) => ({ ...prev, currency: "" }));
+                                setHasPosted(false);
+                                setIsCurrencyMenuOpen(false);
+                              }}
+                            >
+                              Select currency
+                            </button>
+                            {currencyOptions.map((option) => (
+                              <button
+                                key={option.code}
+                                type="button"
+                                className={`recruiter-postjob-currency-option ${
+                                  formData.currency === option.code ? "active" : ""
+                                }`}
+                                onClick={() => {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    currency: option.code,
+                                  }));
+                                  setHasPosted(false);
+                                  setIsCurrencyMenuOpen(false);
+                                }}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2038,11 +2101,7 @@ const RecruiterJobPostPage: React.FC = () => {
                                   <label>Submission Format *</label>
                                   <div className="recruiter-postjob-segmented-control">
                                     {[
-                                      { value: "file", label: "File" },
-                                      {
-                                        value: "repo",
-                                        label: "Repository Link",
-                                      },
+                                      { value: "file", label: "File Upload" },
                                       { value: "link", label: "Task Link" },
                                     ].map((item) => (
                                       <button

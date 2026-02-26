@@ -12,6 +12,8 @@ const RecruiterAssessment = require("../models/recruiterAssessmentModel");
 const AtsReport = require("../models/atsReportModel");
 const Message = require("../models/messageModel");
 const ConnectionRequest = require("../models/connectionRequestModel");
+const SavedJob = require("../models/savedJobModel");
+const RecommendationHistory = require("../models/recommendationHistoryModel");
 
 const ADMIN_EMAIL = "hirelinknp@gmail.com";
 
@@ -1164,6 +1166,402 @@ exports.getRecruiterDashboardStats = async (req, res, next) => {
           },
         },
         topJobs: topJobsAgg,
+      },
+      dateRange: {
+        from: rangeStart.toISOString(),
+        to: rangeEnd.toISOString(),
+      },
+      recentApplications,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Candidate: dashboard insights
+exports.getCandidateDashboardStats = async (req, res, next) => {
+  try {
+    if (!req.user || String(req.user.role || "").toLowerCase() !== "candidate") {
+      return res.status(403).json({
+        success: false,
+        message: "Only candidates can access this resource",
+      });
+    }
+
+    const candidateId = req.user.id;
+    const candidateObjectId = new mongoose.Types.ObjectId(candidateId);
+
+    const toDateParam = req.query.to ? new Date(req.query.to) : new Date();
+    const fromDateParam = req.query.from ? new Date(req.query.from) : null;
+    const isValidTo = !Number.isNaN(toDateParam.getTime());
+    const inferredToDate = isValidTo ? toDateParam : new Date();
+    const inferredFromDate =
+      fromDateParam && !Number.isNaN(fromDateParam.getTime())
+        ? fromDateParam
+        : new Date(inferredToDate.getTime() - 29 * 24 * 60 * 60 * 1000);
+
+    const rangeStart = new Date(inferredFromDate);
+    rangeStart.setHours(0, 0, 0, 0);
+    const rangeEnd = new Date(inferredToDate);
+    rangeEnd.setHours(23, 59, 59, 999);
+    const dateRangeQuery = { $gte: rangeStart, $lte: rangeEnd };
+    const staleCutoff = new Date(rangeEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const rangeDays = Math.max(
+      1,
+      Math.round((rangeEnd.getTime() - rangeStart.getTime()) / 86400000) + 1,
+    );
+    const labels = Array.from({ length: rangeDays }, (_, i) => {
+      const date = new Date(rangeStart);
+      date.setDate(date.getDate() + i);
+      return date.toISOString().slice(0, 10);
+    });
+
+    const toSeriesMap = (rows, key = "_id") =>
+      rows.reduce((acc, row) => {
+        acc[row[key]] = row.count;
+        return acc;
+      }, {});
+
+    const [
+      totalApplications,
+      applicationsInRange,
+      reviewedInRange,
+      shortlistedInRange,
+      interviewInRange,
+      hiredInRange,
+      rejectedInRange,
+      activePipelineInRange,
+      staleSubmittedCount,
+      savedJobsTotal,
+      savedJobsInRange,
+      recommendationRunsTotal,
+      recommendationRunsInRange,
+      messagesTotal,
+      unreadMessages,
+      pendingConnections,
+      acceptedConnections,
+      attemptsSubmitted,
+      attemptsInProgress,
+      avgQuizScoreAgg,
+      applicationsTrendAgg,
+      savedTrendAgg,
+      recommendationsTrendAgg,
+      applicationStatusAgg,
+      workModeAgg,
+      jobTypeAgg,
+      topAppliedJobsAgg,
+      recentApplicationsRaw,
+      recommendationItemsAgg,
+    ] = await Promise.all([
+      AppliedJob.countDocuments({ candidate: candidateId }),
+      AppliedJob.countDocuments({ candidate: candidateId, createdAt: dateRangeQuery }),
+      AppliedJob.countDocuments({
+        candidate: candidateId,
+        status: "reviewed",
+        createdAt: dateRangeQuery,
+      }),
+      AppliedJob.countDocuments({
+        candidate: candidateId,
+        status: "shortlisted",
+        createdAt: dateRangeQuery,
+      }),
+      AppliedJob.countDocuments({
+        candidate: candidateId,
+        status: "interview",
+        createdAt: dateRangeQuery,
+      }),
+      AppliedJob.countDocuments({
+        candidate: candidateId,
+        status: "hired",
+        createdAt: dateRangeQuery,
+      }),
+      AppliedJob.countDocuments({
+        candidate: candidateId,
+        status: "rejected",
+        createdAt: dateRangeQuery,
+      }),
+      AppliedJob.countDocuments({
+        candidate: candidateId,
+        status: { $in: ["submitted", "reviewed", "shortlisted", "interview"] },
+        createdAt: dateRangeQuery,
+      }),
+      AppliedJob.countDocuments({
+        candidate: candidateId,
+        status: "submitted",
+        createdAt: { $lte: staleCutoff },
+      }),
+      SavedJob.countDocuments({ candidate: candidateId }),
+      SavedJob.countDocuments({ candidate: candidateId, createdAt: dateRangeQuery }),
+      RecommendationHistory.countDocuments({ candidate: candidateId }),
+      RecommendationHistory.countDocuments({ candidate: candidateId, createdAt: dateRangeQuery }),
+      Message.countDocuments({ receiver: candidateId, createdAt: dateRangeQuery }),
+      Message.countDocuments({ receiver: candidateId, readAt: null, createdAt: dateRangeQuery }),
+      ConnectionRequest.countDocuments({
+        recipient: candidateId,
+        status: "pending",
+        createdAt: dateRangeQuery,
+      }),
+      ConnectionRequest.countDocuments({
+        $or: [{ requester: candidateId }, { recipient: candidateId }],
+        status: "accepted",
+        createdAt: dateRangeQuery,
+      }),
+      AssessmentAttempt.countDocuments({
+        candidate: candidateId,
+        status: "submitted",
+        createdAt: dateRangeQuery,
+      }),
+      AssessmentAttempt.countDocuments({
+        candidate: candidateId,
+        status: "in_progress",
+        createdAt: dateRangeQuery,
+      }),
+      AssessmentAttempt.aggregate([
+        {
+          $match: {
+            candidate: candidateObjectId,
+            status: "submitted",
+            assessmentSource: "admin",
+            createdAt: dateRangeQuery,
+          },
+        },
+        { $group: { _id: null, avgScore: { $avg: "$score" } } },
+      ]),
+      AppliedJob.aggregate([
+        { $match: { candidate: candidateObjectId, createdAt: dateRangeQuery } },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      SavedJob.aggregate([
+        { $match: { candidate: candidateObjectId, createdAt: dateRangeQuery } },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      RecommendationHistory.aggregate([
+        { $match: { candidate: candidateObjectId, createdAt: dateRangeQuery } },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      AppliedJob.aggregate([
+        { $match: { candidate: candidateObjectId, createdAt: dateRangeQuery } },
+        {
+          $group: {
+            _id: { $cond: [{ $in: ["$status", [null, ""]] }, "unknown", "$status"] },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]),
+      AppliedJob.aggregate([
+        { $match: { candidate: candidateObjectId, createdAt: dateRangeQuery } },
+        {
+          $lookup: {
+            from: "jobposts",
+            localField: "job",
+            foreignField: "_id",
+            as: "jobInfo",
+          },
+        },
+        {
+          $group: {
+            _id: {
+              $ifNull: [{ $arrayElemAt: ["$jobInfo.workMode", 0] }, "not specified"],
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]),
+      AppliedJob.aggregate([
+        { $match: { candidate: candidateObjectId, createdAt: dateRangeQuery } },
+        {
+          $lookup: {
+            from: "jobposts",
+            localField: "job",
+            foreignField: "_id",
+            as: "jobInfo",
+          },
+        },
+        {
+          $group: {
+            _id: {
+              $ifNull: [{ $arrayElemAt: ["$jobInfo.jobType", 0] }, "not specified"],
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]),
+      AppliedJob.aggregate([
+        { $match: { candidate: candidateObjectId, createdAt: dateRangeQuery } },
+        { $group: { _id: "$job", applicants: { $sum: 1 } } },
+        {
+          $lookup: {
+            from: "jobposts",
+            localField: "_id",
+            foreignField: "_id",
+            as: "jobInfo",
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            jobId: "$_id",
+            title: { $ifNull: [{ $arrayElemAt: ["$jobInfo.jobTitle", 0] }, "Untitled role"] },
+            applicants: 1,
+          },
+        },
+        { $sort: { applicants: -1 } },
+        { $limit: 5 },
+      ]),
+      AppliedJob.find({ candidate: candidateId, createdAt: dateRangeQuery })
+        .select("status createdAt job")
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .populate({ path: "job", select: "jobTitle recruiterId location" })
+        .lean(),
+      RecommendationHistory.aggregate([
+        { $match: { candidate: candidateObjectId, createdAt: dateRangeQuery } },
+        {
+          $project: {
+            count: {
+              $cond: [{ $isArray: "$recommendations" }, { $size: "$recommendations" }, 0],
+            },
+          },
+        },
+        { $group: { _id: null, total: { $sum: "$count" } } },
+      ]),
+    ]);
+
+    const recruiterIds = Array.from(
+      new Set(
+        recentApplicationsRaw
+          .map((item) => item.job?.recruiterId)
+          .filter(Boolean)
+          .map((id) => String(id)),
+      ),
+    );
+
+    const recruiters = recruiterIds.length
+      ? await User.find({ _id: { $in: recruiterIds } })
+          .select("_id fullName")
+          .lean()
+      : [];
+    const recruiterNameMap = recruiters.reduce((acc, user) => {
+      acc[String(user._id)] = user.fullName || "Recruiter";
+      return acc;
+    }, {});
+
+    const recentApplications = recentApplicationsRaw.map((item) => ({
+      id: item._id,
+      jobTitle: item.job?.jobTitle || "Untitled role",
+      location: item.job?.location || "-",
+      companyName: recruiterNameMap[String(item.job?.recruiterId || "")] || "Company",
+      status: item.status || "submitted",
+      appliedAt: item.createdAt,
+    }));
+
+    const applicationsSeriesMap = toSeriesMap(applicationsTrendAgg);
+    const savedSeriesMap = toSeriesMap(savedTrendAgg);
+    const recommendationsSeriesMap = toSeriesMap(recommendationsTrendAgg);
+
+    const recommendationItemsTotalInRange =
+      recommendationItemsAgg.length > 0 ? recommendationItemsAgg[0].total || 0 : 0;
+
+    const respondedInRange =
+      reviewedInRange + shortlistedInRange + interviewInRange + hiredInRange + rejectedInRange;
+    const responseRate = applicationsInRange
+      ? Number(((respondedInRange / applicationsInRange) * 100).toFixed(1))
+      : 0;
+    const interviewRate = applicationsInRange
+      ? Number((((interviewInRange + hiredInRange) / applicationsInRange) * 100).toFixed(1))
+      : 0;
+    const hireRate = applicationsInRange
+      ? Number(((hiredInRange / applicationsInRange) * 100).toFixed(1))
+      : 0;
+
+    return res.status(200).json({
+      success: true,
+      stats: {
+        applications: {
+          total: totalApplications,
+          inRange: applicationsInRange,
+          reviewed: reviewedInRange,
+          shortlisted: shortlistedInRange,
+          interview: interviewInRange,
+          hired: hiredInRange,
+          rejected: rejectedInRange,
+          responded: respondedInRange,
+          activePipeline: activePipelineInRange,
+          staleSubmitted: staleSubmittedCount,
+          rates: {
+            responseRate,
+            interviewRate,
+            hireRate,
+          },
+        },
+        savedJobs: {
+          total: savedJobsTotal,
+          inRange: savedJobsInRange,
+        },
+        recommendations: {
+          totalRuns: recommendationRunsTotal,
+          runsInRange: recommendationRunsInRange,
+          suggestedJobsInRange: recommendationItemsTotalInRange,
+        },
+        assessments: {
+          submitted: attemptsSubmitted,
+          inProgress: attemptsInProgress,
+          avgQuizScore:
+            avgQuizScoreAgg.length > 0
+              ? Number((avgQuizScoreAgg[0].avgScore || 0).toFixed(1))
+              : 0,
+        },
+        messaging: {
+          totalReceived: messagesTotal,
+          unreadReceived: unreadMessages,
+        },
+        connections: {
+          pending: pendingConnections,
+          accepted: acceptedConnections,
+        },
+        trends: {
+          labels,
+          applications: labels.map((label) => applicationsSeriesMap[label] || 0),
+          savedJobs: labels.map((label) => savedSeriesMap[label] || 0),
+          recommendationRuns: labels.map((label) => recommendationsSeriesMap[label] || 0),
+        },
+        distributions: {
+          applicationStatuses: {
+            labels: applicationStatusAgg.map((item) => item._id),
+            values: applicationStatusAgg.map((item) => item.count),
+          },
+          workModes: {
+            labels: workModeAgg.map((item) => item._id),
+            values: workModeAgg.map((item) => item.count),
+          },
+          jobTypes: {
+            labels: jobTypeAgg.map((item) => item._id),
+            values: jobTypeAgg.map((item) => item.count),
+          },
+        },
+        topAppliedJobs: topAppliedJobsAgg,
       },
       dateRange: {
         from: rangeStart.toISOString(),

@@ -343,7 +343,9 @@ const Register = () => {
                   type="text"
                   id="fullName"
                   name="fullName"
-                  placeholder="Full Name"
+                  placeholder={
+                    userType === "recruiter" ? "Company Name" : "Full Name"
+                  }
                   value={formData.fullName}
                   onChange={handleInputChange}
                   required

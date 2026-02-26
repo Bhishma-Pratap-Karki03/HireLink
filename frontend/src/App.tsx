@@ -22,6 +22,7 @@ import AdminProfilePage from "./pages/adminpages/AdminProfilePage";
 import AdminDashboard from "./pages/adminpages/AdminDashboard";
 import NotFoundPage from "./pages/NotFoundPage";
 import HomePage from "./pages/HomePage";
+import AboutUsPage from "./pages/AboutUsPage";
 import EmployersPage from "./pages/EmployersPage";
 import EmployerDetailsPage from "./pages/EmployerDetailsPage";
 import JobListingPage from "./pages/JobListingPage";
@@ -133,6 +134,7 @@ function App() {
         {/* Root route - redirects based on authentication */}
         <Route path="/" element={<RootRedirect />} />
         <Route path="/home" element={<HomePage />} />
+        <Route path="/about-us" element={<AboutUsPage />} />
 
         {/* Public routes - redirect if already authenticated */}
         <Route
@@ -195,6 +197,14 @@ function App() {
           path="/assessments/:assessmentId/attempts/:attemptId"
           element={
             <ProtectedRoute allowedRoles={["candidate"]}>
+              <AssessmentAttemptPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/candidate/:candidateId/assessments/:attemptId"
+          element={
+            <ProtectedRoute allowedRoles={["candidate", "recruiter", "admin"]}>
               <AssessmentAttemptPage />
             </ProtectedRoute>
           }

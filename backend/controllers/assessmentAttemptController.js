@@ -2,6 +2,9 @@ const AdminAssessment = require("../models/adminAssessmentModel");
 const RecruiterAssessment = require("../models/recruiterAssessmentModel");
 const AssessmentAttempt = require("../models/assessmentAttemptModel");
 const User = require("../models/userModel");
+const ConnectionRequest = require("../models/connectionRequestModel");
+const fs = require("fs");
+const path = require("path");
 
 const parseMinutes = (value) => {
   if (!value) return 60;
@@ -39,6 +42,93 @@ const autoSubmitIfExpired = async (attempt, assessment) => {
   attempt.score = score;
   await attempt.save();
   return attempt;
+};
+
+const formatSubmissionSummary = (attempt, assessment) => {
+  const quizTotal =
+    assessment?.type === "quiz" && Array.isArray(assessment.quizQuestions)
+      ? assessment.quizQuestions.length
+      : 0;
+
+  return {
+    attemptId: String(attempt._id),
+    assessmentId: String(attempt.assessment),
+    assessmentSource: attempt.assessmentSource || "admin",
+    title: assessment?.title || "Assessment",
+    type: assessment?.type || "quiz",
+    difficulty: assessment?.difficulty || "",
+    submittedAt: attempt.submittedAt || attempt.updatedAt || attempt.createdAt,
+    attemptNumber: attempt.attemptNumber || 1,
+    score: typeof attempt.score === "number" ? attempt.score : 0,
+    quizTotal,
+  };
+};
+
+const canViewCandidateSubmissions = async (viewerId, candidateId) => {
+  if (!viewerId || !candidateId) return false;
+  if (String(viewerId) === String(candidateId)) return true;
+
+  const viewer = await User.findById(viewerId).select("role").lean();
+  if (!viewer) return false;
+  if (viewer.role === "admin") return true;
+  if (!["candidate", "recruiter"].includes(viewer.role)) return false;
+
+  const link = await ConnectionRequest.findOne({
+    status: "accepted",
+    $or: [
+      { requester: viewerId, recipient: candidateId },
+      { requester: candidateId, recipient: viewerId },
+    ],
+  })
+    .select("_id")
+    .lean();
+
+  return Boolean(link);
+};
+
+const parseArrayField = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string") return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_error) {
+    return [];
+  }
+};
+
+const normalizeAnswerPayload = (raw = {}) => ({
+  quizAnswers: parseArrayField(raw.quizAnswers)
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item)),
+  writingResponse:
+    typeof raw.writingResponse === "string" ? raw.writingResponse : "",
+  writingLink: typeof raw.writingLink === "string" ? raw.writingLink : "",
+  codeResponse: typeof raw.codeResponse === "string" ? raw.codeResponse : "",
+  codeLink: typeof raw.codeLink === "string" ? raw.codeLink : "",
+});
+
+const removeUploadedFileIfExists = (url) => {
+  if (!url || typeof url !== "string" || !url.startsWith("/uploads/")) return;
+  const relativePath = url.replace(/^\/uploads\//, "");
+  const absolutePath = path.join(__dirname, "..", "public", "uploads", relativePath);
+  if (fs.existsSync(absolutePath)) {
+    try {
+      fs.unlinkSync(absolutePath);
+    } catch (_error) {
+      // Do not fail request on cleanup error
+    }
+  }
+};
+
+const mapUploadedCodeFile = (file) => {
+  if (!file?.filename) return null;
+  return {
+    codeFileUrl: `/uploads/assessment-submissions/${file.filename}`,
+    codeFileName: file.originalname || file.filename,
+    codeFileMimeType: file.mimetype || "",
+    codeFileSize: typeof file.size === "number" ? file.size : 0,
+  };
 };
 
 const listAvailableAssessments = async (req, res) => {
@@ -200,6 +290,10 @@ const startAttempt = async (req, res) => {
         writingLink: "",
         codeResponse: "",
         codeLink: "",
+        codeFileUrl: "",
+        codeFileName: "",
+        codeFileMimeType: "",
+        codeFileSize: 0,
       },
     });
 
@@ -269,11 +363,23 @@ const saveAnswers = async (req, res) => {
       });
     }
 
+    const normalizedBody = normalizeAnswerPayload(req.body || {});
+    const uploadedCodeFile = mapUploadedCodeFile(req.file);
+    const previousFileUrl = attempt.answers?.codeFileUrl || "";
+
     attempt.answers = {
       ...attempt.answers,
-      ...req.body,
+      ...normalizedBody,
+      ...(uploadedCodeFile || {}),
     };
+    if (uploadedCodeFile) {
+      attempt.answers.codeResponse = "";
+      attempt.answers.codeLink = "";
+    }
     await attempt.save();
+    if (uploadedCodeFile && previousFileUrl && previousFileUrl !== uploadedCodeFile.codeFileUrl) {
+      removeUploadedFileIfExists(previousFileUrl);
+    }
 
     res.status(200).json({ success: true });
   } catch (error) {
@@ -306,10 +412,30 @@ const submitAttempt = async (req, res) => {
       return res.status(200).json({ success: true, attempt });
     }
 
+    const normalizedBody = normalizeAnswerPayload(req.body || {});
+    const uploadedCodeFile = mapUploadedCodeFile(req.file);
+    const previousFileUrl = attempt.answers?.codeFileUrl || "";
+
     attempt.answers = {
       ...attempt.answers,
-      ...req.body,
+      ...normalizedBody,
+      ...(uploadedCodeFile || {}),
     };
+    if (uploadedCodeFile) {
+      attempt.answers.codeResponse = "";
+      attempt.answers.codeLink = "";
+    }
+
+    if (
+      (assessment.type === "task" || assessment.type === "code") &&
+      assessment.codeSubmission === "file" &&
+      !attempt.answers?.codeFileUrl
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload a file (PDF, DOC, DOCX, or ZIP) before submitting.",
+      });
+    }
 
     attempt.status = "submitted";
     attempt.submittedAt = new Date();
@@ -325,6 +451,9 @@ const submitAttempt = async (req, res) => {
     }
 
     await attempt.save();
+    if (uploadedCodeFile && previousFileUrl && previousFileUrl !== uploadedCodeFile.codeFileUrl) {
+      removeUploadedFileIfExists(previousFileUrl);
+    }
 
     res.status(200).json({ success: true, attempt });
   } catch (error) {
@@ -337,10 +466,236 @@ const submitAttempt = async (req, res) => {
   }
 };
 
+const getMySubmissionHistory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const attempts = await AssessmentAttempt.find({
+      candidate: userId,
+      status: "submitted",
+    })
+      .sort({ submittedAt: -1, createdAt: -1 })
+      .lean();
+
+    const mapped = await Promise.all(
+      attempts.map(async (attempt) => {
+        const assessment = await getAssessmentBySource(attempt);
+        return formatSubmissionSummary(attempt, assessment);
+      }),
+    );
+
+    return res.status(200).json({
+      success: true,
+      submissions: mapped,
+    });
+  } catch (error) {
+    console.error("Get submission history error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error fetching submission history",
+      error: error.message,
+    });
+  }
+};
+
+const getMyShowcaseSubmissions = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId)
+      .select("showcasedAssessmentAttempts")
+      .lean();
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const ids = Array.isArray(user.showcasedAssessmentAttempts)
+      ? user.showcasedAssessmentAttempts.map((id) => String(id))
+      : [];
+
+    return res.status(200).json({
+      success: true,
+      attemptIds: ids.slice(0, 5),
+    });
+  } catch (error) {
+    console.error("Get showcase submissions error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error fetching showcased submissions",
+      error: error.message,
+    });
+  }
+};
+
+const updateMyShowcaseSubmissions = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const attemptIds = Array.isArray(req.body?.attemptIds)
+      ? req.body.attemptIds.map((id) => String(id))
+      : [];
+    const uniqueIds = [...new Set(attemptIds)].slice(0, 5);
+
+    const validAttempts = await AssessmentAttempt.find({
+      _id: { $in: uniqueIds },
+      candidate: userId,
+      status: "submitted",
+    })
+      .select("_id")
+      .lean();
+    const validIdSet = new Set(validAttempts.map((item) => String(item._id)));
+    const filteredIds = uniqueIds.filter((id) => validIdSet.has(id));
+
+    await User.findByIdAndUpdate(userId, {
+      $set: { showcasedAssessmentAttempts: filteredIds },
+    });
+
+    return res.status(200).json({
+      success: true,
+      attemptIds: filteredIds,
+    });
+  } catch (error) {
+    console.error("Update showcase submissions error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error updating showcased submissions",
+      error: error.message,
+    });
+  }
+};
+
+const getCandidateShowcaseSubmissions = async (req, res) => {
+  try {
+    const viewerId = req.user.id;
+    const { candidateId } = req.params;
+
+    const canView = await canViewCandidateSubmissions(viewerId, candidateId);
+    if (!canView) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to view candidate submissions",
+      });
+    }
+
+    const candidate = await User.findById(candidateId)
+      .select("role showcasedAssessmentAttempts")
+      .lean();
+    if (!candidate || candidate.role !== "candidate") {
+      return res.status(404).json({
+        success: false,
+        message: "Candidate not found",
+      });
+    }
+
+    const showcasedIds = Array.isArray(candidate.showcasedAssessmentAttempts)
+      ? candidate.showcasedAssessmentAttempts.map((id) => String(id))
+      : [];
+
+    let attempts = [];
+    if (showcasedIds.length > 0) {
+      attempts = await AssessmentAttempt.find({
+        _id: { $in: showcasedIds },
+        candidate: candidateId,
+        status: "submitted",
+      }).lean();
+    } else {
+      attempts = await AssessmentAttempt.find({
+        candidate: candidateId,
+        status: "submitted",
+      })
+        .sort({ submittedAt: -1, createdAt: -1 })
+        .limit(5)
+        .lean();
+    }
+
+    const orderMap = new Map(showcasedIds.map((id, index) => [id, index]));
+    attempts.sort((a, b) => {
+      const aIndex = orderMap.has(String(a._id))
+        ? orderMap.get(String(a._id))
+        : Number.MAX_SAFE_INTEGER;
+      const bIndex = orderMap.has(String(b._id))
+        ? orderMap.get(String(b._id))
+        : Number.MAX_SAFE_INTEGER;
+      if (aIndex !== bIndex) return aIndex - bIndex;
+      const aTime = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+      const bTime = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    const mapped = await Promise.all(
+      attempts.slice(0, 5).map(async (attempt) => {
+        const assessment = await getAssessmentBySource(attempt);
+        return formatSubmissionSummary(attempt, assessment);
+      }),
+    );
+
+    return res.status(200).json({
+      success: true,
+      submissions: mapped,
+    });
+  } catch (error) {
+    console.error("Get candidate showcase submissions error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error fetching candidate showcased submissions",
+      error: error.message,
+    });
+  }
+};
+
+const getCandidateSubmissionDetail = async (req, res) => {
+  try {
+    const viewerId = req.user.id;
+    const { candidateId, attemptId } = req.params;
+
+    const canView = await canViewCandidateSubmissions(viewerId, candidateId);
+    if (!canView) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to view this submission",
+      });
+    }
+
+    const attempt = await AssessmentAttempt.findOne({
+      _id: attemptId,
+      candidate: candidateId,
+      status: "submitted",
+    }).lean();
+
+    if (!attempt) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Submission not found" });
+    }
+
+    const assessment = await getAssessmentBySource(attempt);
+    if (!assessment) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Assessment not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      attempt,
+      assessment,
+    });
+  } catch (error) {
+    console.error("Get candidate submission detail error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error fetching submission detail",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   listAvailableAssessments,
   startAttempt,
   saveAnswers,
   submitAttempt,
   getAttempt,
+  getMySubmissionHistory,
+  getMyShowcaseSubmissions,
+  updateMyShowcaseSubmissions,
+  getCandidateShowcaseSubmissions,
+  getCandidateSubmissionDetail,
 };

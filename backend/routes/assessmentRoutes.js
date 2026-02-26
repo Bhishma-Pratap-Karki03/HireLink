@@ -1,6 +1,10 @@
 ﻿const express = require("express");
 const router = express.Router();
 const { protect } = require("../middleware/authMiddleware");
+const {
+  submissionUpload,
+  handleSubmissionUploadError,
+} = require("../middleware/assessmentSubmissionUpload");
 const adminAssessmentController = require("../controllers/adminAssessmentController");
 const assessmentAttemptController = require("../controllers/assessmentAttemptController");
 
@@ -22,6 +26,31 @@ router.delete(
   adminAssessmentController.dismissAssessmentAttempt,
 );
 router.get("/available", protect, assessmentAttemptController.listAvailableAssessments);
+router.get(
+  "/my-submissions",
+  protect,
+  assessmentAttemptController.getMySubmissionHistory,
+);
+router.get(
+  "/my-showcase",
+  protect,
+  assessmentAttemptController.getMyShowcaseSubmissions,
+);
+router.put(
+  "/my-showcase",
+  protect,
+  assessmentAttemptController.updateMyShowcaseSubmissions,
+);
+router.get(
+  "/candidate/:candidateId/showcase",
+  protect,
+  assessmentAttemptController.getCandidateShowcaseSubmissions,
+);
+router.get(
+  "/candidate/:candidateId/attempts/:attemptId",
+  protect,
+  assessmentAttemptController.getCandidateSubmissionDetail,
+);
 router.get("/attempts/:attemptId", protect, assessmentAttemptController.getAttempt);
 router.get("/:id", adminAssessmentController.getAssessmentById);
 router.post(
@@ -32,11 +61,15 @@ router.post(
 router.post(
   "/:id/attempts/:attemptId/answers",
   protect,
+  submissionUpload.single("codeFile"),
+  handleSubmissionUploadError,
   assessmentAttemptController.saveAnswers,
 );
 router.post(
   "/:id/attempts/:attemptId/submit",
   protect,
+  submissionUpload.single("codeFile"),
+  handleSubmissionUploadError,
   assessmentAttemptController.submitAttempt,
 );
 router.post("/", protect, adminAssessmentController.createAssessment);

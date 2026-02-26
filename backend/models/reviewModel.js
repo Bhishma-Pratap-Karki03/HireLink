@@ -3,10 +3,25 @@ const mongoose = require("mongoose");
 
 const reviewSchema = new mongoose.Schema(
   {
+    targetType: {
+      type: String,
+      enum: ["company", "project"],
+      default: "company",
+      index: true,
+    },
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
+    },
+    candidateId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
+    },
+    projectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: false,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -71,12 +86,20 @@ const reviewSchema = new mongoose.Schema(
   },
 );
 
-// Create a compound index to prevent multiple reviews from same user for same company
-reviewSchema.index({ companyId: 1, userId: 1 }, { unique: true });
+// Prevent duplicate review per user per company/project
+reviewSchema.index(
+  { targetType: 1, companyId: 1, userId: 1 },
+  { unique: true, partialFilterExpression: { targetType: "company" } },
+);
+reviewSchema.index(
+  { targetType: 1, projectId: 1, userId: 1 },
+  { unique: true, partialFilterExpression: { targetType: "project" } },
+);
 
 // Create a compound index for efficient queries
-reviewSchema.index({ companyId: 1, isApproved: 1, createdAt: -1 });
-reviewSchema.index({ companyId: 1, status: 1, createdAt: -1 });
+reviewSchema.index({ targetType: 1, companyId: 1, isApproved: 1, createdAt: -1 });
+reviewSchema.index({ targetType: 1, companyId: 1, status: 1, createdAt: -1 });
+reviewSchema.index({ targetType: 1, projectId: 1, status: 1, createdAt: -1 });
 
 const Review = mongoose.model("Review", reviewSchema);
 

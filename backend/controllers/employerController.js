@@ -50,6 +50,13 @@ exports.getRecruiterById = async (req, res, next) => {
       });
     }
 
+    if (error.statusCode === 403) {
+      return res.status(403).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
     // Handle any unexpected errors
     res.status(500).json({
       success: false,

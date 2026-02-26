@@ -4,7 +4,7 @@
   --hl-select-bg: #ffffff;
   --hl-select-border: #d7e0ef;
   --hl-select-text: #1f2a3a;
-  --hl-select-focus: #7c5cff;
+  --hl-select-focus: #0068ce;
 }
 
 select {
@@ -31,6 +31,24 @@ select:focus {
 select:disabled {
   color: #9aa4b2;
   background-color: #f4f6fb;
+}
+
+/* Best-effort popup list styling for native selects (browser-limited) */
+select option {
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+  color: var(--hl-select-text);
+  background: #ffffff;
+}
+
+select option:disabled {
+  color: #9aa4b2;
+  background: #f4f6fb;
+}
+
+select optgroup {
+  font-family: "Montserrat", sans-serif;
+  color: #47617f;
 }
 
 /* Apply confirmation modal */

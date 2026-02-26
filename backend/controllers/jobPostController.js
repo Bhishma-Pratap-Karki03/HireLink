@@ -275,6 +275,190 @@ const listJobPosts = async (req, res) => {
   }
 };
 
+const getJobCategoriesSummary = async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 7, 1), 20);
+
+    const summary = await JobPost.aggregate([
+      {
+        $match: {
+          isActive: true,
+          status: "published",
+        },
+      },
+      {
+        $project: {
+          titleName: {
+            $trim: {
+              input: {
+                $ifNull: ["$jobTitle", "$department"],
+              },
+            },
+          },
+        },
+      },
+      {
+        $match: {
+          titleName: { $ne: "" },
+        },
+      },
+      {
+        $group: {
+          _id: { $toLower: "$titleName" },
+          name: { $first: "$titleName" },
+          vacancies: { $sum: 1 },
+        },
+      },
+      {
+        $sort: {
+          vacancies: -1,
+          name: 1,
+        },
+      },
+      {
+        $facet: {
+          topCategories: [{ $limit: limit }],
+          totals: [
+            {
+              $group: {
+                _id: null,
+                totalVacancies: { $sum: "$vacancies" },
+                totalTitles: { $sum: 1 },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const topCategories = (summary?.[0]?.topCategories || []).map((item) => ({
+      name: item.name,
+      vacancies: item.vacancies || 0,
+    }));
+    const totals = summary?.[0]?.totals?.[0] || {
+      totalVacancies: 0,
+      totalTitles: 0,
+    };
+
+    return res.status(200).json({
+      success: true,
+      categories: topCategories,
+      totalVacancies: totals.totalVacancies || 0,
+      totalCategories: totals.totalTitles || 0,
+    });
+  } catch (error) {
+    console.error("Get job categories summary error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error fetching category summary",
+      error: error.message,
+    });
+  }
+};
+
+const getCompanyVacancySummary = async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 7, 1), 20);
+
+    const summary = await JobPost.aggregate([
+      {
+        $match: {
+          isActive: true,
+          status: "published",
+        },
+      },
+      {
+        $project: {
+          recruiterId: 1,
+          openingsNumber: {
+            $convert: {
+              input: "$openings",
+              to: "int",
+              onError: 1,
+              onNull: 1,
+            },
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$recruiterId",
+          vacancies: { $sum: "$openingsNumber" },
+          jobsCount: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "recruiter",
+        },
+      },
+      {
+        $unwind: {
+          path: "$recruiter",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          companyName: { $ifNull: ["$recruiter.fullName", "Company"] },
+          companyLogo: { $ifNull: ["$recruiter.profilePicture", ""] },
+        },
+      },
+      {
+        $sort: {
+          vacancies: -1,
+          jobsCount: -1,
+          companyName: 1,
+        },
+      },
+      {
+        $facet: {
+          topCompanies: [{ $limit: limit }],
+          totals: [
+            {
+              $group: {
+                _id: null,
+                totalVacancies: { $sum: "$vacancies" },
+                totalCompanies: { $sum: 1 },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const companies = (summary?.[0]?.topCompanies || []).map((item) => ({
+      companyId: item._id,
+      name: item.companyName || "Company",
+      logo: item.companyLogo || "",
+      vacancies: item.vacancies || 0,
+      jobsCount: item.jobsCount || 0,
+    }));
+
+    const totals = summary?.[0]?.totals?.[0] || {
+      totalVacancies: 0,
+      totalCompanies: 0,
+    };
+
+    return res.status(200).json({
+      success: true,
+      companies,
+      totalVacancies: totals.totalVacancies || 0,
+      totalCompanies: totals.totalCompanies || 0,
+    });
+  } catch (error) {
+    console.error("Get company vacancy summary error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error fetching company vacancy summary",
+      error: error.message,
+    });
+  }
+};
+
 const listRecruiterJobPosts = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -721,6 +905,8 @@ const updateJobStatusByAdmin = async (req, res) => {
 module.exports = {
   createJobPost,
   listJobPosts,
+  getJobCategoriesSummary,
+  getCompanyVacancySummary,
   getJobPostById,
   listRecruiterJobPosts,
   updateJobPost,

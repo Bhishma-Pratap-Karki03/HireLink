@@ -1,4 +1,4 @@
-import React, { FormEvent, useEffect, useMemo, useState } from "react";
+import React, { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminSidebar from "../../components/admincomponents/AdminSidebar";
 import AdminTopBar from "../../components/admincomponents/AdminTopBar";
@@ -10,6 +10,7 @@ import statsTotalUsersIcon from "../../images/Candidate Profile Page Images/stat
 import statsAppliedIcon from "../../images/Candidate Profile Page Images/stats-applied-icon.svg";
 import statsRejectedIcon from "../../images/Candidate Profile Page Images/stats-reject.svg";
 import statsCandidatesIcon from "../../images/Candidate Profile Page Images/statsCandidatesIcon.png";
+import dropdownArrow from "../../images/Register Page Images/1_2307.svg";
 
 type AssessmentItem = {
   id: string;
@@ -34,6 +35,10 @@ const AdminAssessmentsPage: React.FC = () => {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [isTypeOpen, setIsTypeOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const typeDropdownRef = useRef<HTMLDivElement | null>(null);
+  const statusDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const fetchAssessments = async () => {
     try {
@@ -102,6 +107,26 @@ const AdminAssessmentsPage: React.FC = () => {
 
   useEffect(() => {
     fetchAssessments();
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        typeDropdownRef.current &&
+        !typeDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsTypeOpen(false);
+      }
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsStatusOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
   const filteredAssessments = useMemo(() => {
@@ -214,24 +239,120 @@ const AdminAssessmentsPage: React.FC = () => {
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
                 />
-                <select
-                  value={typeFilter}
-                  onChange={(event) => setTypeFilter(event.target.value)}
+                <div
+                  className="admin-assessments-filter-dropdown"
+                  ref={typeDropdownRef}
                 >
-                  <option value="all">All Type</option>
-                  <option value="quiz">Quiz</option>
-                  <option value="writing">Writing</option>
-                  <option value="task">Task</option>
-                  <option value="code">Code</option>
-                </select>
-                <select
-                  value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value)}
+                  <button
+                    type="button"
+                    className={`admin-assessments-filter-trigger ${
+                      isTypeOpen ? "open" : ""
+                    }`}
+                    onClick={() => {
+                      setIsTypeOpen((prev) => !prev);
+                      setIsStatusOpen(false);
+                    }}
+                  >
+                    <span>
+                      {typeFilter === "quiz"
+                        ? "Quiz"
+                        : typeFilter === "writing"
+                          ? "Writing"
+                          : typeFilter === "task"
+                            ? "Task"
+                            : typeFilter === "code"
+                              ? "Code"
+                              : "All Type"}
+                    </span>
+                    <img
+                      src={dropdownArrow}
+                      alt=""
+                      aria-hidden="true"
+                      className={`admin-assessments-filter-caret ${
+                        isTypeOpen ? "open" : ""
+                      }`}
+                    />
+                  </button>
+                  {isTypeOpen && (
+                    <div className="admin-assessments-filter-menu" role="listbox">
+                      {[
+                        { value: "all", label: "All Type" },
+                        { value: "quiz", label: "Quiz" },
+                        { value: "writing", label: "Writing" },
+                        { value: "task", label: "Task" },
+                        { value: "code", label: "Code" },
+                      ].map((item) => (
+                        <button
+                          key={item.value}
+                          type="button"
+                          className={`admin-assessments-filter-option ${
+                            typeFilter === item.value ? "active" : ""
+                          }`}
+                          onClick={() => {
+                            setTypeFilter(item.value);
+                            setIsTypeOpen(false);
+                          }}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div
+                  className="admin-assessments-filter-dropdown"
+                  ref={statusDropdownRef}
                 >
-                  <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
+                  <button
+                    type="button"
+                    className={`admin-assessments-filter-trigger ${
+                      isStatusOpen ? "open" : ""
+                    }`}
+                    onClick={() => {
+                      setIsStatusOpen((prev) => !prev);
+                      setIsTypeOpen(false);
+                    }}
+                  >
+                    <span>
+                      {statusFilter === "active"
+                        ? "Active"
+                        : statusFilter === "inactive"
+                          ? "Inactive"
+                          : "All Status"}
+                    </span>
+                    <img
+                      src={dropdownArrow}
+                      alt=""
+                      aria-hidden="true"
+                      className={`admin-assessments-filter-caret ${
+                        isStatusOpen ? "open" : ""
+                      }`}
+                    />
+                  </button>
+                  {isStatusOpen && (
+                    <div className="admin-assessments-filter-menu" role="listbox">
+                      {[
+                        { value: "all", label: "All Status" },
+                        { value: "active", label: "Active" },
+                        { value: "inactive", label: "Inactive" },
+                      ].map((item) => (
+                        <button
+                          key={item.value}
+                          type="button"
+                          className={`admin-assessments-filter-option ${
+                            statusFilter === item.value ? "active" : ""
+                          }`}
+                          onClick={() => {
+                            setStatusFilter(item.value);
+                            setIsStatusOpen(false);
+                          }}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button type="submit">Search</button>
               </form>
 

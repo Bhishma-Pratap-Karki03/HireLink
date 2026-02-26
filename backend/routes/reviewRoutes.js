@@ -6,6 +6,15 @@ const reviewController = require("../controllers/reviewController");
 
 // Public routes
 router.get("/company/:companyId", reviewController.getCompanyReviews);
+router.get(
+  "/project/:candidateId/:projectId",
+  reviewController.getProjectReviews,
+);
+router.get(
+  "/project/:candidateId/:projectId/manage",
+  protect,
+  reviewController.getProjectReviewsForCandidate,
+);
 
 // Protected routes for candidates/users
 router.post("/company/:companyId", protect, reviewController.submitReview);
@@ -13,6 +22,16 @@ router.get(
   "/company/:companyId/my-review",
   protect,
   reviewController.getMyReview,
+);
+router.post(
+  "/project/:candidateId/:projectId",
+  protect,
+  reviewController.submitProjectReview,
+);
+router.get(
+  "/project/:candidateId/:projectId/my-review",
+  protect,
+  reviewController.getMyProjectReview,
 );
 router.put("/:reviewId", protect, reviewController.updateReview);
 router.delete("/:reviewId", protect, reviewController.deleteReview);

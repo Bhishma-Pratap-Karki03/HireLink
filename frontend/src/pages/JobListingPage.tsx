@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -34,6 +34,7 @@ import brandAvaya from "../images/Job List Page Images/brand-avaya.svg";
 import brandAvis from "../images/Job List Page Images/brand-avis.svg";
 import brandNielsen from "../images/Job List Page Images/brand-nielsen.svg";
 import brandDoordash from "../images/Job List Page Images/brand-doordash.svg";
+import dropdownArrow from "../images/Register Page Images/1_2307.svg";
 
 type JobCard = {
   id: string;
@@ -72,6 +73,7 @@ const JobListingPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState("newest");
+  const [isSortOpen, setIsSortOpen] = useState(false);
   const [jobCards, setJobCards] = useState<JobCard[]>([]);
   const [totalJobs, setTotalJobs] = useState(0);
   const [page, setPage] = useState(1);
@@ -119,6 +121,7 @@ const JobListingPage = () => {
   const [filterEducation, setFilterEducation] = useState("");
   const [filterSkills, setFilterSkills] = useState("");
   const [filterCurrency, setFilterCurrency] = useState("");
+  const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
   const [filterSalaryFrom, setFilterSalaryFrom] = useState("");
   const [filterSalaryTo, setFilterSalaryTo] = useState("");
   const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>({
@@ -151,6 +154,8 @@ const JobListingPage = () => {
   const [savedJobs, setSavedJobs] = useState<Record<string, boolean>>({});
   const [confirmRequirements, setConfirmRequirements] = useState(false);
   const [confirmResume, setConfirmResume] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement | null>(null);
+  const currencyDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
@@ -482,6 +487,37 @@ const JobListingPage = () => {
     }));
     setPage(1);
   }, [searchParams]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        sortDropdownRef.current &&
+        !sortDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsSortOpen(false);
+      }
+      if (
+        currencyDropdownRef.current &&
+        !currencyDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsCurrencyOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  const selectedCurrencyLabel =
+    filterCurrency === "NPR"
+      ? "NPR (Rs.)"
+      : filterCurrency === "INR"
+        ? "INR (Rs.)"
+        : filterCurrency === "USD"
+          ? "USD ($)"
+          : filterCurrency === "GBP"
+            ? "GBP (GBP)"
+            : "Select currency";
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -1212,20 +1248,77 @@ const JobListingPage = () => {
               </div>
               {expandedSections.salaryRange && (
                 <div className="joblist-salary-range">
-                  <div className="joblist-input-row">
+                  <div className="joblist-input-row joblist-currency-dropdown" ref={currencyDropdownRef}>
                     <img src={images.salaryIcon} alt="Currency" />
-                    <select
-                      value={filterCurrency}
-                      onChange={(e) => setFilterCurrency(e.target.value)}
+                    <button
+                      type="button"
+                      className={`joblist-currency-trigger ${isCurrencyOpen ? "open" : ""}`}
+                      onClick={() => setIsCurrencyOpen((prev) => !prev)}
+                      aria-haspopup="listbox"
+                      aria-expanded={isCurrencyOpen}
                     >
-                      <option value="" disabled>
-                        Select currency
-                      </option>
-                      <option value="NPR">NPR (Rs.)</option>
-                      <option value="INR">INR (₹)</option>
-                      <option value="USD">USD ($)</option>
-                      <option value="GBP">GBP (£)</option>
-                    </select>
+                      <span>{selectedCurrencyLabel}</span>
+                      <img
+                        src={dropdownArrow}
+                        alt=""
+                        aria-hidden="true"
+                        className={`joblist-currency-caret ${isCurrencyOpen ? "open" : ""}`}
+                      />
+                    </button>
+                    {isCurrencyOpen && (
+                      <div className="joblist-currency-menu" role="listbox">
+                        <button
+                          type="button"
+                          className={`joblist-currency-option ${filterCurrency === "" ? "active" : ""}`}
+                          onClick={() => {
+                            setFilterCurrency("");
+                            setIsCurrencyOpen(false);
+                          }}
+                        >
+                          Select currency
+                        </button>
+                        <button
+                          type="button"
+                          className={`joblist-currency-option ${filterCurrency === "NPR" ? "active" : ""}`}
+                          onClick={() => {
+                            setFilterCurrency("NPR");
+                            setIsCurrencyOpen(false);
+                          }}
+                        >
+                          NPR (Rs.)
+                        </button>
+                        <button
+                          type="button"
+                          className={`joblist-currency-option ${filterCurrency === "INR" ? "active" : ""}`}
+                          onClick={() => {
+                            setFilterCurrency("INR");
+                            setIsCurrencyOpen(false);
+                          }}
+                        >
+                          INR (Rs.)
+                        </button>
+                        <button
+                          type="button"
+                          className={`joblist-currency-option ${filterCurrency === "USD" ? "active" : ""}`}
+                          onClick={() => {
+                            setFilterCurrency("USD");
+                            setIsCurrencyOpen(false);
+                          }}
+                        >
+                          USD ($)
+                        </button>
+                        <button
+                          type="button"
+                          className={`joblist-currency-option ${filterCurrency === "GBP" ? "active" : ""}`}
+                          onClick={() => {
+                            setFilterCurrency("GBP");
+                            setIsCurrencyOpen(false);
+                          }}
+                        >
+                          GBP (GBP)
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div className="joblist-salary-inputs">
                     <input
@@ -1272,20 +1365,68 @@ const JobListingPage = () => {
                   ? "Loading jobs..."
                   : `Showing ${startIndex}-${endIndex} of ${totalJobs} jobs`}
               </span>
-              <div className="joblist-sort">
+              <div className="joblist-sort" ref={sortDropdownRef}>
                 <span>Sort by:</span>
-                <select
-                  className="joblist-sort-select"
-                  value={sortBy}
-                  onChange={(e) => {
-                    setSortBy(e.target.value);
-                    setPage(1);
-                  }}
+                <button
+                  type="button"
+                  className={`joblist-sort-select joblist-sort-trigger ${
+                    isSortOpen ? "open" : ""
+                  }`}
+                  onClick={() => setIsSortOpen((prev) => !prev)}
+                  aria-haspopup="listbox"
+                  aria-expanded={isSortOpen}
                 >
-                  <option value="newest">Newest Post</option>
-                  <option value="oldest">Oldest Post</option>
-                  <option value="salary">Salary</option>
-                </select>
+                  <span>
+                    {sortBy === "oldest"
+                      ? "Oldest Post"
+                      : sortBy === "salary"
+                        ? "Salary"
+                        : "Newest Post"}
+                  </span>
+                  <img
+                    src={dropdownArrow}
+                    alt=""
+                    aria-hidden="true"
+                    className={`joblist-sort-caret ${isSortOpen ? "open" : ""}`}
+                  />
+                </button>
+                {isSortOpen && (
+                  <div className="joblist-sort-menu" role="listbox">
+                    <button
+                      type="button"
+                      className={`joblist-sort-option ${sortBy === "newest" ? "active" : ""}`}
+                      onClick={() => {
+                        setSortBy("newest");
+                        setPage(1);
+                        setIsSortOpen(false);
+                      }}
+                    >
+                      Newest Post
+                    </button>
+                    <button
+                      type="button"
+                      className={`joblist-sort-option ${sortBy === "oldest" ? "active" : ""}`}
+                      onClick={() => {
+                        setSortBy("oldest");
+                        setPage(1);
+                        setIsSortOpen(false);
+                      }}
+                    >
+                      Oldest Post
+                    </button>
+                    <button
+                      type="button"
+                      className={`joblist-sort-option ${sortBy === "salary" ? "active" : ""}`}
+                      onClick={() => {
+                        setSortBy("salary");
+                        setPage(1);
+                        setIsSortOpen(false);
+                      }}
+                    >
+                      Salary
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1463,5 +1604,7 @@ const JobListingPage = () => {
 };
 
 export default JobListingPage;
+
+
 
 

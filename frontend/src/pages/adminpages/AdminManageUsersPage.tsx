@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminSidebar from "../../components/admincomponents/AdminSidebar";
 import AdminTopBar from "../../components/admincomponents/AdminTopBar";
@@ -8,6 +8,7 @@ import statsTotalUsersIcon from "../../images/Candidate Profile Page Images/stat
 import statsCandidatesIcon from "../../images/Candidate Profile Page Images/statsCandidatesIcon.png";
 import statsRecruitersIcon from "../../images/Candidate Profile Page Images/statsRecruitersIcon.png";
 import statsBlockedIcon from "../../images/Candidate Profile Page Images/stats-reject.svg";
+import dropdownArrow from "../../images/Register Page Images/1_2307.svg";
 
 type AdminUserItem = {
   _id: string;
@@ -29,6 +30,10 @@ const AdminManageUsersPage = () => {
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [actingUserId, setActingUserId] = useState("");
+  const [isRoleOpen, setIsRoleOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const roleDropdownRef = useRef<HTMLDivElement | null>(null);
+  const statusDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const token = localStorage.getItem("authToken") || "";
 
@@ -66,6 +71,26 @@ const AdminManageUsersPage = () => {
   useEffect(() => {
     fetchUsers();
   }, [roleFilter, statusFilter]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        roleDropdownRef.current &&
+        !roleDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsRoleOpen(false);
+      }
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsStatusOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   const onSearchSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -224,22 +249,114 @@ const AdminManageUsersPage = () => {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
-              <select
-                value={roleFilter}
-                onChange={(event) => setRoleFilter(event.target.value)}
+              <div
+                className="admin-manage-filter-dropdown"
+                ref={roleDropdownRef}
               >
-                <option value="all">All Roles</option>
-                <option value="candidate">Candidate</option>
-                <option value="recruiter">Recruiter</option>
-              </select>
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
+                <button
+                  type="button"
+                  className={`admin-manage-filter-trigger ${
+                    isRoleOpen ? "open" : ""
+                  }`}
+                  onClick={() => {
+                    setIsRoleOpen((prev) => !prev);
+                    setIsStatusOpen(false);
+                  }}
+                >
+                  <span>
+                    {roleFilter === "candidate"
+                      ? "Candidate"
+                      : roleFilter === "recruiter"
+                        ? "Recruiter"
+                        : "All Roles"}
+                  </span>
+                  <img
+                    src={dropdownArrow}
+                    alt=""
+                    aria-hidden="true"
+                    className={`admin-manage-filter-caret ${
+                      isRoleOpen ? "open" : ""
+                    }`}
+                  />
+                </button>
+                {isRoleOpen && (
+                  <div className="admin-manage-filter-menu" role="listbox">
+                    {[
+                      { value: "all", label: "All Roles" },
+                      { value: "candidate", label: "Candidate" },
+                      { value: "recruiter", label: "Recruiter" },
+                    ].map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        className={`admin-manage-filter-option ${
+                          roleFilter === item.value ? "active" : ""
+                        }`}
+                        onClick={() => {
+                          setRoleFilter(item.value);
+                          setIsRoleOpen(false);
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div
+                className="admin-manage-filter-dropdown"
+                ref={statusDropdownRef}
               >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="blocked">Blocked</option>
-              </select>
+                <button
+                  type="button"
+                  className={`admin-manage-filter-trigger ${
+                    isStatusOpen ? "open" : ""
+                  }`}
+                  onClick={() => {
+                    setIsStatusOpen((prev) => !prev);
+                    setIsRoleOpen(false);
+                  }}
+                >
+                  <span>
+                    {statusFilter === "active"
+                      ? "Active"
+                      : statusFilter === "blocked"
+                        ? "Blocked"
+                        : "All Status"}
+                  </span>
+                  <img
+                    src={dropdownArrow}
+                    alt=""
+                    aria-hidden="true"
+                    className={`admin-manage-filter-caret ${
+                      isStatusOpen ? "open" : ""
+                    }`}
+                  />
+                </button>
+                {isStatusOpen && (
+                  <div className="admin-manage-filter-menu" role="listbox">
+                    {[
+                      { value: "all", label: "All Status" },
+                      { value: "active", label: "Active" },
+                      { value: "blocked", label: "Blocked" },
+                    ].map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        className={`admin-manage-filter-option ${
+                          statusFilter === item.value ? "active" : ""
+                        }`}
+                        onClick={() => {
+                          setStatusFilter(item.value);
+                          setIsStatusOpen(false);
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button type="submit">Search</button>
             </form>
 

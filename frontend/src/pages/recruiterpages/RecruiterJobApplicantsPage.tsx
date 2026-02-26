@@ -101,6 +101,7 @@ const RecruiterJobApplicantsPage = () => {
   const [scanMessage, setScanMessage] = useState("");
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
   const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const openApplicantOverlay = (report: ReportItem) => {
     setSelectedReport(report);
@@ -236,6 +237,24 @@ const RecruiterJobApplicantsPage = () => {
         } as ReportItem),
     }));
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredRankedApplications = rankedApplications.filter(
+    ({ application, report }) => {
+      if (!normalizedQuery) return true;
+      const fullName = (
+        report.candidate?.fullName ||
+        application.candidate?.fullName ||
+        ""
+      ).toLowerCase();
+      const email = (
+        report.candidate?.email ||
+        application.candidate?.email ||
+        ""
+      ).toLowerCase();
+      return fullName.includes(normalizedQuery) || email.includes(normalizedQuery);
+    },
+  );
+
   const selectedApplication = selectedReport
     ? applications.find((application) => application.id === getApplicationId(selectedReport))
     : undefined;
@@ -244,7 +263,11 @@ const RecruiterJobApplicantsPage = () => {
     <div className="recruiter-applicants-layout">
       <RecruiterSidebar />
       <main className="recruiter-applicants-main">
-        <RecruiterTopBar />
+        <RecruiterTopBar
+          showSearch
+          searchPlaceholder="Search applicants by name or email..."
+          onSearch={setSearchQuery}
+        />
         <div className="recruiter-applicants-content">
           <div className="recruiter-applicants-header">
             <div>
@@ -278,8 +301,14 @@ const RecruiterJobApplicantsPage = () => {
             <div className="recruiter-applicants-state">No applicants for this job yet.</div>
           )}
 
+          {!loading && !error && applications.length > 0 && filteredRankedApplications.length === 0 && (
+            <div className="recruiter-applicants-state">
+              No applicants match "{searchQuery}".
+            </div>
+          )}
+
           <div className="recruiter-applicants-list">
-            {rankedApplications.map(({ application, report, rank }) => {
+            {filteredRankedApplications.map(({ application, report, rank }) => {
               const candidateId =
                 getCandidateId(report.candidate) || getCandidateId(application.candidate);
               return (

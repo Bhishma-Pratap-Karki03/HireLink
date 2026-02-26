@@ -404,8 +404,14 @@ exports.getApplicationsByJob = async (req, res) => {
               : null,
           writingResponse: answers.writingResponse || "",
           writingLink: answers.writingLink || "",
+          codeSubmission: assessmentDetails?.codeSubmission || "",
           codeResponse: answers.codeResponse || "",
           codeLink: answers.codeLink || "",
+          codeFileUrl: answers.codeFileUrl || "",
+          codeFileName: answers.codeFileName || "",
+          codeFileMimeType: answers.codeFileMimeType || "",
+          codeFileSize:
+            typeof answers.codeFileSize === "number" ? answers.codeFileSize : 0,
         },
       };
     });
@@ -751,10 +757,16 @@ exports.getApplicationAssessmentById = async (req, res) => {
         writingFormat: assessment.writingFormat || "",
         writingResponse: answers.writingResponse || "",
         writingLink: answers.writingLink || "",
+        codeSubmission: assessment.codeSubmission || "",
         codeProblem: assessment.codeProblem || "",
         codeEvaluation: assessment.codeEvaluation || "",
         codeResponse: answers.codeResponse || "",
         codeLink: answers.codeLink || "",
+        codeFileUrl: answers.codeFileUrl || "",
+        codeFileName: answers.codeFileName || "",
+        codeFileMimeType: answers.codeFileMimeType || "",
+        codeFileSize:
+          typeof answers.codeFileSize === "number" ? answers.codeFileSize : 0,
       },
     });
   } catch (error) {

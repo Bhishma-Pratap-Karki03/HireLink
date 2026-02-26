@@ -85,7 +85,6 @@ interface Review {
   id: string;
   rating: number;
   text: string;
-  title: string;
   reviewerName: string;
   reviewerLocation: string;
   reviewerRole: string;
@@ -98,6 +97,7 @@ type MutualConnection = {
   id: string;
   fullName: string;
   profilePicture?: string;
+  role?: string;
 };
 
 const EmployerDetailsPage = () => {
@@ -108,11 +108,12 @@ const EmployerDetailsPage = () => {
   const [company, setCompany] = useState<CompanyDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPrivateProfile, setIsPrivateProfile] = useState(false);
+  const [privateNotice, setPrivateNotice] = useState("");
   const [isSaved, setIsSaved] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [newReview, setNewReview] = useState({
     rating: 0,
-    title: "",
     description: "",
   });
   const [hoveredRating, setHoveredRating] = useState(0);
@@ -159,6 +160,8 @@ const EmployerDetailsPage = () => {
     try {
       setLoading(true);
       setError(null);
+      setIsPrivateProfile(false);
+      setPrivateNotice("");
 
       const response = await fetch(
         `http://localhost:5000/api/employers/${id}`,
@@ -180,6 +183,42 @@ const EmployerDetailsPage = () => {
       } else {
         if (response.status === 404) {
           setError("Company not found");
+        } else if (response.status === 403) {
+          const data = await response.json();
+          setIsPrivateProfile(true);
+          setPrivateNotice(
+            data?.message ||
+              "This employer profile is private. Details are not available.",
+          );
+          setError(null);
+
+          // Keep hero card visible by loading basic employer listing data.
+          const listResponse = await fetch("http://localhost:5000/api/employers");
+          const listData = await listResponse.json();
+
+          if (listResponse.ok && Array.isArray(listData?.recruiters)) {
+            const matched = listData.recruiters.find(
+              (item: any) => String(item?.id || "") === String(id),
+            );
+
+            if (matched) {
+              setCompany({
+                id: matched.id,
+                name: matched.name || "Company",
+                logo: matched.logo || "",
+                location: matched.location || "Location not specified",
+                email: matched.email || "",
+                companySize: matched.companySize || "",
+                foundedYear: matched.foundedYear || "",
+                websiteUrl: matched.websiteUrl || "",
+                about: "",
+                workspaceImages: [],
+                linkedinUrl: "",
+                instagramUrl: "",
+                facebookUrl: "",
+              });
+            }
+          }
         } else {
           setError("Failed to fetch company details");
         }
@@ -252,7 +291,6 @@ const EmployerDetailsPage = () => {
           // Pre-fill the review form with existing review
           setNewReview({
             rating: data.review.rating,
-            title: data.review.title,
             description: data.review.text,
           });
         } else {
@@ -314,10 +352,10 @@ const EmployerDetailsPage = () => {
   }, [id, isReviewSubmitted]);
 
   useEffect(() => {
-    if (company?.name) {
+    if (company?.name && !isPrivateProfile) {
       fetchCompanyJobs();
     }
-  }, [company?.name]);
+  }, [company?.name, isPrivateProfile]);
 
   const formatWorkMode = (mode?: string) => {
     if (!mode) return "Remote";
@@ -557,7 +595,6 @@ const EmployerDetailsPage = () => {
           },
           body: JSON.stringify({
             rating: newReview.rating,
-            title: newReview.title, // Optional title
             description: newReview.description,
           }),
         },
@@ -567,7 +604,7 @@ const EmployerDetailsPage = () => {
 
       if (response.ok) {
         // Clear form and close it
-        setNewReview({ rating: 0, title: "", description: "" });
+        setNewReview({ rating: 0, description: "" });
         setShowReviewForm(false);
         setIsReviewSubmitted(!isReviewSubmitted); // Trigger re-fetch
         setExistingReview(data.review); // Set the existing review
@@ -642,7 +679,6 @@ const EmployerDetailsPage = () => {
           },
           body: JSON.stringify({
             rating: newReview.rating,
-            title: newReview.title,
             description: newReview.description,
           }),
         },
@@ -652,7 +688,7 @@ const EmployerDetailsPage = () => {
 
       if (response.ok) {
         // Clear form and close it
-        setNewReview({ rating: 0, title: "", description: "" });
+        setNewReview({ rating: 0, description: "" });
         setShowReviewForm(false);
         setIsReviewSubmitted(!isReviewSubmitted); // Trigger re-fetch
         setExistingReview(data.review); // Update existing review
@@ -710,7 +746,7 @@ const EmployerDetailsPage = () => {
 
       if (response.ok) {
         // Clear form and close it
-        setNewReview({ rating: 0, title: "", description: "" });
+        setNewReview({ rating: 0, description: "" });
         setShowReviewForm(false);
         setExistingReview(null);
         setIsReviewSubmitted(!isReviewSubmitted); // Trigger re-fetch
@@ -850,12 +886,11 @@ const EmployerDetailsPage = () => {
       // Pre-fill with existing review
       setNewReview({
         rating: existingReview.rating,
-        title: existingReview.title,
         description: existingReview.text,
       });
     } else {
       // Clear form for new review
-      setNewReview({ rating: 0, title: "", description: "" });
+      setNewReview({ rating: 0, description: "" });
     }
     setShowReviewForm(true);
   };
@@ -961,6 +996,11 @@ const EmployerDetailsPage = () => {
                                 src={resolveProfileImage(item.profilePicture)}
                                 alt={item.fullName}
                                 title={item.fullName}
+                                className={
+                                  item.role === "recruiter"
+                                    ? "employer-details-mutual-logo"
+                                    : ""
+                                }
                                 onError={handleImageError}
                               />
                             ))}
@@ -999,7 +1039,7 @@ const EmployerDetailsPage = () => {
           )}
 
           {/* Error State */}
-          {error && !loading && (
+          {error && !loading && !isPrivateProfile && (
             <div className="employer-details-error">
               <p>{error}</p>
               <button
@@ -1012,7 +1052,7 @@ const EmployerDetailsPage = () => {
           )}
 
           {/* Company Content */}
-          {!loading && !error && company && (
+          {!loading && !error && company && !isPrivateProfile && (
             <div className="employer-details-content-grid">
               {/* Left Column */}
               <div className="employer-details-content-left">
@@ -1265,22 +1305,6 @@ const EmployerDetailsPage = () => {
                                     of 5
                                   </span>
                                 </div>
-                              </div>
-
-                              <div className="employer-details-form-group">
-                                <label>Review Title (Optional)</label>
-                                <input
-                                  type="text"
-                                  placeholder="e.g. Great culture but challenging workload"
-                                  className="employer-details-review-title-input"
-                                  value={newReview.title}
-                                  onChange={(e) =>
-                                    setNewReview({
-                                      ...newReview,
-                                      title: e.target.value,
-                                    })
-                                  }
-                                />
                               </div>
 
                               <div className="employer-details-form-group">
@@ -1565,8 +1589,17 @@ const EmployerDetailsPage = () => {
             </div>
           )}
 
+          {!loading && isPrivateProfile && company && (
+            <div className="employer-details-loading">
+              <p>
+                {privateNotice ||
+                  "This employer profile is private. Only basic profile information is visible."}
+              </p>
+            </div>
+          )}
+
           {/* Jobs Section */}
-          {!loading && !error && (
+          {!loading && !error && !isPrivateProfile && (
             <div className="employer-details-jobs-section">
               <div className="employer-details-jobs-header">
                 <h2>Current Openings at {company?.name || "Company"}</h2>
@@ -1593,7 +1626,7 @@ const EmployerDetailsPage = () => {
               )}
               {!jobsLoading && !jobsError && jobs.length > 0 && (
                 <div className="employer-details-jobs-grid employer-details-jobs-grid-compact">
-                  {jobs.map((job) => (
+                  {jobs.slice(0, 3).map((job) => (
                     <article key={job.id} className="joblist-card-item">
                       <div className="joblist-card-top">
                         <img

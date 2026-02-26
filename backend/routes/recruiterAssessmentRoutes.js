@@ -1,5 +1,9 @@
 const express = require("express");
 const { protect } = require("../middleware/authMiddleware");
+const {
+  submissionUpload,
+  handleSubmissionUploadError,
+} = require("../middleware/assessmentSubmissionUpload");
 const recruiterAssessmentController = require("../controllers/recruiterAssessmentController");
 const recruiterAssessmentAttemptController = require("../controllers/recruiterAssessmentAttemptController");
 
@@ -21,11 +25,15 @@ router.post(
 router.post(
   "/:id/attempts/:attemptId/answers",
   protect,
+  submissionUpload.single("codeFile"),
+  handleSubmissionUploadError,
   recruiterAssessmentAttemptController.saveRecruiterAnswers,
 );
 router.post(
   "/:id/attempts/:attemptId/submit",
   protect,
+  submissionUpload.single("codeFile"),
+  handleSubmissionUploadError,
   recruiterAssessmentAttemptController.submitRecruiterAttempt,
 );
 

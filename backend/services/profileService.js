@@ -25,6 +25,7 @@ class ProfileService {
         about: user.about || "",
         currentJobTitle: user.currentJobTitle || "",
         profilePicture: user.profilePicture || "",
+        profileVisibility: user.profileVisibility || "public",
         resume: user.resume || "",
         resumeFileName: user.resumeFileName || "",
         resumeFileSize: user.resumeFileSize || 0,
@@ -62,6 +63,7 @@ class ProfileService {
       linkedinUrl,
       instagramUrl,
       facebookUrl,
+      profileVisibility,
     } = updateData;
 
     // Validate phone number format if provided
@@ -113,6 +115,13 @@ class ProfileService {
       updateFields.instagramUrl = instagramUrl.trim();
     if (facebookUrl !== undefined)
       updateFields.facebookUrl = facebookUrl.trim();
+    if (profileVisibility !== undefined) {
+      const normalizedVisibility = String(profileVisibility).trim().toLowerCase();
+      if (!["public", "private"].includes(normalizedVisibility)) {
+        throw new Error("Profile visibility must be public or private");
+      }
+      updateFields.profileVisibility = normalizedVisibility;
+    }
 
     console.log("Updating profile with fields:", updateFields); // Debug log
 
@@ -141,6 +150,7 @@ class ProfileService {
         about: user.about || "",
         currentJobTitle: user.currentJobTitle || "",
         profilePicture: user.profilePicture || "",
+        profileVisibility: user.profileVisibility || "public",
       },
     };
   }
@@ -195,7 +205,21 @@ class ProfileService {
     );
 
     if (!user) {
-      throw new Error("User not found");
+      const error = new Error("User not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (
+      ["candidate", "recruiter"].includes(user.role) &&
+      user.profileVisibility === "private"
+    ) {
+      const roleLabel = user.role === "recruiter" ? "employer" : "candidate";
+      const error = new Error(
+        `This ${roleLabel} has set their profile to private. Details are not available.`
+      );
+      error.statusCode = 403;
+      throw error;
     }
 
     // Get full profile picture URL
@@ -218,6 +242,7 @@ class ProfileService {
       role: user.role,
       currentJobTitle: user.currentJobTitle || "",
       profilePicture: profilePictureUrl,
+      profileVisibility: user.profileVisibility || "public",
       about: user.about || "",
       address: user.address || "",
       resume: user.resume || "",

@@ -11,15 +11,21 @@ interface ProfilePictureEditorProps {
   currentImage: string;
   userName: string;
   currentJobTitle?: string;
+  currentProfileVisibility?: "public" | "private";
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { imageFile?: File | null; currentJobTitle: string }) => void;
+  onSave: (data: {
+    imageFile?: File | null;
+    currentJobTitle: string;
+    profileVisibility: "public" | "private";
+  }) => void;
 }
 
 const ProfilePictureEditor: React.FC<ProfilePictureEditorProps> = ({
   currentImage,
   userName,
   currentJobTitle: initialJobTitle = "",
+  currentProfileVisibility = "public",
   isOpen,
   onClose,
   onSave,
@@ -28,7 +34,9 @@ const ProfilePictureEditor: React.FC<ProfilePictureEditorProps> = ({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [currentJobTitle, setCurrentJobTitle] =
     useState<string>(initialJobTitle);
-  const [isPublicProfile, setIsPublicProfile] = useState<boolean>(true);
+  const [isPublicProfile, setIsPublicProfile] = useState<boolean>(
+    currentProfileVisibility === "public"
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDefaultImage, setIsDefaultImage] = useState<boolean>(false);
   const [currentFileName, setCurrentFileName] = useState<string>("");
@@ -53,12 +61,14 @@ const ProfilePictureEditor: React.FC<ProfilePictureEditorProps> = ({
     // Reset file state
     setImageFile(null);
     setHasImageChanged(false);
+    setCurrentJobTitle(initialJobTitle);
+    setIsPublicProfile(currentProfileVisibility === "public");
 
     // Clear file input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  }, [currentImage, isOpen]);
+  }, [currentImage, isOpen, initialJobTitle, currentProfileVisibility]);
 
   // Handle Escape key to close modal
   useEffect(() => {
@@ -154,6 +164,7 @@ const ProfilePictureEditor: React.FC<ProfilePictureEditorProps> = ({
       await onSave({
         imageFile: imagePayload,
         currentJobTitle,
+        profileVisibility: isPublicProfile ? "public" : "private",
       });
 
       onClose();
@@ -174,6 +185,8 @@ const ProfilePictureEditor: React.FC<ProfilePictureEditorProps> = ({
         currentImage.includes("Default Profile") ||
         currentImage.includes("Default Profile.webp")
     );
+    setCurrentJobTitle(initialJobTitle);
+    setIsPublicProfile(currentProfileVisibility === "public");
     setHasImageChanged(false);
     onClose();
   };

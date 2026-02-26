@@ -76,6 +76,7 @@ interface UserProfile {
   address: string;
   about: string;
   currentJobTitle?: string;
+  profileVisibility?: "public" | "private";
   profilePicture: string;
   createdAt: string;
   companySize: string;
@@ -118,6 +119,7 @@ const RecruiterProfilePage: React.FC = () => {
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [reviewPage, setReviewPage] = useState(1);
   const [hasMoreReviews, setHasMoreReviews] = useState(true);
+  const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false);
 
   // Fetch user profile data
   const fetchUserProfile = useCallback(async () => {
@@ -357,6 +359,7 @@ const RecruiterProfilePage: React.FC = () => {
   // Handle profile picture save
   const handleSaveProfilePicture = async (data: {
     imageFile?: File | null;
+    profileVisibility: "public" | "private";
   }) => {
     const token = localStorage.getItem("authToken");
 
@@ -367,6 +370,26 @@ const RecruiterProfilePage: React.FC = () => {
 
     try {
       setIsLoading(true);
+
+      const profileSettingsResponse = await fetch(
+        "http://localhost:5000/api/profile/me",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            profileVisibility: data.profileVisibility,
+          }),
+        },
+      );
+
+      if (!profileSettingsResponse.ok) {
+        const errorData = await profileSettingsResponse.json();
+        throw new Error(errorData.message || "Failed to update profile settings");
+      }
+
       if (data.imageFile !== undefined) {
         if (data.imageFile) {
           const formData = new FormData();
@@ -732,6 +755,52 @@ const RecruiterProfilePage: React.FC = () => {
     console.log("Search query:", query);
   };
 
+  const handleToggleProfileVisibility = async () => {
+    if (!userProfile) return;
+
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    const nextVisibility =
+      userProfile.profileVisibility === "private" ? "public" : "private";
+
+    try {
+      setIsUpdatingVisibility(true);
+      const response = await fetch("http://localhost:5000/api/profile/me", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          profileVisibility: nextVisibility,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to update profile visibility");
+      }
+
+      setUserProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              profileVisibility: nextVisibility,
+            }
+          : prev,
+      );
+    } catch (error) {
+      console.error("Error updating profile visibility:", error);
+      alert("Failed to update profile visibility. Please try again.");
+    } finally {
+      setIsUpdatingVisibility(false);
+    }
+  };
+
   // Handle edit profile picture click
   const handleEditProfilePicture = () => {
     setIsProfilePictureEditorOpen(true);
@@ -783,10 +852,55 @@ const RecruiterProfilePage: React.FC = () => {
           <div className="recruiter-profile-scrollable-content">
             <div className="recruiter-profile-content-wrapper">
               <div className="recruiter-profile-page-header">
-                <h1>Company Profile</h1>
-                <p>
-                  Manage your company branding details visible to candidates
-                </p>
+                <div className="recruiter-profile-page-header-left">
+                  <h1>Company Profile</h1>
+                  <p>
+                    Manage your company branding details visible to candidates
+                  </p>
+                </div>
+                <div className="recruiter-profile-page-header-right">
+                  <div className="recruiter-profile-visibility-toggle-card">
+                    <span className="recruiter-profile-visibility-label">
+                      Public Profile:{" "}
+                      {userProfile?.profileVisibility === "private" ? "Off" : "On"}
+                    </span>
+                    <button
+                      type="button"
+                      className="recruiter-profile-visibility-toggle-btn"
+                      onClick={handleToggleProfileVisibility}
+                      disabled={isUpdatingVisibility}
+                      aria-label={
+                        userProfile?.profileVisibility === "private"
+                          ? "Turn on public profile"
+                          : "Turn off public profile"
+                      }
+                    >
+                      {userProfile?.profileVisibility === "private" ? (
+                        <svg
+                          width="56"
+                          height="30"
+                          viewBox="0 0 56 30"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <rect width="56" height="30" rx="15" fill="#E5E7EB" />
+                          <circle cx="17" cy="15" r="10" fill="white" />
+                        </svg>
+                      ) : (
+                        <svg
+                          width="56"
+                          height="30"
+                          viewBox="0 0 56 30"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <rect width="56" height="30" rx="15" fill="#0068CE" />
+                          <circle cx="39" cy="15" r="10" fill="white" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Logo Card */}
@@ -835,6 +949,8 @@ const RecruiterProfilePage: React.FC = () => {
                         onClick={() =>
                           handleSaveProfilePicture({
                             imageFile: null,
+                            profileVisibility:
+                              userProfile?.profileVisibility || "public",
                           })
                         }
                       >
@@ -1306,6 +1422,7 @@ const RecruiterProfilePage: React.FC = () => {
         <>
           <RecruiterProfilePictureEditor
             currentImage={getProfileImageUrl()}
+            currentProfileVisibility={userProfile.profileVisibility || "public"}
             isOpen={isProfilePictureEditorOpen}
             onClose={() => setIsProfilePictureEditorOpen(false)}
             onSave={handleSaveProfilePicture}

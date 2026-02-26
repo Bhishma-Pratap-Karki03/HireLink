@@ -1,6 +1,42 @@
 // reviewController.js - Updated with proper exports
 const Review = require("../models/reviewModel");
 const User = require("../models/userModel");
+const ConnectionRequest = require("../models/connectionRequestModel");
+
+const buildReviewPayload = (review, user) => ({
+  id: review._id,
+  rating: review.rating,
+  text: review.description,
+  title: review.title || "",
+  reviewerName: user?.fullName || review.reviewerName || "Deleted User",
+  reviewerLocation: user?.address || review.reviewerLocation || "Unknown",
+  reviewerRole: review.reviewerRole || user?.currentJobTitle || "",
+  reviewerUserType: user?.role || "",
+  date: new Date(review.createdAt).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }),
+  reviewerAvatar: user?.profilePicture
+    ? user.profilePicture.startsWith("http")
+      ? user.profilePicture
+      : `http://localhost:5000${user.profilePicture}`
+    : "",
+  status: review.status,
+});
+
+const areUsersConnected = async (userAId, userBId) => {
+  const link = await ConnectionRequest.findOne({
+    status: "accepted",
+    $or: [
+      { requester: userAId, recipient: userBId },
+      { requester: userBId, recipient: userAId },
+    ],
+  })
+    .select("_id")
+    .lean();
+  return Boolean(link);
+};
 
 // Get all reviews for a company (public)
 const getCompanyReviews = async (req, res, next) => {
@@ -18,6 +54,7 @@ const getCompanyReviews = async (req, res, next) => {
 
     // Get all published and not deleted reviews for this company
     const reviews = await Review.find({
+      targetType: "company",
       companyId,
       status: "published",
       isDeleted: false,
@@ -105,6 +142,7 @@ const getCompanyReviewsForRecruiter = async (req, res, next) => {
 
     // Build query based on status
     const query = {
+      targetType: "company",
       companyId,
       isDeleted: false,
     };
@@ -151,15 +189,18 @@ const getCompanyReviewsForRecruiter = async (req, res, next) => {
 
     // Get counts for each status
     const totalReviews = await Review.countDocuments({
+      targetType: "company",
       companyId,
       isDeleted: false,
     });
     const publishedReviews = await Review.countDocuments({
+      targetType: "company",
       companyId,
       status: "published",
       isDeleted: false,
     });
     const hiddenReviews = await Review.countDocuments({
+      targetType: "company",
       companyId,
       status: "hidden",
       isDeleted: false,
@@ -208,14 +249,18 @@ const updateReviewStatus = async (req, res, next) => {
       });
     }
 
-    // Check if user is the recruiter of this company
-    const company = await User.findOne({
-      _id: review.companyId,
-      _id: userId,
-      role: "recruiter",
-    });
+    let isAllowed = false;
+    if (review.targetType === "company") {
+      const company = await User.findOne({
+        _id: review.companyId,
+        role: "recruiter",
+      }).select("_id");
+      isAllowed = Boolean(company) && String(company._id) === String(userId);
+    } else if (review.targetType === "project") {
+      isAllowed = String(review.candidateId) === String(userId);
+    }
 
-    if (!company) {
+    if (!isAllowed) {
       return res.status(403).json({
         success: false,
         message: "Not authorized to update this review",
@@ -259,14 +304,18 @@ const deleteReviewByRecruiter = async (req, res, next) => {
       });
     }
 
-    // Check if user is the recruiter of this company
-    const company = await User.findOne({
-      _id: review.companyId,
-      _id: userId,
-      role: "recruiter",
-    });
+    let isAllowed = false;
+    if (review.targetType === "company") {
+      const company = await User.findOne({
+        _id: review.companyId,
+        role: "recruiter",
+      }).select("_id");
+      isAllowed = Boolean(company) && String(company._id) === String(userId);
+    } else if (review.targetType === "project") {
+      isAllowed = String(review.candidateId) === String(userId);
+    }
 
-    if (!company) {
+    if (!isAllowed) {
       return res.status(403).json({
         success: false,
         message: "Not authorized to delete this review",
@@ -318,6 +367,7 @@ const submitReview = async (req, res, next) => {
 
     // Check if user has already submitted a review for this company
     const existingReview = await Review.findOne({
+      targetType: "company",
       companyId,
       userId,
       isDeleted: false,
@@ -351,6 +401,7 @@ const submitReview = async (req, res, next) => {
 
     // Create new review
     const newReview = new Review({
+      targetType: "company",
       companyId,
       userId,
       rating,
@@ -413,6 +464,7 @@ const getMyReview = async (req, res, next) => {
     const userId = req.user.id;
 
     const review = await Review.findOne({
+      targetType: "company",
       companyId,
       userId,
       isDeleted: false,
@@ -453,6 +505,261 @@ const getMyReview = async (req, res, next) => {
     res.status(500).json({
       success: false,
       message: "Server error fetching your review",
+      error: error.message,
+    });
+  }
+};
+
+const getProjectReviews = async (req, res) => {
+  try {
+    const { candidateId, projectId } = req.params;
+
+    const candidate = await User.findById(candidateId).select("role projects");
+    if (!candidate || candidate.role !== "candidate") {
+      return res.status(404).json({
+        success: false,
+        message: "Candidate not found",
+      });
+    }
+
+    const project = candidate.projects?.id(projectId);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
+      });
+    }
+
+    const reviews = await Review.find({
+      targetType: "project",
+      candidateId,
+      projectId,
+      status: "published",
+      isDeleted: false,
+    })
+      .populate("userId", "fullName profilePicture address currentJobTitle role")
+      .sort({ createdAt: -1 });
+
+    let averageRating = 0;
+    if (reviews.length > 0) {
+      const total = reviews.reduce((sum, review) => sum + review.rating, 0);
+      averageRating = total / reviews.length;
+    }
+
+    res.status(200).json({
+      success: true,
+      reviews: reviews.map((review) => buildReviewPayload(review, review.userId)),
+      averageRating: parseFloat(averageRating.toFixed(1)),
+      totalReviews: reviews.length,
+    });
+  } catch (error) {
+    console.error("Get project reviews error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error fetching project reviews",
+      error: error.message,
+    });
+  }
+};
+
+const getProjectReviewsForCandidate = async (req, res) => {
+  try {
+    const { candidateId, projectId } = req.params;
+    const userId = req.user.id;
+
+    if (String(candidateId) !== String(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to manage these project reviews",
+      });
+    }
+
+    const candidate = await User.findById(candidateId).select("role projects");
+    if (!candidate || candidate.role !== "candidate") {
+      return res.status(404).json({
+        success: false,
+        message: "Candidate not found",
+      });
+    }
+
+    const project = candidate.projects?.id(projectId);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
+      });
+    }
+
+    const reviews = await Review.find({
+      targetType: "project",
+      candidateId,
+      projectId,
+      isDeleted: false,
+    })
+      .populate("userId", "fullName profilePicture address currentJobTitle role")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      reviews: reviews.map((review) => buildReviewPayload(review, review.userId)),
+    });
+  } catch (error) {
+    console.error("Get candidate project reviews error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error fetching project reviews",
+      error: error.message,
+    });
+  }
+};
+
+const submitProjectReview = async (req, res) => {
+  try {
+    const { candidateId, projectId } = req.params;
+    const { rating, title, description, reviewerRole } = req.body;
+    const userId = req.user.id;
+
+    if (userId === candidateId) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot review your own project",
+      });
+    }
+
+    const [candidate, reviewer] = await Promise.all([
+      User.findById(candidateId).select("role projects"),
+      User.findById(userId),
+    ]);
+
+    if (!candidate || candidate.role !== "candidate") {
+      return res.status(404).json({
+        success: false,
+        message: "Candidate not found",
+      });
+    }
+
+    if (!reviewer || !["candidate", "recruiter"].includes(reviewer.role)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only candidates or recruiters can review projects",
+      });
+    }
+
+    const project = candidate.projects?.id(projectId);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
+      });
+    }
+
+    const connected = await areUsersConnected(userId, candidateId);
+    if (!connected) {
+      return res.status(403).json({
+        success: false,
+        message: "Only connected users can review this project",
+      });
+    }
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid rating (1-5)",
+      });
+    }
+
+    if (!description || description.trim().length < 10) {
+      return res.status(400).json({
+        success: false,
+        message: "Review description must be at least 10 characters",
+      });
+    }
+
+    const existingReview = await Review.findOne({
+      targetType: "project",
+      candidateId,
+      projectId,
+      userId,
+      isDeleted: false,
+    });
+
+    if (existingReview) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "You have already reviewed this project. Please update your review instead.",
+        code: "REVIEW_ALREADY_EXISTS",
+        existingReviewId: existingReview._id,
+      });
+    }
+
+    const review = await Review.create({
+      targetType: "project",
+      // Backward compatibility with old unique index (companyId + userId)
+      companyId: projectId,
+      candidateId,
+      projectId,
+      userId,
+      rating,
+      title: title || "",
+      description: description.trim(),
+      reviewerName: reviewer.fullName,
+      reviewerLocation: reviewer.address || "",
+      reviewerRole: reviewerRole || reviewer.currentJobTitle || "",
+      isApproved: true,
+      status: "published",
+      isDeleted: false,
+    });
+
+    const savedReview = await Review.findById(review._id).populate(
+      "userId",
+      "fullName profilePicture address currentJobTitle role",
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Project review submitted successfully",
+      review: buildReviewPayload(savedReview, savedReview.userId),
+    });
+  } catch (error) {
+    console.error("Submit project review error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error submitting project review",
+      error: error.message,
+    });
+  }
+};
+
+const getMyProjectReview = async (req, res) => {
+  try {
+    const { candidateId, projectId } = req.params;
+    const userId = req.user.id;
+
+    const review = await Review.findOne({
+      targetType: "project",
+      candidateId,
+      projectId,
+      userId,
+      isDeleted: false,
+    }).populate("userId", "fullName profilePicture address currentJobTitle role");
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: "You haven't reviewed this project yet",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      review: buildReviewPayload(review, review.userId),
+    });
+  } catch (error) {
+    console.error("Get my project review error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error fetching your project review",
       error: error.message,
     });
   }
@@ -583,6 +890,10 @@ module.exports = {
   updateReviewStatus,
   deleteReviewByRecruiter,
   submitReview,
+  getProjectReviews,
+  getProjectReviewsForCandidate,
+  submitProjectReview,
+  getMyProjectReview,
   getMyReview,
   updateReview,
   deleteReview,
