@@ -1,3 +1,4 @@
+import PortalFooter from "../../components/PortalFooter";
 import CandidateSidebar from "../../components/candidatecomponents/CandidateSidebar";
 import CandidateTopBar from "../../components/candidatecomponents/CandidateTopBar";
 import SettingsContent from "../../components/settingsContent/SettingsContent";
@@ -13,9 +14,12 @@ const CandidateSettingsPage = () => {
           title="Settings"
           subtitle="Update your password and manage your account access."
         />
-      </main>
+              <PortalFooter />
+</main>
     </div>
   );
 };
 
 export default CandidateSettingsPage;
+
+

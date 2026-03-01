@@ -230,7 +230,8 @@ exports.removeProfilePicture = async (req, res) => {
 exports.getUserProfile = async (req, res) => {
   try {
     // Call the profile service to get public user profile
-    const result = await profileService.getUserProfile(req.params.userId);
+    const viewerId = req.user?.id || null;
+    const result = await profileService.getUserProfile(req.params.userId, viewerId);
 
     // Return success response
     res.status(200).json({

@@ -1,3 +1,4 @@
+import PortalFooter from "../../components/PortalFooter";
 // Current imports
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -2385,7 +2386,8 @@ const CandidateProfilePage = () => {
             )}
           </article>
         </div>
-      </main>
+              <PortalFooter />
+</main>
       {/* Profile Picture Editor Modal */}
       <ProfilePictureEditor
         currentImage={getProfileImageUrl()}
@@ -2468,3 +2470,5 @@ const CandidateProfilePage = () => {
 };
 
 export default CandidateProfilePage;
+
+

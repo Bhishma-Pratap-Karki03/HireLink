@@ -1,3 +1,4 @@
+import PortalFooter from "../../components/PortalFooter";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import RecruiterSidebar from "../../components/recruitercomponents/RecruiterSidebar";
@@ -7,6 +8,7 @@ import "../../styles/RecruiterJobApplicantsPage.css";
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
 import actionMessageIcon from "../../images/Candidate Profile Page Images/message-icon.svg";
 import actionEyeIcon from "../../images/Candidate Profile Page Images/eyeIcon.svg";
+import dropdownArrow from "../../images/Register Page Images/1_2307.svg";
 
 type CandidateInfo = {
   id?: string;
@@ -89,6 +91,14 @@ const getApplicationId = (report: ReportItem) => {
 };
 
 const getCandidateId = (candidate?: CandidateInfo) => candidate?.id || candidate?._id || "";
+const STATUS_OPTIONS = [
+  { value: "submitted", label: "Submitted" },
+  { value: "reviewed", label: "Reviewed" },
+  { value: "shortlisted", label: "Shortlisted" },
+  { value: "interview", label: "Interview" },
+  { value: "rejected", label: "Rejected" },
+  { value: "hired", label: "Hired" },
+];
 
 const RecruiterJobApplicantsPage = () => {
   const { id } = useParams();
@@ -102,6 +112,7 @@ const RecruiterJobApplicantsPage = () => {
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
   const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [openStatusDropdownId, setOpenStatusDropdownId] = useState<string | null>(null);
 
   const openApplicantOverlay = (report: ReportItem) => {
     setSelectedReport(report);
@@ -168,6 +179,17 @@ const RecruiterJobApplicantsPage = () => {
 
     fetchApplicantsWithAts();
   }, [id, navigate]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest(".recruiter-applicant-status-dropdown")) return;
+      setOpenStatusDropdownId(null);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleStatusChange = async (applicationId: string, nextStatus: string) => {
     const token = localStorage.getItem("authToken");
@@ -312,7 +334,12 @@ const RecruiterJobApplicantsPage = () => {
               const candidateId =
                 getCandidateId(report.candidate) || getCandidateId(application.candidate);
               return (
-                <article key={application.id} className="recruiter-applicant-card">
+                <article
+                  key={application.id}
+                  className={`recruiter-applicant-card ${
+                    openStatusDropdownId === application.id ? "status-open" : ""
+                  }`}
+                >
                   <div className="recruiter-applicant-info recruiter-ats-top-row">
                     <div className="recruiter-applicant-left">
                       <div className="recruiter-ats-rank">#{rank}</div>
@@ -329,21 +356,52 @@ const RecruiterJobApplicantsPage = () => {
                     </div>
                     <div className="recruiter-applicant-status-inline">
                       <span>Status</span>
-                      <div className="recruiter-applicant-status-control">
-                        <select
-                          value={application.status}
-                          onChange={(e) =>
-                            handleStatusChange(application.id, e.target.value)
+                      <div className="recruiter-applicant-status-control recruiter-applicant-status-dropdown">
+                        <button
+                          type="button"
+                          className={`recruiter-applicant-status-trigger ${
+                            openStatusDropdownId === application.id ? "open" : ""
+                          }`}
+                          onClick={() =>
+                            setOpenStatusDropdownId((prev) =>
+                              prev === application.id ? null : application.id
+                            )
                           }
                           disabled={statusUpdating === application.id}
                         >
-                          <option value="submitted">Submitted</option>
-                          <option value="reviewed">Reviewed</option>
-                          <option value="shortlisted">Shortlisted</option>
-                          <option value="interview">Interview</option>
-                          <option value="rejected">Rejected</option>
-                          <option value="hired">Hired</option>
-                        </select>
+                          <span>
+                            {STATUS_OPTIONS.find((item) => item.value === application.status)
+                              ?.label || "Submitted"}
+                          </span>
+                          <img
+                            src={dropdownArrow}
+                            alt=""
+                            aria-hidden="true"
+                            className={`recruiter-applicant-status-caret ${
+                              openStatusDropdownId === application.id ? "open" : ""
+                            }`}
+                          />
+                        </button>
+                        {openStatusDropdownId === application.id && (
+                          <div className="recruiter-applicant-status-menu" role="listbox">
+                            {STATUS_OPTIONS.map((statusOption) => (
+                              <button
+                                key={statusOption.value}
+                                type="button"
+                                className={`recruiter-applicant-status-option ${
+                                  application.status === statusOption.value ? "active" : ""
+                                }`}
+                                onClick={() => {
+                                  setOpenStatusDropdownId(null);
+                                  if (application.status === statusOption.value) return;
+                                  handleStatusChange(application.id, statusOption.value);
+                                }}
+                              >
+                                {statusOption.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="recruiter-applicant-score recruiter-ats-score">
@@ -386,9 +444,12 @@ const RecruiterJobApplicantsPage = () => {
             navigate(`/recruiter/job-postings/${id}/applicants/${applicationId}/assessment`)
           }
         />
-      </main>
+              <PortalFooter />
+</main>
     </div>
   );
 };
 
 export default RecruiterJobApplicantsPage;
+
+

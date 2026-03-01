@@ -77,6 +77,7 @@ type Project = {
 type CandidateProfile = {
   id: string;
   fullName: string;
+  profileVisibility?: "public" | "private";
   email?: string;
   currentJobTitle?: string;
   address?: string;
@@ -230,11 +231,37 @@ const CandidateDetailsPage = () => {
         setError("");
         setIsPrivateProfile(false);
         setPrivateNotice("");
+        const token = localStorage.getItem("authToken");
 
-        const res = await fetch(`http://localhost:5000/api/profile/user/${id}`);
+        const res = await fetch(`http://localhost:5000/api/profile/user/${id}`, {
+          headers: token
+            ? {
+                Authorization: `Bearer ${token}`,
+              }
+            : undefined,
+        });
         const data = await res.json();
         if (!res.ok) {
           if (res.status === 403) {
+            const isSelfRequest =
+              Boolean(currentUserId) && String(currentUserId) === String(id);
+
+            if (isSelfRequest && token) {
+              const meRes = await fetch("http://localhost:5000/api/profile/me", {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+              });
+              const meData = await meRes.json();
+              if (meRes.ok && meData?.user) {
+                setIsPrivateProfile(false);
+                setPrivateNotice("");
+                setProfile(meData.user);
+                return;
+              }
+            }
+
             setIsPrivateProfile(true);
             setPrivateNotice(
               data?.message ||
@@ -284,7 +311,7 @@ const CandidateDetailsPage = () => {
     };
 
     fetchProfile();
-  }, [id]);
+  }, [id, currentUserId]);
 
   useEffect(() => {
     const fetchConnectionStatus = async () => {
@@ -464,6 +491,9 @@ const CandidateDetailsPage = () => {
           try {
             const response = await fetch(
               `http://localhost:5000/api/reviews/project/${profile.id}/${projectKey}`,
+              token
+                ? { headers: { Authorization: `Bearer ${token}` } }
+                : undefined,
             );
             const data = await response.json();
             reviewsMap[projectKey] = data?.reviews || [];

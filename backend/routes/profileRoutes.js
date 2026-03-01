@@ -1,7 +1,7 @@
 // routes/profileRoutes.js - FIXED VERSION
 const express = require("express");
 const router = express.Router();
-const { protect } = require("../middleware/authMiddleware");
+const { protect, optionalProtect } = require("../middleware/authMiddleware");
 const profileController = require("../controllers/profileController");
 const multer = require("multer");
 const path = require("path");
@@ -43,7 +43,7 @@ const upload = multer({
 });
 
 // Public routes
-router.get("/user/:userId", profileController.getUserProfile);
+router.get("/user/:userId", optionalProtect, profileController.getUserProfile);
 
 // Protected routes (require authentication)
 router.get("/me", protect, profileController.getMyProfile);

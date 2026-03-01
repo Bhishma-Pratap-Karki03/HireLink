@@ -101,6 +101,8 @@ const CandidatesPage = () => {
   const currentUser = userDataStr ? JSON.parse(userDataStr) : null;
   const currentUserId =
     currentUser?.id || currentUser?._id || currentUser?.userId || "";
+  const isAdminViewer =
+    currentUser?.email === "hirelinknp@gmail.com" || currentUser?.role === "admin";
 
   useEffect(() => {
     const fetchCandidates = async () => {
@@ -441,9 +443,7 @@ const CandidatesPage = () => {
                 <article
                   key={cardId}
                   className="candidates-card"
-                  onClick={() =>
-                    navigate(isSelfCard ? "/candidate-profile" : `/candidate/${cardId}`)
-                  }
+                  onClick={() => navigate(`/candidate/${cardId}`)}
                   role="button"
                 >
                   <div className="candidates-card-header">
@@ -486,7 +486,9 @@ const CandidatesPage = () => {
                     </div>
                   )}
                   <div
-                    className={`candidates-card-actions ${isSelfCard ? "is-single" : ""}`}
+                    className={`candidates-card-actions ${
+                      isSelfCard ? "is-single" : ""
+                    } ${!isSelfCard && isAdminViewer ? "is-admin-view" : ""}`}
                   >
                     {isSelfCard ? (
                       <button
@@ -494,13 +496,13 @@ const CandidatesPage = () => {
                         title="View profile"
                         onClick={(event) => {
                           event.stopPropagation();
-                          navigate("/candidate-profile");
+                          navigate(`/candidate/${cardId}`);
                         }}
                       >
                         <img src={viewProfileIcon} alt="View profile" />
                         <span>View Profile</span>
                       </button>
-                    ) : (
+                    ) : !isAdminViewer ? (
                       <>
                         <button
                           type="button"
@@ -532,6 +534,18 @@ const CandidatesPage = () => {
                           <span>Message</span>
                         </button>
                       </>
+                    ) : (
+                      <button
+                        type="button"
+                        title="View profile"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(`/candidate/${cardId}`);
+                        }}
+                      >
+                        <img src={viewProfileIcon} alt="View profile" />
+                        <span>View Profile</span>
+                      </button>
                     )}
                   </div>
                 </article>

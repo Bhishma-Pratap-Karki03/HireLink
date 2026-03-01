@@ -1,13 +1,14 @@
 // reviewRoutes.js - Updated with recruiter management routes
 const express = require("express");
 const router = express.Router();
-const { protect } = require("../middleware/authMiddleware");
+const { protect, optionalProtect } = require("../middleware/authMiddleware");
 const reviewController = require("../controllers/reviewController");
 
 // Public routes
 router.get("/company/:companyId", reviewController.getCompanyReviews);
 router.get(
   "/project/:candidateId/:projectId",
+  optionalProtect,
   reviewController.getProjectReviews,
 );
 router.get(

@@ -513,13 +513,39 @@ const getMyReview = async (req, res, next) => {
 const getProjectReviews = async (req, res) => {
   try {
     const { candidateId, projectId } = req.params;
+    const viewerId = req.user?.id || null;
 
-    const candidate = await User.findById(candidateId).select("role projects");
+    const candidate = await User.findById(candidateId).select(
+      "role projects profileVisibility",
+    );
     if (!candidate || candidate.role !== "candidate") {
       return res.status(404).json({
         success: false,
         message: "Candidate not found",
       });
+    }
+
+    if (candidate.profileVisibility === "private") {
+      if (!viewerId) {
+        return res.status(403).json({
+          success: false,
+          message: "This candidate profile is private.",
+        });
+      }
+
+      if (String(viewerId) !== String(candidateId)) {
+        const viewer = await User.findById(viewerId).select("role").lean();
+        const isAdmin = viewer?.role === "admin";
+        if (!isAdmin) {
+          const connected = await areUsersConnected(viewerId, candidateId);
+          if (!connected) {
+            return res.status(403).json({
+              success: false,
+              message: "This candidate profile is private.",
+            });
+          }
+        }
+      }
     }
 
     const project = candidate.projects?.id(projectId);
@@ -627,7 +653,7 @@ const submitProjectReview = async (req, res) => {
     }
 
     const [candidate, reviewer] = await Promise.all([
-      User.findById(candidateId).select("role projects"),
+      User.findById(candidateId).select("role projects profileVisibility"),
       User.findById(userId),
     ]);
 
@@ -735,6 +761,33 @@ const getMyProjectReview = async (req, res) => {
   try {
     const { candidateId, projectId } = req.params;
     const userId = req.user.id;
+
+    const candidate = await User.findById(candidateId).select(
+      "role profileVisibility",
+    );
+    if (!candidate || candidate.role !== "candidate") {
+      return res.status(404).json({
+        success: false,
+        message: "Candidate not found",
+      });
+    }
+
+    if (
+      candidate.profileVisibility === "private" &&
+      String(candidateId) !== String(userId)
+    ) {
+      const viewer = await User.findById(userId).select("role").lean();
+      const isAdmin = viewer?.role === "admin";
+      if (!isAdmin) {
+        const connected = await areUsersConnected(userId, candidateId);
+        if (!connected) {
+          return res.status(403).json({
+            success: false,
+            message: "This candidate profile is private.",
+          });
+        }
+      }
+    }
 
     const review = await Review.findOne({
       targetType: "project",

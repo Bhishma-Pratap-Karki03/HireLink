@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
+import PortalFooter from "../../components/PortalFooter";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CandidateSidebar from "../../components/candidatecomponents/CandidateSidebar";
 import CandidateTopBar from "../../components/candidatecomponents/CandidateTopBar";
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
+import { connectSocket, getSocket } from "../../lib/socketClient";
 import "../../styles/CandidateFriendRequestsPage.css";
+import prevIcon from "../../images/Employers Page Images/Prev Icon.svg";
+import nextIcon from "../../images/Employers Page Images/Next Icon.svg";
 
 type FriendRequestItem = {
   id: string;
@@ -29,6 +33,7 @@ type ConnectedUserItem = {
 };
 
 const CandidateFriendRequestsPage = () => {
+  const ITEMS_PER_PAGE = 20;
   const navigate = useNavigate();
   const [requests, setRequests] = useState<FriendRequestItem[]>([]);
   const [friends, setFriends] = useState<ConnectedUserItem[]>([]);
@@ -39,6 +44,7 @@ const CandidateFriendRequestsPage = () => {
     "requests",
   );
   const [topSearch, setTopSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchRequests = async (silent = false) => {
     const token = localStorage.getItem("authToken");
@@ -101,12 +107,35 @@ const CandidateFriendRequestsPage = () => {
   }, []);
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      if (document.hidden) return;
+    const token = localStorage.getItem("authToken") || "";
+    if (!token) return;
+
+    const socket = connectSocket(token);
+    if (!socket) return;
+
+    const handleConnectionEvent = () => {
       fetchRequests(true);
       fetchFriends();
-    }, 2500);
-    return () => window.clearInterval(intervalId);
+    };
+    const handleVisibilityOrFocus = () => {
+      if (document.hidden) return;
+      handleConnectionEvent();
+    };
+
+    socket.on("connect", handleConnectionEvent);
+    socket.on("connection:request:new", handleConnectionEvent);
+    socket.on("connection:request:updated", handleConnectionEvent);
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    return () => {
+      const connectedSocket = getSocket();
+      connectedSocket?.off("connect", handleConnectionEvent);
+      connectedSocket?.off("connection:request:new", handleConnectionEvent);
+      connectedSocket?.off("connection:request:updated", handleConnectionEvent);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+    };
   }, []);
 
   const fetchFriends = async () => {
@@ -206,6 +235,34 @@ const CandidateFriendRequestsPage = () => {
     item.fullName.toLowerCase().includes(topSearch.trim().toLowerCase()),
   );
 
+  const activeItemsCount =
+    activeTab === "requests" ? filteredRequests.length : filteredFriends.length;
+  const totalPages = Math.max(1, Math.ceil(activeItemsCount / ITEMS_PER_PAGE));
+  const visiblePages = useMemo(
+    () => Array.from({ length: Math.min(totalPages, 7) }, (_, index) => index + 1),
+    [totalPages],
+  );
+
+  const paginatedRequests = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredRequests.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredRequests, currentPage]);
+
+  const paginatedFriends = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredFriends.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredFriends, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, topSearch]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   return (
     <div className="candidate-dashboard-container">
       <CandidateSidebar />
@@ -273,7 +330,7 @@ const CandidateFriendRequestsPage = () => {
 
           {activeTab === "requests" && (
             <div className="candidate-friend-list">
-              {filteredRequests.map((item) => (
+              {paginatedRequests.map((item) => (
                 <article key={item.id} className="candidate-friend-card">
                   <div
                     className="candidate-friend-user candidate-friend-user-clickable"
@@ -341,7 +398,7 @@ const CandidateFriendRequestsPage = () => {
 
           {activeTab === "connected" && (
             <div className="candidate-friend-list">
-              {filteredFriends.map((item) => (
+              {paginatedFriends.map((item) => (
                 <article key={item.id} className="candidate-friend-card">
                   <div
                     className="candidate-friend-user candidate-friend-user-clickable"
@@ -396,10 +453,57 @@ const CandidateFriendRequestsPage = () => {
               ))}
             </div>
           )}
+
+          {!loading && !error && activeItemsCount > 0 && (
+            <div className="candidate-friend-pagination">
+              <div className="candidate-friend-page-info">
+                Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
+                {(currentPage - 1) * ITEMS_PER_PAGE +
+                  (activeTab === "requests"
+                    ? paginatedRequests.length
+                    : paginatedFriends.length)}{" "}
+                of {activeItemsCount}
+              </div>
+              <div className="candidate-friend-page-controls">
+                <button
+                  className="candidate-friend-page-nav"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <img src={prevIcon} alt="Previous" />
+                </button>
+                <div className="candidate-friend-page-numbers">
+                  {visiblePages.map((pageNumber) => (
+                    <span
+                      key={pageNumber}
+                      className={`candidate-friend-page-num ${
+                        pageNumber === currentPage ? "active" : ""
+                      }`}
+                      onClick={() => setCurrentPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  className="candidate-friend-page-nav"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  <img src={nextIcon} alt="Next" />
+                </button>
+              </div>
+            </div>
+          )}
         </section>
-      </main>
+              <PortalFooter />
+</main>
     </div>
   );
 };
 
 export default CandidateFriendRequestsPage;
+
+

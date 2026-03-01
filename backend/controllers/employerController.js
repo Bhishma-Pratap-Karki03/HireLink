@@ -30,9 +30,10 @@ exports.getAllRecruiters = async (req, res, next) => {
 exports.getRecruiterById = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const viewerId = req.user?.id || null;
 
     // Call the employer service to get recruiter by ID
-    const result = await employerService.getRecruiterById(id);
+    const result = await employerService.getRecruiterById(id, viewerId);
 
     // Return success response with recruiter data
     res.status(200).json({

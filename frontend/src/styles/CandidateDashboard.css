@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-  overflow-y: auto;
+  overflow-y: visible;
   background: #eff3f7;
 }
 

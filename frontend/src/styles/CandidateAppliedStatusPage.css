@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-  overflow-y: auto;
+  overflow-y: visible;
   overflow-x: hidden;
   background: #eff3f7;
   min-height: 100vh;
@@ -223,6 +223,76 @@
 
 .candidate-applied-error {
   color: #c62828;
+}
+
+.candidate-applied-pagination {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-top: 1px solid #e7eef8;
+  min-width: 760px;
+}
+
+.candidate-applied-page-info {
+  font-size: 13px;
+  color: #5f6f88;
+  margin-left: auto;
+  order: 2;
+}
+
+.candidate-applied-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  order: 1;
+}
+
+.candidate-applied-page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.candidate-applied-page-num {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e2937;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.candidate-applied-page-num.active {
+  background: #e0d6fc;
+  color: #000000;
+  font-weight: 600;
+}
+
+.candidate-applied-page-nav {
+  border: none;
+  background: none;
+  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.candidate-applied-page-nav img {
+  width: 22px;
+  height: 22px;
+}
+
+.candidate-applied-page-nav:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 @media (max-width: 1300px) {

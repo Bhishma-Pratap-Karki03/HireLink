@@ -1,4 +1,5 @@
 const User = require("../models/userModel");
+const ConnectionRequest = require("../models/connectionRequestModel");
 const path = require("path");
 const fs = require("fs");
 
@@ -199,7 +200,7 @@ class ProfileService {
   }
 
   // Get public profile information for any user (for viewing other profiles)
-  async getUserProfile(userId) {
+  async getUserProfile(userId, viewerId = null) {
     const user = await User.findById(userId).select(
       "-password -verificationCode -resetCode -phone" // Remove sensitive data
     );
@@ -210,16 +211,39 @@ class ProfileService {
       throw error;
     }
 
-    if (
-      ["candidate", "recruiter"].includes(user.role) &&
-      user.profileVisibility === "private"
-    ) {
-      const roleLabel = user.role === "recruiter" ? "employer" : "candidate";
-      const error = new Error(
-        `This ${roleLabel} has set their profile to private. Details are not available.`
-      );
-      error.statusCode = 403;
-      throw error;
+    if (["candidate", "recruiter"].includes(user.role) && user.profileVisibility === "private") {
+      if (!viewerId) {
+        const roleLabel = user.role === "recruiter" ? "employer" : "candidate";
+        const error = new Error(
+          `This ${roleLabel} has set their profile to private. Details are not available.`
+        );
+        error.statusCode = 403;
+        throw error;
+      }
+
+      if (String(viewerId) !== String(user._id)) {
+        const viewer = await User.findById(viewerId).select("role").lean();
+        const isAdmin = viewer?.role === "admin";
+        if (!isAdmin) {
+          const link = await ConnectionRequest.findOne({
+            status: "accepted",
+            $or: [
+              { requester: viewerId, recipient: user._id },
+              { requester: user._id, recipient: viewerId },
+            ],
+          })
+            .select("_id")
+            .lean();
+          if (!link) {
+            const roleLabel = user.role === "recruiter" ? "employer" : "candidate";
+            const error = new Error(
+              `This ${roleLabel} has set their profile to private. Details are not available.`
+            );
+            error.statusCode = 403;
+            throw error;
+          }
+        }
+      }
     }
 
     // Get full profile picture URL

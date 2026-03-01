@@ -29,8 +29,6 @@ import jobCardShareIcon from "../images/Recruiter Job Post Page Images/shareFg.s
 
 // Share and save icons
 import shareIcon from "../images/Employers Page Images/I5_270_1_3212.svg";
-import saveIcon from "../images/Employers Page Images/8_426.svg";
-import savedIcon from "../images/Employers Page Images/Saved icon.svg";
 
 // Star icons from HTML
 import starFilled from "../images/Employers Page Images/5_169.svg";
@@ -56,6 +54,7 @@ import defaultLogo from "../images/Register Page Images/Default Profile.webp";
 interface CompanyDetails {
   id: string;
   name: string;
+  profileVisibility?: "public" | "private";
   logo: string;
   location: string;
   email: string;
@@ -110,7 +109,6 @@ const EmployerDetailsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isPrivateProfile, setIsPrivateProfile] = useState(false);
   const [privateNotice, setPrivateNotice] = useState("");
-  const [isSaved, setIsSaved] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [newReview, setNewReview] = useState({
     rating: 0,
@@ -138,6 +136,8 @@ const EmployerDetailsPage = () => {
   const currentUser = userDataStr ? JSON.parse(userDataStr) : null;
   const currentUserId =
     currentUser?.id || currentUser?._id || currentUser?.userId || "";
+  const isAdminViewer =
+    currentUser?.email === "hirelinknp@gmail.com" || currentUser?.role === "admin";
   const isAllowedRole =
     currentUser?.role === "candidate" || currentUser?.role === "recruiter";
 
@@ -162,14 +162,20 @@ const EmployerDetailsPage = () => {
       setError(null);
       setIsPrivateProfile(false);
       setPrivateNotice("");
+      const token = localStorage.getItem("authToken");
 
       const response = await fetch(
         `http://localhost:5000/api/employers/${id}`,
         {
           method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: token
+            ? {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              }
+            : {
+                "Content-Type": "application/json",
+              },
         },
       );
 
@@ -185,6 +191,53 @@ const EmployerDetailsPage = () => {
           setError("Company not found");
         } else if (response.status === 403) {
           const data = await response.json();
+          const isSelfRequest =
+            Boolean(currentUserId) && String(currentUserId) === String(id);
+
+          if (isSelfRequest && token) {
+            const meRes = await fetch("http://localhost:5000/api/profile/me", {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            });
+            const meData = await meRes.json();
+            if (meRes.ok && meData?.user) {
+              const me = meData.user;
+              setIsPrivateProfile(false);
+              setPrivateNotice("");
+              setCompany({
+                id: me.id,
+                name: me.fullName || "Company",
+                logo: me.profilePicture
+                  ? me.profilePicture.startsWith("http")
+                    ? me.profilePicture
+                    : `http://localhost:5000${me.profilePicture}`
+                  : "",
+                location: me.address || "Location not specified",
+                email: me.email || "",
+                companySize: me.companySize || "",
+                foundedYear: me.foundedYear || "",
+                websiteUrl: me.websiteUrl || "",
+                about: me.about || "",
+                workspaceImages: (me.workspaceImages || [])
+                  .map((item: any) =>
+                    item?.imageUrl
+                      ? item.imageUrl.startsWith("http")
+                        ? item.imageUrl
+                        : `http://localhost:5000${item.imageUrl}`
+                      : null,
+                  )
+                  .filter(Boolean),
+                linkedinUrl: me.linkedinUrl || "",
+                instagramUrl: me.instagramUrl || "",
+                facebookUrl: me.facebookUrl || "",
+              });
+              setError(null);
+              return;
+            }
+          }
+
           setIsPrivateProfile(true);
           setPrivateNotice(
             data?.message ||
@@ -436,10 +489,6 @@ const EmployerDetailsPage = () => {
 
     fetchMutualConnections();
   }, [company?.id, currentUserId, isAllowedRole]);
-
-  const toggleSave = () => {
-    setIsSaved(!isSaved);
-  };
 
   const handleViewDetails = (jobId: string) => {
     navigate(`/jobs/${jobId}`);
@@ -1566,24 +1615,16 @@ const EmployerDetailsPage = () => {
                       </button>
                     </div>
 
-                    {/* Save Button */}
-                    <button
-                      className={`employer-details-save-btn ${
-                        isSaved ? "saved" : ""
-                      }`}
-                      onClick={toggleSave}
-                    >
-                      <img src={isSaved ? savedIcon : saveIcon} alt="Save" />
-                      <span>{isSaved ? "Saved Company" : "Save Company"}</span>
-                    </button>
                   </div>
 
-                  <button
-                    className="employer-details-send-message-btn"
-                    onClick={handleSendMessage}
-                  >
-                    Send Message
-                  </button>
+                  {!isAdminViewer && (
+                    <button
+                      className="employer-details-send-message-btn"
+                      onClick={handleSendMessage}
+                    >
+                      Send Message
+                    </button>
+                  )}
                 </div>
               </aside>
             </div>
@@ -1635,14 +1676,16 @@ const EmployerDetailsPage = () => {
                           className="joblist-company-logo"
                           onError={handleImageError}
                         />
-                        <div className="joblist-card-actions">
-                          <button className="joblist-icon-btn">
-                            <img src={jobCardBookmarkIcon} alt="Bookmark" />
-                          </button>
-                          <button className="joblist-icon-btn">
-                            <img src={jobCardShareIcon} alt="Share" />
-                          </button>
-                        </div>
+                        {!isAdminViewer && (
+                          <div className="joblist-card-actions">
+                            <button className="joblist-icon-btn">
+                              <img src={jobCardBookmarkIcon} alt="Bookmark" />
+                            </button>
+                            <button className="joblist-icon-btn">
+                              <img src={jobCardShareIcon} alt="Share" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <div className="joblist-card-company">{job.company}</div>
                       <div className="joblist-card-meta">
@@ -1667,12 +1710,14 @@ const EmployerDetailsPage = () => {
                         >
                           View Details
                         </button>
-                        <button
-                          className="joblist-btn-primary"
-                          onClick={() => handleApplyNow(job.id)}
-                        >
-                          Apply Now
-                        </button>
+                        {!isAdminViewer && (
+                          <button
+                            className="joblist-btn-primary"
+                            onClick={() => handleApplyNow(job.id)}
+                          >
+                            Apply Now
+                          </button>
+                        )}
                       </div>
                     </article>
                   ))}

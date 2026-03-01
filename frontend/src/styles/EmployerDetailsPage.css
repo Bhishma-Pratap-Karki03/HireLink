@@ -758,13 +758,13 @@
   border: 1px solid #e1e1e1;
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 104, 206, 0.08);
-  /* Extend from left column into sidebar width so form aligns with right edge of sidebar card */
-  width: calc(100% + 470px);
-  max-width: calc(100% + 470px);
+  width: 100%;
+  max-width: 100%;
   margin-left: 0;
   margin-right: 0;
   position: relative;
   z-index: 1;
+  box-sizing: border-box;
 }
 
 .employer-details-write-review-content.full-width {
@@ -1108,7 +1108,7 @@
   border: 1px solid #e5e7e9;
   border-radius: 8px;
   padding: 15px 20px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 15px;
   font-weight: 500;
@@ -1116,8 +1116,8 @@
   cursor: pointer;
   transition: all 0.2s;
   width: 100%;
-  justify-content: flex-start;
-  text-align: left;
+  justify-content: center;
+  text-align: center;
 }
 
 .employer-details-connect-btn:hover {
@@ -1574,6 +1574,133 @@
   background-color: #0056b3;
 }
 
+/* UI polish overrides */
+.employer-details-page {
+  background: #f5f8fc;
+}
+
+.employer-details-hero {
+  background: linear-gradient(180deg, #eaf6ff 0%, #f4fbff 100%);
+  padding: 72px 10%;
+}
+
+.employer-details-company-header {
+  background: #ffffff;
+  border: 1px solid #dfe8f4;
+  border-radius: 18px;
+  box-shadow: 0 14px 32px rgba(15, 40, 60, 0.08);
+  padding: 24px 28px;
+  max-width: 1140px;
+}
+
+.employer-details-main-content {
+  background: white;
+  padding: 42px 0 78px;
+}
+
+.employer-details-container {
+  max-width: 1320px;
+  padding: 0 24px;
+}
+
+.employer-details-content-grid {
+  gap: 28px;
+}
+
+.employer-details-content-left {
+  gap: 34px;
+}
+
+.employer-details-overview-section,
+.employer-details-gallery-section,
+.employer-details-reviews-section {
+  background: #ffffff;
+  border: 1px solid #e4ecf6;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 10px 26px rgba(15, 40, 60, 0.06);
+}
+
+/* Extend reviews section to align with right edge of sidebar card */
+.employer-details-reviews-section {
+  width: calc(100% + 428px);
+  max-width: calc(100% + 428px);
+}
+
+.employer-details-overview-section::after,
+.employer-details-gallery-section::after,
+.employer-details-jobs-section::before {
+  display: none;
+}
+
+.employer-details-overview-section h2,
+.employer-details-gallery-section h2,
+.employer-details-reviews-header h2,
+.employer-details-jobs-header h2 {
+  margin-bottom: 16px;
+}
+
+.employer-details-sidebar-card {
+  background: #edf8ff;
+  border: 1px solid #dce9f8;
+  border-radius: 16px;
+  padding: 34px 30px;
+  box-shadow: 0 10px 24px rgba(15, 40, 60, 0.08);
+  min-height: auto;
+}
+
+.employer-details-connect-section {
+  margin: 24px 0;
+}
+
+.employer-details-connect-buttons {
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.employer-details-connect-btn {
+  height: 50px;
+  border-radius: 10px;
+  border-color: #d9e2ef;
+  font-weight: 600;
+}
+
+.employer-details-send-message-btn {
+  border-radius: 10px;
+  height: 50px;
+  padding: 0 18px;
+  box-shadow: 0 10px 20px rgba(0, 104, 206, 0.24);
+  transition: transform 0.2s ease, box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.employer-details-send-message-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 24px rgba(0, 104, 206, 0.3);
+}
+
+.employer-details-jobs-section {
+  margin-top: 46px;
+  padding-top: 0;
+}
+
+.employer-details-jobs-header {
+  margin-bottom: 24px;
+}
+
+.employer-details-jobs-section .joblist-card-item {
+  box-shadow: 0 10px 24px rgba(15, 40, 60, 0.08);
+}
+
+.employer-details-review-card-small {
+  width: 100%;
+  min-height: 190px;
+}
+
+.employer-details-write-review-form-wrapper.full-width {
+  box-shadow: 0 12px 28px rgba(15, 40, 60, 0.08);
+}
+
 /* Responsive Styles */
 @media (max-width: 1200px) {
   .employer-details-content-grid {
@@ -1583,6 +1710,11 @@
 
   .employer-details-reviews-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .employer-details-reviews-section {
+    width: 100%;
+    max-width: 100%;
   }
 
   .employer-details-jobs-grid {

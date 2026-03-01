@@ -1,3 +1,4 @@
+import PortalFooter from "../../components/PortalFooter";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import RecruiterSidebar from "../../components/recruitercomponents/RecruiterSidebar";
@@ -196,9 +197,12 @@ const RecruiterJobPostingsListPage = () => {
             ))}
           </div>
         </div>
-      </main>
+              <PortalFooter />
+</main>
     </div>
   );
 };
 
 export default RecruiterJobPostingsListPage;
+
+

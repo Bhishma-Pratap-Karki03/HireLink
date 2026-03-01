@@ -546,7 +546,7 @@
 
 .joblist-pagination {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   padding: 18px 0;
   border-top: 1px solid #e2e8f0;
@@ -556,6 +556,7 @@
   display: flex;
   align-items: center;
   gap: 22px;
+  order: 1;
 }
 
 .joblist-page-numbers {
@@ -613,6 +614,8 @@
 .joblist-page-info {
   font-size: 12px;
   color: #5f6f88;
+  margin-left: auto;
+  order: 2;
 }
 
 .joblist-brands {

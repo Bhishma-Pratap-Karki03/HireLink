@@ -41,6 +41,8 @@ import CandidateFriendRequestsPage from "./pages/candidatepages/CandidateFriendR
 import RecruiterFriendRequestsPage from "./pages/recruiterpages/RecruiterFriendRequestsPage";
 import CandidateMessagesPage from "./pages/candidatepages/CandidateMessagesPage";
 import RecruiterMessagesPage from "./pages/recruiterpages/RecruiterMessagesPage";
+import CandidateNotificationsPage from "./pages/candidatepages/CandidateNotificationsPage";
+import RecruiterNotificationsPage from "./pages/recruiterpages/RecruiterNotificationsPage";
 import CandidateAppliedStatusPage from "./pages/candidatepages/CandidateAppliedStatusPage";
 import CandidateSmartJobsPage from "./pages/candidatepages/CandidateSmartJobsPage";
 import CandidateSmartJobsHistoryPage from "./pages/candidatepages/CandidateSmartJobsHistoryPage";
@@ -470,6 +472,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/recruiter/notifications"
+          element={
+            <ProtectedRoute allowedRoles={["recruiter"]}>
+              <RecruiterNotificationsPage />
+            </ProtectedRoute>
+          }
+        />
         {/* CANDIDATE PAGES */}
         <Route
           path="/candidate/resume"
@@ -527,6 +537,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["candidate"]}>
               <CandidateFriendRequestsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/candidate/notifications"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <CandidateNotificationsPage />
             </ProtectedRoute>
           }
         />

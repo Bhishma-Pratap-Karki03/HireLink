@@ -11,6 +11,7 @@ import jobPostingsIcon from "../../images/Recruiter Profile Page Images/6_312.sv
 import messagesIcon from "../../images/Recruiter Profile Page Images/6_317.svg";
 import settingsIcon from "../../images/Recruiter Profile Page Images/6_335.svg";
 import friendRequestsIcon from "../../images/Recruiter Profile Page Images/friend-request.svg";
+import notificationIcon from "../../images/Recruiter Profile Page Images/notification icon.svg";
 
 interface UserData {
   id: string;
@@ -159,6 +160,12 @@ const RecruiterSidebar: React.FC = () => {
       path: "/recruiter/friend-requests",
       label: "Friend Requests",
       icon: friendRequestsIcon,
+    },
+    {
+      id: "notifications",
+      path: "/recruiter/notifications",
+      label: "Notifications",
+      icon: notificationIcon,
     },
     {
       id: "settings",

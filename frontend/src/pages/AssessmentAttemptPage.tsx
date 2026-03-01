@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../styles/AssessmentAttemptPage.css";
@@ -365,6 +367,39 @@ const AssessmentAttemptPage = () => {
 
   const isReadOnly = attempt?.status !== "in_progress";
   const isSubmitted = attempt?.status === "submitted";
+  const quillModules = useMemo(
+    () => ({
+      toolbar: isReadOnly
+        ? false
+        : [
+            [{ header: [1, 2, 3, false] }],
+            ["bold", "italic", "underline", "strike"],
+            [{ list: "ordered" }, { list: "bullet" }],
+            [{ align: [] }],
+            [{ indent: "-1" }, { indent: "+1" }],
+            [{ color: [] }, { background: [] }],
+            ["link", "blockquote", "code-block"],
+            ["clean"],
+          ],
+    }),
+    [isReadOnly],
+  );
+  const quillFormats = [
+    "header",
+    "bold",
+    "italic",
+    "underline",
+    "strike",
+    "list",
+    "bullet",
+    "indent",
+    "align",
+    "color",
+    "background",
+    "link",
+    "blockquote",
+    "code-block",
+  ];
   const completedDuration = () => {
     if (!attempt?.startTime || !attempt?.endTime) return null;
     const start = new Date(attempt.startTime).getTime();
@@ -501,13 +536,17 @@ const AssessmentAttemptPage = () => {
                       onChange={(e) => setWritingLink(e.target.value)}
                     />
                   ) : (
-                    <textarea
-                      className="assessment-textarea"
-                      placeholder="Write your response here..."
+                    <div className="assessment-writing-quill">
+                      <ReactQuill
+                        theme="snow"
                       value={writingResponse}
-                      disabled={isReadOnly}
-                      onChange={(e) => setWritingResponse(e.target.value)}
-                    />
+                        onChange={setWritingResponse}
+                        modules={quillModules}
+                        formats={quillFormats}
+                        placeholder="Write your response here..."
+                        readOnly={isReadOnly}
+                      />
+                    </div>
                   )}
                 </div>
               )}

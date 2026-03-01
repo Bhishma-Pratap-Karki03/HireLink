@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import PortalFooter from "../../components/PortalFooter";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import CandidateSidebar from "../../components/candidatecomponents/CandidateSidebar";
 import CandidateTopBar from "../../components/candidatecomponents/CandidateTopBar";
 import "../../styles/CandidateSmartJobsPage.css";
+import prevIcon from "../../images/Employers Page Images/Prev Icon.svg";
+import nextIcon from "../../images/Employers Page Images/Next Icon.svg";
 
 type Recommendation = {
   jobId: string;
@@ -17,11 +20,14 @@ type Recommendation = {
 };
 
 const CandidateSmartJobsHistoryPage = () => {
+  const ITEMS_PER_PAGE = 20;
   const navigate = useNavigate();
   const { historyId } = useParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [items, setItems] = useState<Recommendation[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchHistory = async () => {
     const token = localStorage.getItem("authToken");
@@ -58,11 +64,53 @@ const CandidateSmartJobsHistoryPage = () => {
     fetchHistory();
   }, [historyId]);
 
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return items;
+
+    return items.filter((item) => {
+      const title = (item.jobTitle || "").toLowerCase();
+      const company = (item.companyName || "").toLowerCase();
+      const location = (item.location || "").toLowerCase();
+      return (
+        title.includes(query) ||
+        company.includes(query) ||
+        location.includes(query)
+      );
+    });
+  }, [items, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / ITEMS_PER_PAGE));
+
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredItems.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredItems, currentPage]);
+
+  const visiblePages = useMemo(
+    () => Array.from({ length: Math.min(totalPages, 7) }, (_, index) => index + 1),
+    [totalPages],
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   return (
     <div className="candidate-dashboard-container">
       <CandidateSidebar />
       <main className="candidate-smart-main">
-        <CandidateTopBar />
+        <CandidateTopBar
+          showSearch
+          searchPlaceholder="Search by job title, company, or location..."
+          onSearch={setSearchQuery}
+        />
         <section className="candidate-smart-shell">
           <header className="candidate-smart-header">
             <div className="candidate-smart-header-left">
@@ -87,10 +135,15 @@ const CandidateSmartJobsHistoryPage = () => {
           {!loading && !error && items.length === 0 && (
             <div className="candidate-smart-state">No recommendations in this history run.</div>
           )}
+          {!loading && !error && items.length > 0 && filteredItems.length === 0 && (
+            <div className="candidate-smart-state">
+              No jobs match your search.
+            </div>
+          )}
 
-          {items.length > 0 && (
+          {filteredItems.length > 0 && (
             <div className="candidate-smart-list">
-              {items.map((item) => (
+              {paginatedItems.map((item) => (
                 <article key={item.jobId} className="candidate-smart-card">
                   <div className="candidate-smart-card-top">
                     <div>
@@ -130,10 +183,53 @@ const CandidateSmartJobsHistoryPage = () => {
               ))}
             </div>
           )}
+          {filteredItems.length > 0 && (
+            <div className="candidate-smart-pagination">
+              <div className="candidate-smart-page-controls">
+                <button
+                  className="candidate-smart-page-nav"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <img src={prevIcon} alt="Previous" />
+                </button>
+                <div className="candidate-smart-page-numbers">
+                  {visiblePages.map((pageNumber) => (
+                    <span
+                      key={pageNumber}
+                      className={`candidate-smart-page-num ${
+                        pageNumber === currentPage ? "active" : ""
+                      }`}
+                      onClick={() => setCurrentPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  className="candidate-smart-page-nav"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  <img src={nextIcon} alt="Next" />
+                </button>
+              </div>
+              <div className="candidate-smart-page-info">
+                Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
+                {(currentPage - 1) * ITEMS_PER_PAGE + paginatedItems.length} of{" "}
+                {filteredItems.length}
+              </div>
+            </div>
+          )}
         </section>
-      </main>
+              <PortalFooter />
+</main>
     </div>
   );
 };
 
 export default CandidateSmartJobsHistoryPage;
+
+

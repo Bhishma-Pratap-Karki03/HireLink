@@ -1,4 +1,5 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import PortalFooter from "../../components/PortalFooter";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CandidateSidebar from "../../components/candidatecomponents/CandidateSidebar";
 import CandidateTopBar from "../../components/candidatecomponents/CandidateTopBar";
@@ -9,6 +10,8 @@ import statsOfferIcon from "../../images/Candidate Profile Page Images/stats-off
 import statsTotalIcon from "../../images/Candidate Profile Page Images/stats-reject.svg";
 import actionMessageIcon from "../../images/Candidate Profile Page Images/message-icon.svg";
 import actionResumeIcon from "../../images/Candidate Profile Page Images/eyeIcon.svg";
+import prevIcon from "../../images/Employers Page Images/Prev Icon.svg";
+import nextIcon from "../../images/Employers Page Images/Next Icon.svg";
 
 type AppliedStatusItem = {
   id: string;
@@ -31,9 +34,11 @@ type AppliedStatusItem = {
 };
 
 const CandidateAppliedStatusPage = () => {
+  const ITEMS_PER_PAGE = 20;
   const navigate = useNavigate();
   const [items, setItems] = useState<AppliedStatusItem[]>([]);
   const [titleSearch, setTitleSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -59,8 +64,8 @@ const CandidateAppliedStatusPage = () => {
 
   const cleanLabel = (value?: string) =>
     String(value || "")
-      .replace(/â€¢/g, "-")
-      .replace(/�/g, "-")
+      .replace(/•/g, "-")
+      .replace(/\?/g, "-")
       .trim();
 
   const labelFromStatus = (status?: string) => {
@@ -96,6 +101,28 @@ const CandidateAppliedStatusPage = () => {
     if (!query) return items;
     return items.filter((item) => item.jobTitle.toLowerCase().includes(query));
   }, [items, titleSearch]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / ITEMS_PER_PAGE));
+
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredItems.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredItems, currentPage]);
+
+  const visiblePages = useMemo(
+    () => Array.from({ length: Math.min(totalPages, 7) }, (_, index) => index + 1),
+    [totalPages],
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [titleSearch]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const fetchAppliedStatus = async () => {
     const token = localStorage.getItem("authToken");
@@ -193,7 +220,7 @@ const CandidateAppliedStatusPage = () => {
 
             {!loading &&
               !error &&
-              filteredItems.map((item) => (
+              paginatedItems.map((item) => (
                 <article key={item.id} className="candidate-applied-row">
                   <div className="candidate-applied-cell candidate-applied-job">
                     <h4>{item.jobTitle}</h4>
@@ -246,12 +273,56 @@ const CandidateAppliedStatusPage = () => {
                   </div>
                 </article>
               ))}
+            {!loading && !error && filteredItems.length > 0 && (
+              <div className="candidate-applied-pagination">
+                <div className="candidate-applied-page-info">
+                  Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
+                  {(currentPage - 1) * ITEMS_PER_PAGE + paginatedItems.length} of{" "}
+                  {filteredItems.length}
+                </div>
+                <div className="candidate-applied-page-controls">
+                  <button
+                    className="candidate-applied-page-nav"
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <img src={prevIcon} alt="Previous" />
+                  </button>
+                  <div className="candidate-applied-page-numbers">
+                    {visiblePages.map((pageNumber) => (
+                      <span
+                        key={pageNumber}
+                        className={`candidate-applied-page-num ${
+                          pageNumber === currentPage ? "active" : ""
+                        }`}
+                        onClick={() => setCurrentPage(pageNumber)}
+                      >
+                        {pageNumber}
+                      </span>
+                    ))}
+                  </div>
+                  <button
+                    className="candidate-applied-page-nav"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                  >
+                    <img src={nextIcon} alt="Next" />
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
         </section>
-      </main>
+              <PortalFooter />
+</main>
     </div>
   );
 };
 
 export default CandidateAppliedStatusPage;
+
+
+
 

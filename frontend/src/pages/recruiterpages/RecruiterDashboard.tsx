@@ -1,3 +1,4 @@
+import PortalFooter from "../../components/PortalFooter";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -704,6 +705,7 @@ const RecruiterDashboard = () => {
               {!loading && error && <div className="recruiter-dashboard-state error">{error}</div>}
             </div>
           </div>
+          <PortalFooter />
         </div>
       </div>
     </div>

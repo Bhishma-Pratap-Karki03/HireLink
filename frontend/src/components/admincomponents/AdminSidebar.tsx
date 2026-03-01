@@ -11,6 +11,7 @@ import usersIcon from "../../images/Admin Profile Page Images/4_103.svg";
 import settingsIcon from "../../images/Recruiter Profile Page Images/6_335.svg";
 import assessmentsIcon from "../../images/Admin Profile Page Images/Quiz.svg";
 import jobsIcon from "../../images/Recruiter Profile Page Images/6_312.svg";
+import notificationIcon from "../../images/Recruiter Profile Page Images/notification icon.svg";
 
 interface UserData {
   id: string;
@@ -155,6 +156,12 @@ const AdminSidebar: React.FC = () => {
       path: "/admin/assessments",
       label: "Quiz/Assessment",
       icon: assessmentsIcon,
+    },
+    {
+      id: "notifications",
+      path: "/admin/messages",
+      label: "Notifications",
+      icon: notificationIcon,
     },
     {
       id: "settings",

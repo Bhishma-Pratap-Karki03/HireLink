@@ -100,6 +100,8 @@ const EmployersPage = () => {
   const currentUser = userDataStr ? JSON.parse(userDataStr) : null;
   const currentUserId =
     currentUser?.id || currentUser?._id || currentUser?.userId || "";
+  const isAdminViewer =
+    currentUser?.email === "hirelinknp@gmail.com" || currentUser?.role === "admin";
 
   // Function to fetch companies from backend
   const fetchCompanies = async () => {
@@ -822,7 +824,7 @@ const EmployersPage = () => {
                                   <img src={viewProfileIcon} alt="View profile" />
                                   <span>View Profile</span>
                                 </button>
-                              ) : (
+                              ) : !isAdminViewer ? (
                                 <>
                                   <button
                                     type="button"
@@ -854,6 +856,20 @@ const EmployersPage = () => {
                                     <span>Message</span>
                                   </button>
                                 </>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="employerspublic-contact-btn"
+                                  title="View profile"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    navigate(`/employer/${company.id}`);
+                                  }}
+                                  onMouseDown={(event) => event.stopPropagation()}
+                                >
+                                  <img src={viewProfileIcon} alt="View profile" />
+                                  <span>View Profile</span>
+                                </button>
                               )}
                             </div>
                           </div>

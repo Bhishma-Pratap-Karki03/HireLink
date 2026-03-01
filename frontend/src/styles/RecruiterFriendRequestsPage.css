@@ -207,3 +207,122 @@
     flex: 1;
   }
 }
+
+/* Friend Requests UI Enhancement */
+.recruiter-friend-content {
+  padding: 32px;
+  gap: 16px;
+}
+
+.recruiter-friend-header {
+  background: linear-gradient(180deg, #f6fbff 0%, #ffffff 100%);
+  border: 1px solid #dce8f6;
+  border-radius: 16px;
+  padding: 18px 20px;
+}
+
+.recruiter-friend-header h1 {
+  font-size: clamp(28px, 3vw, 34px);
+  letter-spacing: -0.4px;
+  color: #0f2f53;
+}
+
+.recruiter-friend-header p {
+  margin-top: 8px;
+  color: #5f7694;
+}
+
+.recruiter-friend-tabs {
+  background: #ffffff;
+  border: 1px solid #dce8f6;
+  border-radius: 12px;
+  padding: 8px;
+  width: fit-content;
+}
+
+.recruiter-friend-tab {
+  border-radius: 8px;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.recruiter-friend-state {
+  border: 1px solid #dce8f6;
+  border-radius: 14px;
+  background: #f8fbff;
+}
+
+.recruiter-friend-state.error {
+  border-color: #f3c7c7;
+  background: #fff6f6;
+}
+
+.recruiter-friend-list {
+  gap: 12px;
+}
+
+.recruiter-friend-card {
+  border: 1px solid #dce8f6;
+  box-shadow: 0 10px 22px rgba(15, 40, 60, 0.08);
+  border-radius: 16px;
+  padding: 16px 18px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+
+.recruiter-friend-avatar {
+  width: 70px;
+  height: 70px;
+  border-color: #d5e5f5;
+}
+
+.recruiter-friend-info h3 {
+  font-size: 21px;
+  letter-spacing: -0.2px;
+}
+
+.recruiter-friend-info span {
+  color: #1a66d4;
+}
+
+.recruiter-friend-actions {
+  gap: 8px;
+}
+
+.recruiter-friend-btn {
+  min-width: 102px;
+  border-radius: 10px;
+  font-weight: 700;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+
+.recruiter-friend-btn.accept {
+  background: #0068ce;
+  border-color: #0068ce;
+}
+
+
+@media (max-width: 992px) {
+  .recruiter-friend-content {
+    padding: 20px;
+  }
+
+  .recruiter-friend-header {
+    padding: 14px 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .recruiter-friend-content {
+    padding: 24px;
+  }
+
+  .recruiter-friend-card {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .recruiter-friend-actions {
+    justify-content: flex-end;
+  }
+}

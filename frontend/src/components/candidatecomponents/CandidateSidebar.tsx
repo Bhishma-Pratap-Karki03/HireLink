@@ -14,6 +14,7 @@ import savedJobIcon from "../../images/Candidate Profile Page Images/261_1935.sv
 import settingsIcon from "../../images/Candidate Profile Page Images/261_1942.svg";
 import friendRequestsIcon from "../../images/Recruiter Profile Page Images/friend-request.svg";
 import appliedStatusIcon from "../../images/Candidate Profile Page Images/communication.png";
+import notificationIcon from "../../images/Recruiter Profile Page Images/notification icon.svg";
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
 
 interface UserData {
@@ -262,6 +263,12 @@ const CandidateSidebar: React.FC = () => {
           icon: friendRequestsIcon,
         },
         {
+          id: "notifications",
+          path: "/candidate/notifications",
+          label: "Notifications",
+          icon: notificationIcon,
+        },
+        {
           id: "settings",
           path: "/candidate/settings",
           label: "Settings",
@@ -329,7 +336,10 @@ const CandidateSidebar: React.FC = () => {
 
       <nav className="sidebar-nav">
         {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const isSmartJobs =
+            item.id === "job-alerts" &&
+            location.pathname.startsWith("/candidate/job-alerts");
+          const isActive = isSmartJobs || location.pathname === item.path;
 
           return (
             <Link
@@ -350,6 +360,7 @@ const CandidateSidebar: React.FC = () => {
           );
         })}
       </nav>
+
     </aside>
   );
 };

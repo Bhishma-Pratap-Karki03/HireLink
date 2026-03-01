@@ -1,3 +1,4 @@
+import PortalFooter from "../../components/PortalFooter";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import RecruiterSidebar from "../../components/recruitercomponents/RecruiterSidebar";
@@ -260,7 +261,10 @@ const RecruiterApplicantAssessmentPage = () => {
                   {assessment.writingResponse && (
                     <div className="recruiter-assessment-page-block">
                       <span>Writing Submission</span>
-                      <pre>{assessment.writingResponse}</pre>
+                      <div
+                        className="assessment-richtext"
+                        dangerouslySetInnerHTML={{ __html: assessment.writingResponse }}
+                      />
                     </div>
                   )}
                 </>
@@ -324,9 +328,12 @@ const RecruiterApplicantAssessmentPage = () => {
             </section>
           )}
         </div>
-      </main>
+              <PortalFooter />
+</main>
     </div>
   );
 };
 
 export default RecruiterApplicantAssessmentPage;
+
+

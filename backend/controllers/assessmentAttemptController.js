@@ -68,8 +68,14 @@ const canViewCandidateSubmissions = async (viewerId, candidateId) => {
   if (!viewerId || !candidateId) return false;
   if (String(viewerId) === String(candidateId)) return true;
 
-  const viewer = await User.findById(viewerId).select("role").lean();
+  const [viewer, candidate] = await Promise.all([
+    User.findById(viewerId).select("role").lean(),
+    User.findById(candidateId).select("role profileVisibility").lean(),
+  ]);
+
   if (!viewer) return false;
+  if (!candidate || candidate.role !== "candidate") return false;
+
   if (viewer.role === "admin") return true;
   if (!["candidate", "recruiter"].includes(viewer.role)) return false;
 
@@ -82,6 +88,10 @@ const canViewCandidateSubmissions = async (viewerId, candidateId) => {
   })
     .select("_id")
     .lean();
+
+  if (candidate.profileVisibility === "private") {
+    return Boolean(link);
+  }
 
   return Boolean(link);
 };

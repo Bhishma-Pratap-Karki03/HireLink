@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../styles/Navbar.css";
+import { connectSocket, getSocket } from "../lib/socketClient";
 
 // Import images
 import logoImg from "../images/Register Page Images/Logo.png";
@@ -30,6 +31,49 @@ interface UserData {
   address?: string;
 }
 
+interface NotificationItem {
+  id: string;
+  type:
+    | "connection_request_received"
+    | "connection_request_accepted"
+    | "application_status_updated"
+    | "message_received";
+  isRead: boolean;
+  message: string;
+  createdAt: string;
+  updatedAt: string;
+  targetPath: string;
+  unreadMessageCount?: number;
+  actor?: {
+    id: string;
+    fullName: string;
+    role: string;
+    profilePicture?: string;
+  };
+}
+
+interface MessageConversationItem {
+  user: {
+    id: string;
+    fullName: string;
+    email: string;
+    role: string;
+    profilePicture?: string;
+    currentJobTitle?: string;
+  };
+  lastMessage: {
+    id: string;
+    content: string;
+    createdAt: string;
+    senderId: string;
+    receiverId: string;
+  } | null;
+  updatedAt: string;
+  unreadCount?: number;
+}
+
+const NOTIFICATION_TOAST_STORAGE_PREFIX = "connectionNotificationToasts:";
+
 const readStoredUserData = (): UserData | null => {
   if (typeof window === "undefined") return null;
   try {
@@ -48,6 +92,25 @@ const readStoredUserName = (): string => {
   return "";
 };
 
+const getToastStorageKey = () => {
+  const storedUser = readStoredUserData();
+  const userId = storedUser?.id || "guest";
+  return `${NOTIFICATION_TOAST_STORAGE_PREFIX}${userId}`;
+};
+
+const resolveAvatar = (value?: string) => {
+  if (!value) return defaultAvatar;
+  if (value.startsWith("http")) return value;
+  return `http://localhost:5000${value}`;
+};
+
+const getNotificationTime = (item: NotificationItem) => {
+  const primary = new Date(item.updatedAt || item.createdAt).getTime();
+  if (!Number.isNaN(primary)) return primary;
+  const fallback = new Date(item.createdAt).getTime();
+  return Number.isNaN(fallback) ? 0 : fallback;
+};
+
 const Navbar = ({ userType = "candidate" }: NavbarProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() =>
@@ -58,10 +121,31 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileUserDropdownOpen, setIsMobileUserDropdownOpen] =
     useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [connectionNotificationItems, setConnectionNotificationItems] = useState<
+    NotificationItem[]
+  >([]);
+  const [messageNotificationItems, setMessageNotificationItems] = useState<
+    NotificationItem[]
+  >([]);
+  const [notificationLoading, setNotificationLoading] = useState(false);
+  const [notificationError, setNotificationError] = useState("");
+  const [connectionUnreadCount, setConnectionUnreadCount] = useState(0);
+  const [messageUnreadCount, setMessageUnreadCount] = useState(0);
+  const [notificationToasts, setNotificationToasts] = useState<NotificationItem[]>([]);
+  const [dismissingToastIds, setDismissingToastIds] = useState<string[]>([]);
   const [profileImage, setProfileImage] = useState<string>(defaultAvatar);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const mobileUserDropdownRef = useRef<HTMLDivElement | null>(null);
+  const notificationRef = useRef<HTMLDivElement | null>(null);
+  const toastTimersRef = useRef<Record<string, number>>({});
   const navigate = useNavigate();
+  const notificationItems = useMemo(() => {
+    return [...connectionNotificationItems, ...messageNotificationItems]
+      .sort((a, b) => getNotificationTime(b) - getNotificationTime(a))
+      .slice(0, 5);
+  }, [connectionNotificationItems, messageNotificationItems]);
+  const unreadNotificationCount = connectionUnreadCount + messageUnreadCount;
 
   // Fetch user data from backend
   const fetchUserData = async () => {
@@ -204,6 +288,396 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
     setIsMobileUserDropdownOpen((prev) => !prev);
   };
 
+  const fetchNotifications = async (silent = false) => {
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      setConnectionNotificationItems([]);
+      setConnectionUnreadCount(0);
+      return;
+    }
+
+    try {
+      if (!silent) {
+        setNotificationLoading(true);
+        setNotificationError("");
+      }
+      const response = await fetch(
+        "http://localhost:5000/api/connections/notifications?limit=5",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to load notifications");
+      }
+      setConnectionNotificationItems(data?.notifications || []);
+      setConnectionUnreadCount(Number(data?.unreadCount || 0));
+    } catch (error: any) {
+      if (!silent) {
+        setNotificationError(error?.message || "Failed to load notifications");
+      }
+    } finally {
+      if (!silent) {
+        setNotificationLoading(false);
+      }
+    }
+  };
+
+  const fetchMessageNotifications = async (silent = false) => {
+    const token = localStorage.getItem("authToken");
+    const role = userData?.role;
+    if (!token || (role !== "candidate" && role !== "recruiter")) {
+      setMessageNotificationItems([]);
+      setMessageUnreadCount(0);
+      return;
+    }
+
+    try {
+      if (!silent) {
+        setNotificationLoading(true);
+        setNotificationError("");
+      }
+      const response = await fetch("http://localhost:5000/api/messages/conversations", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to load message notifications");
+      }
+
+      const conversations = (data?.conversations || []) as MessageConversationItem[];
+      const unreadConversations = conversations.filter(
+        (item) => Number(item?.unreadCount || 0) > 0
+      );
+      const totalUnread = unreadConversations.reduce(
+        (sum, item) => sum + Number(item?.unreadCount || 0),
+        0
+      );
+
+      const mapped = unreadConversations
+        .map((item) => {
+          const unreadCount = Number(item.unreadCount || 0);
+          const displayMessage = item.lastMessage?.content?.trim()
+            ? item.lastMessage.content
+            : "sent you a message.";
+          const messagePath =
+            role === "recruiter"
+              ? `/recruiter/messages?user=${item.user.id}`
+              : `/candidate/messages?user=${item.user.id}`;
+
+          return {
+            id: `message:${item.user.id}`,
+            type: "message_received" as const,
+            isRead: false,
+            message:
+              unreadCount > 1
+                ? `${item.user.fullName} sent ${unreadCount} new messages.`
+                : `${item.user.fullName}: ${displayMessage}`,
+            createdAt: item.lastMessage?.createdAt || item.updatedAt,
+            updatedAt: item.lastMessage?.createdAt || item.updatedAt,
+            targetPath: messagePath,
+            unreadMessageCount: unreadCount,
+            actor: {
+              id: item.user.id,
+              fullName: item.user.fullName || "User",
+              role: item.user.role || "",
+              profilePicture: item.user.profilePicture || "",
+            },
+          };
+        })
+        .sort((a, b) => getNotificationTime(b) - getNotificationTime(a))
+        .slice(0, 5);
+
+      setMessageNotificationItems(mapped);
+      setMessageUnreadCount(totalUnread);
+    } catch (error: any) {
+      if (!silent) {
+        setNotificationError(
+          error?.message || "Failed to load message notifications"
+        );
+      }
+    } finally {
+      if (!silent) {
+        setNotificationLoading(false);
+      }
+    }
+  };
+
+  const toggleNotificationMenu = () => {
+    setIsNotificationOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        fetchNotifications();
+        fetchMessageNotifications();
+      }
+      return next;
+    });
+  };
+
+  const handleNotificationClick = async (item: NotificationItem) => {
+    if (item.type === "message_received") {
+      setMessageNotificationItems((prev) =>
+        prev.map((entry) =>
+          entry.id === item.id ? { ...entry, isRead: true } : entry
+        )
+      );
+      const consumedUnread = Number(item.unreadMessageCount || 0);
+      if (consumedUnread > 0) {
+        setMessageUnreadCount((prev) => Math.max(prev - consumedUnread, 0));
+      }
+      setIsNotificationOpen(false);
+      navigate(item.targetPath || "/home");
+      return;
+    }
+
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/connections/notifications/read",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ notificationId: item.id }),
+        }
+      );
+
+      const data = await response.json();
+      if (response.ok) {
+        setConnectionNotificationItems((prev) =>
+          prev.map((entry) =>
+            entry.id === item.id ? { ...entry, isRead: true } : entry
+          )
+        );
+        setConnectionUnreadCount(Number(data?.unreadCount || 0));
+      }
+    } catch {
+      // no-op: navigation should continue even if read-status update fails
+    }
+
+    setIsNotificationOpen(false);
+    if (item.type === "connection_request_received") {
+      const friendRequestsPath =
+        userData?.role === "recruiter"
+          ? "/recruiter/friend-requests"
+          : "/candidate/friend-requests";
+      navigate(friendRequestsPath);
+      return;
+    }
+
+    navigate(item.targetPath || "/home");
+  };
+
+  const dismissToast = (notificationId: string) => {
+    setDismissingToastIds((prev) =>
+      prev.includes(notificationId) ? prev : [...prev, notificationId]
+    );
+    window.setTimeout(() => {
+      setNotificationToasts((prev) =>
+        prev.filter((item) => item.id !== notificationId)
+      );
+      setDismissingToastIds((prev) =>
+        prev.filter((id) => id !== notificationId)
+      );
+      const activeTimer = toastTimersRef.current[notificationId];
+      if (activeTimer) {
+        window.clearTimeout(activeTimer);
+        delete toastTimersRef.current[notificationId];
+      }
+    }, 280);
+  };
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(getToastStorageKey());
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      setNotificationToasts(parsed.slice(0, 3));
+    } catch {
+      // ignore invalid local storage values
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (notificationToasts.length === 0) {
+        localStorage.removeItem(getToastStorageKey());
+        return;
+      }
+      localStorage.setItem(
+        getToastStorageKey(),
+        JSON.stringify(notificationToasts.slice(0, 3))
+      );
+    } catch {
+      // ignore local storage write errors
+    }
+  }, [notificationToasts]);
+
+  useEffect(() => {
+    notificationToasts.forEach((toast) => {
+      if (toastTimersRef.current[toast.id]) return;
+      toastTimersRef.current[toast.id] = window.setTimeout(() => {
+        dismissToast(toast.id);
+      }, 20000);
+    });
+
+    Object.keys(toastTimersRef.current).forEach((toastId) => {
+      const stillExists = notificationToasts.some((item) => item.id === toastId);
+      if (!stillExists) {
+        window.clearTimeout(toastTimersRef.current[toastId]);
+        delete toastTimersRef.current[toastId];
+      }
+    });
+  }, [notificationToasts]);
+
+  useEffect(() => {
+    return () => {
+      Object.keys(toastTimersRef.current).forEach((toastId) => {
+        window.clearTimeout(toastTimersRef.current[toastId]);
+      });
+      toastTimersRef.current = {};
+    };
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("authToken") || "";
+    const isNotifiableRole =
+      (userData?.role === "candidate" || userData?.role === "recruiter") &&
+      !isAdminUser;
+
+    if (!token || !isNotifiableRole) return;
+
+    const socket = connectSocket(token);
+    if (!socket) return;
+
+    const handleRealtimeNotification = (payload: {
+      notification?: NotificationItem;
+      unreadCount?: number;
+    }) => {
+      const incoming = payload?.notification;
+      if (!incoming) return;
+      setConnectionNotificationItems((prev) => {
+        const merged = [incoming, ...prev.filter((item) => item.id !== incoming.id)];
+        return merged.slice(0, 5);
+      });
+      setConnectionUnreadCount(
+        typeof payload?.unreadCount === "number"
+          ? Number(payload.unreadCount)
+          : (prev) => prev + 1
+      );
+      setNotificationToasts((prev) => {
+        const next = [incoming, ...prev.filter((item) => item.id !== incoming.id)];
+        return next.slice(0, 3);
+      });
+    };
+
+    const handleMessageNotification = (payload: any) => {
+      const receiverId = String(payload?.receiverId || "");
+      const senderId = String(payload?.senderId || "");
+      const actor = payload?.sender;
+
+      if (!receiverId || !senderId || !userData?.id || receiverId !== userData.id) {
+        return;
+      }
+
+      const role = userData?.role;
+      if (role !== "candidate" && role !== "recruiter") return;
+
+      const targetPath =
+        role === "recruiter"
+          ? `/recruiter/messages?user=${senderId}`
+          : `/candidate/messages?user=${senderId}`;
+      const nextUpdatedAt = payload?.createdAt || new Date().toISOString();
+
+      setMessageNotificationItems((prev) => {
+        const existing = prev.find((item) => item.id === `message:${senderId}`);
+        const unreadCount = Number(existing?.unreadMessageCount || 0) + 1;
+
+        const updatedItem: NotificationItem = {
+          id: `message:${senderId}`,
+          type: "message_received",
+          isRead: false,
+          message: `${actor?.fullName || "User"}: ${payload?.content || "sent you a message."}`,
+          createdAt: nextUpdatedAt,
+          updatedAt: nextUpdatedAt,
+          targetPath,
+          unreadMessageCount: unreadCount,
+          actor: {
+            id: senderId,
+            fullName: actor?.fullName || "User",
+            role: actor?.role || "",
+            profilePicture: actor?.profilePicture || "",
+          },
+        };
+
+        const merged = [updatedItem, ...prev.filter((item) => item.id !== updatedItem.id)];
+        return merged.slice(0, 5);
+      });
+      setMessageUnreadCount((prev) => prev + 1);
+    };
+
+    const handleSocketConnect = () => {
+      fetchNotifications(true);
+      fetchMessageNotifications(true);
+    };
+
+    socket.on("connect", handleSocketConnect);
+    socket.on("notification:connection:new", handleRealtimeNotification);
+    socket.on("message:new", handleMessageNotification);
+
+    fetchNotifications(true);
+    fetchMessageNotifications(true);
+
+    return () => {
+      const activeSocket = getSocket();
+      activeSocket?.off("connect", handleSocketConnect);
+      activeSocket?.off("notification:connection:new", handleRealtimeNotification);
+      activeSocket?.off("message:new", handleMessageNotification);
+    };
+  }, [userData?.role, userData?.id, isAdminUser]);
+
+  useEffect(() => {
+    const onDeleted = (event: Event) => {
+      const custom = event as CustomEvent<{
+        notificationId?: string;
+        unreadCount?: number;
+      }>;
+      const notificationId = custom.detail?.notificationId;
+      if (!notificationId) return;
+
+      setConnectionNotificationItems((prev) =>
+        prev.filter((item) => item.id !== notificationId)
+      );
+      setNotificationToasts((prev) =>
+        prev.filter((item) => item.id !== notificationId)
+      );
+      setDismissingToastIds((prev) =>
+        prev.filter((id) => id !== notificationId)
+      );
+
+      const nextUnread = custom.detail?.unreadCount;
+      if (typeof nextUnread === "number") {
+        setConnectionUnreadCount(nextUnread);
+      }
+    };
+
+    window.addEventListener("connectionNotificationDeleted", onDeleted);
+    return () =>
+      window.removeEventListener("connectionNotificationDeleted", onDeleted);
+  }, []);
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -223,6 +697,13 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
       ) {
         setIsMobileUserDropdownOpen(false);
       }
+
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target as Node)
+      ) {
+        setIsNotificationOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -237,6 +718,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
     localStorage.removeItem("userData");
     localStorage.removeItem("profilePictureBase64");
     localStorage.removeItem("profilePictureFileName");
+    localStorage.removeItem(getToastStorageKey());
 
     // Update state
     setIsAuthenticated(false);
@@ -245,6 +727,12 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
     setProfileImage(defaultAvatar);
     setIsMobileUserDropdownOpen(false);
     setIsUserMenuOpen(false);
+    setConnectionNotificationItems([]);
+    setMessageNotificationItems([]);
+    setConnectionUnreadCount(0);
+    setMessageUnreadCount(0);
+    setIsNotificationOpen(false);
+    setNotificationToasts([]);
 
     console.log("Logging out...");
     closeMobileMenu();
@@ -310,15 +798,16 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
   // Determine if user is recruiter
   const isRecruiter = userData?.role === "recruiter";
   const isCandidate = userData?.role === "candidate";
+  const homeNavPath = isCandidate ? "/" : "/home";
 
   // Render authenticated actions - only for candidate role
   const renderAuthenticatedActions = () => {
-    // Only show notification/bookmark for candidates (not for admin or recruiters)
-    const showCandidateIcons = isCandidate && !isAdminUser;
+    const showNotificationIcon = isCandidate || isRecruiter || isAdminUser;
+    const showBookmarkIcon = isCandidate && !isAdminUser;
 
     return (
       <>
-        {showCandidateIcons && (
+        {showBookmarkIcon && (
           <>
             <button
               className="action-icon"
@@ -327,10 +816,106 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
             >
               <img src={bookmarkIcon} alt="Bookmark" />
             </button>
-            <button className="action-icon" title="Notifications">
-              <img src={notificationIcon} alt="Notifications" />
-            </button>
           </>
+        )}
+        {showNotificationIcon && (
+          <div className="notification-wrapper" ref={notificationRef}>
+            <button
+              className="action-icon"
+              title="Notifications"
+              onClick={toggleNotificationMenu}
+            >
+              <img src={notificationIcon} alt="Notifications" />
+              {unreadNotificationCount > 0 && (
+                <span className="notification-badge">
+                  {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+                </span>
+              )}
+            </button>
+            {isNotificationOpen && (
+              <div className="notification-dropdown">
+                <div className="notification-dropdown-header">Recent Notifications</div>
+                {notificationLoading && (
+                  <div className="notification-dropdown-state">Loading...</div>
+                )}
+                {!notificationLoading && notificationError && (
+                  <div className="notification-dropdown-state error">
+                    {notificationError}
+                  </div>
+                )}
+                {!notificationLoading &&
+                  !notificationError &&
+                  notificationItems.length === 0 && (
+                    <div className="notification-dropdown-state">
+                      No recent notifications
+                    </div>
+                  )}
+                {!notificationLoading &&
+                  !notificationError &&
+                  notificationItems.length > 0 && (
+                    <ul className="notification-list">
+                      {notificationItems.map((item) => (
+                        <li
+                          key={item.id}
+                          className={`notification-item ${item.isRead ? "read" : "unread"}`}
+                          onClick={() => handleNotificationClick(item)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              handleNotificationClick(item);
+                            }
+                          }}
+                        >
+                          <div className="notification-item-main">
+                            <img
+                              src={resolveAvatar(item.actor?.profilePicture)}
+                              alt={item.actor?.fullName || "User"}
+                              className={`notification-item-avatar ${
+                                item.actor?.role === "recruiter" ? "recruiter-logo" : ""
+                              }`}
+                              onError={(e) => {
+                                e.currentTarget.src = defaultAvatar;
+                              }}
+                            />
+                            <div className="notification-item-content">
+                              <div className="notification-item-top">
+                                <span
+                                  className={`notification-status-badge ${
+                                    item.type === "message_received"
+                                      ? "status-message-pill"
+                                      : item.type === "application_status_updated"
+                                        ? "status-application"
+                                      : item.type === "connection_request_accepted"
+                                      ? "status-accepted"
+                                      : "status-new-request"
+                                  }`}
+                                >
+                                  {item.type === "message_received"
+                                    ? "Message"
+                                    : item.type === "application_status_updated"
+                                      ? "Application"
+                                    : item.type === "connection_request_accepted"
+                                    ? "Accepted"
+                                    : "New Request"}
+                                </span>
+                                <span className="notification-time">
+                                  {new Date(
+                                    item.updatedAt || item.createdAt
+                                  ).toLocaleString()}
+                                </span>
+                              </div>
+                              <p className="notification-message">{item.message}</p>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+              </div>
+            )}
+          </div>
         )}
         <div className="user-profile-wrapper" ref={userMenuRef}>
           <div
@@ -406,11 +991,12 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
 
   // Render mobile authenticated actions with dropdown
   const renderMobileAuthenticatedActions = () => {
-    const showCandidateIcons = isCandidate && !isAdminUser;
+    const showNotificationIcon = isCandidate || isRecruiter || isAdminUser;
+    const showBookmarkIcon = isCandidate && !isAdminUser;
 
     return (
       <>
-        {showCandidateIcons && (
+        {showBookmarkIcon && (
           <>
             <li>
               <button
@@ -422,17 +1008,19 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
                 Bookmarks
               </button>
             </li>
-            <li>
-              <a
-                href="#"
-                className="mobile-action-icon"
-                onClick={closeMobileMenu}
-              >
-                <img src={notificationIcon} alt="Notifications" />
-                Notifications
-              </a>
-            </li>
           </>
+        )}
+        {showNotificationIcon && (
+          <li>
+            <a
+              href="#"
+              className="mobile-action-icon"
+              onClick={closeMobileMenu}
+            >
+              <img src={notificationIcon} alt="Notifications" />
+              Notifications{unreadNotificationCount > 0 ? ` (${unreadNotificationCount})` : ""}
+            </a>
+          </li>
         )}
         <li>
           <div
@@ -529,21 +1117,15 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
     <header className="site-header">
       <div className="container header-container">
         <Link
-          to={isAuthenticated ? "/" : "/login"}
+          to="/"
           className="logo-link"
-          onClick={(e) => {
-            if (isAuthenticated) {
-              e.preventDefault();
-              navigate("/home");
-            }
-          }}
         >
           <img src={logoImg} alt="HireLink Logo" className="logo-img" />
         </Link>
         <nav className="main-navigation">
           <ul>
             <li>
-              <Link to="/home">
+              <Link to={homeNavPath}>
                 Home
               </Link>
             </li>
@@ -603,7 +1185,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
         </div>
         <ul className="mobile-menu-list">
           <li>
-            <Link to="/home" onClick={closeMobileMenu}>
+            <Link to={homeNavPath} onClick={closeMobileMenu}>
               Home
             </Link>
           </li>
@@ -635,6 +1217,68 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
             : renderMobileUnauthenticatedActions()}
         </ul>
       </nav>
+
+      {notificationToasts.length > 0 && (
+        <div className="notification-toast-stack">
+          {notificationToasts.map((item) => (
+            <div
+              key={item.id}
+              className={`notification-toast ${
+                dismissingToastIds.includes(item.id) ? "is-dismissing" : ""
+              }`}
+              role="button"
+              tabIndex={0}
+              onClick={() => handleNotificationClick(item)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  handleNotificationClick(item);
+                }
+              }}
+            >
+              <button
+                type="button"
+                className="notification-toast-close"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  dismissToast(item.id);
+                }}
+                aria-label="Close notification"
+              >
+                ×
+              </button>
+              <div className="notification-toast-head">
+                <img
+                  src={resolveAvatar(item.actor?.profilePicture)}
+                  alt={item.actor?.fullName || "User"}
+                  className={`notification-toast-avatar ${
+                    item.actor?.role === "recruiter" ? "recruiter-logo" : ""
+                  }`}
+                  onError={(e) => {
+                    e.currentTarget.src = defaultAvatar;
+                  }}
+                />
+                <span
+                  className={`notification-status-badge ${
+                    item.type === "application_status_updated"
+                      ? "status-application"
+                      : item.type === "connection_request_accepted"
+                      ? "status-accepted"
+                      : "status-new-request"
+                  }`}
+                >
+                  {item.type === "application_status_updated"
+                    ? "Application"
+                    : item.type === "connection_request_accepted"
+                    ? "Accepted"
+                    : "New Request"}
+                </span>
+              </div>
+              <p className="notification-toast-message">{item.message}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </header>
   );
 };

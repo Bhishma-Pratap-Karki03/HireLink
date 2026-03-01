@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import PortalFooter from "../../components/PortalFooter";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CandidateSidebar from "../../components/candidatecomponents/CandidateSidebar";
 import CandidateTopBar from "../../components/candidatecomponents/CandidateTopBar";
 import "../../styles/CandidateSmartJobsPage.css";
 import eyeIcon from "../../images/Candidate Profile Page Images/eyeIcon.svg";
 import deleteIcon from "../../images/Candidate Profile Page Images/trash.png";
+import prevIcon from "../../images/Employers Page Images/Prev Icon.svg";
+import nextIcon from "../../images/Employers Page Images/Next Icon.svg";
 
 type RecommendationHistoryItem = {
   id: string;
@@ -13,11 +16,17 @@ type RecommendationHistoryItem = {
 };
 
 const CandidateSmartJobsPage = () => {
+  const ITEMS_PER_PAGE = 20;
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hasRun, setHasRun] = useState(false);
   const [history, setHistory] = useState<RecommendationHistoryItem[]>([]);
+  const [draftDateFrom, setDraftDateFrom] = useState("");
+  const [draftDateTo, setDraftDateTo] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchHistory = async () => {
     const token = localStorage.getItem("authToken");
@@ -87,9 +96,58 @@ const CandidateSmartJobsPage = () => {
     return date.toLocaleString();
   };
 
+  const handleApplyDateFilter = () => {
+    setDateFrom(draftDateFrom);
+    setDateTo(draftDateTo);
+  };
+
+  const filteredHistory = useMemo(() => {
+    return history.filter((item) => {
+      const created = new Date(item.createdAt);
+      if (Number.isNaN(created.getTime())) return false;
+
+      if (dateFrom) {
+        const from = new Date(`${dateFrom}T00:00:00`);
+        if (created < from) return false;
+      }
+
+      if (dateTo) {
+        const to = new Date(`${dateTo}T23:59:59`);
+        if (created > to) return false;
+      }
+
+      return true;
+    });
+  }, [history, dateFrom, dateTo]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredHistory.length / ITEMS_PER_PAGE),
+  );
+
+  const paginatedHistory = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredHistory.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredHistory, currentPage]);
+
+  const visiblePages = useMemo(
+    () => Array.from({ length: Math.min(totalPages, 7) }, (_, index) => index + 1),
+    [totalPages],
+  );
+
   useEffect(() => {
     fetchHistory();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [dateFrom, dateTo]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   return (
     <div className="candidate-dashboard-container">
@@ -108,6 +166,30 @@ const CandidateSmartJobsPage = () => {
               )}
             </div>
             <div className="candidate-smart-header-right">
+              <div className="candidate-smart-filter-block">
+                <div className="candidate-smart-date-filter">
+                  <input
+                    type="date"
+                    value={draftDateFrom}
+                    onChange={(e) => setDraftDateFrom(e.target.value)}
+                    aria-label="From date"
+                  />
+                  <span>to</span>
+                  <input
+                    type="date"
+                    value={draftDateTo}
+                    onChange={(e) => setDraftDateTo(e.target.value)}
+                    aria-label="To date"
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="candidate-smart-apply-filter-btn"
+                  onClick={handleApplyDateFilter}
+                >
+                  Apply Filter
+                </button>
+              </div>
               <button
                 type="button"
                 className="candidate-smart-run-btn"
@@ -132,7 +214,7 @@ const CandidateSmartJobsPage = () => {
             <section className="candidate-smart-history">
               <h4>Recommendation History</h4>
               <div className="candidate-smart-history-list">
-                {history.map((row) => (
+                {paginatedHistory.map((row) => (
                   <article key={row.id} className="candidate-smart-history-row-wrap">
                     <div className="candidate-smart-history-row">
                       <div>
@@ -160,13 +242,61 @@ const CandidateSmartJobsPage = () => {
                     </div>
                   </article>
                 ))}
+                {filteredHistory.length === 0 && (
+                  <div className="candidate-smart-state">
+                    No recommendation history in selected date range.
+                  </div>
+                )}
               </div>
+              {filteredHistory.length > 0 && (
+                <div className="candidate-smart-pagination">
+                  <div className="candidate-smart-page-info">
+                    Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
+                    {(currentPage - 1) * ITEMS_PER_PAGE + paginatedHistory.length} of{" "}
+                    {filteredHistory.length}
+                  </div>
+                  <div className="candidate-smart-page-controls">
+                    <button
+                      className="candidate-smart-page-nav"
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <img src={prevIcon} alt="Previous" />
+                    </button>
+                    <div className="candidate-smart-page-numbers">
+                      {visiblePages.map((pageNumber) => (
+                        <span
+                          key={pageNumber}
+                          className={`candidate-smart-page-num ${
+                            pageNumber === currentPage ? "active" : ""
+                          }`}
+                          onClick={() => setCurrentPage(pageNumber)}
+                        >
+                          {pageNumber}
+                        </span>
+                      ))}
+                    </div>
+                    <button
+                      className="candidate-smart-page-nav"
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                      }
+                      disabled={currentPage === totalPages}
+                    >
+                      <img src={nextIcon} alt="Next" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </section>
           )}
         </section>
-      </main>
+              <PortalFooter />
+</main>
     </div>
   );
 };
 
 export default CandidateSmartJobsPage;
+
+

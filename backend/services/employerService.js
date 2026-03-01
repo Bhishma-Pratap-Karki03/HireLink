@@ -3,6 +3,7 @@
 // Import the User model
 const User = require("../models/userModel");
 const JobPost = require("../models/jobPostModel");
+const ConnectionRequest = require("../models/connectionRequestModel");
 
 class EmployerService {
   // Get all recruiters for public employers page
@@ -113,7 +114,7 @@ class EmployerService {
   }
 
   // Get single recruiter by ID
-  async getRecruiterById(recruiterId) {
+  async getRecruiterById(recruiterId, viewerId = null) {
     // Find the recruiter by ID
     const recruiter = await User.findOne({
       _id: recruiterId,
@@ -129,11 +130,36 @@ class EmployerService {
     }
 
     if (recruiter.profileVisibility === "private") {
-      const error = new Error(
-        "This employer has set their profile to private. Details are not available."
-      );
-      error.statusCode = 403;
-      throw error;
+      if (!viewerId) {
+        const error = new Error(
+          "This employer has set their profile to private. Details are not available."
+        );
+        error.statusCode = 403;
+        throw error;
+      }
+
+      if (String(viewerId) !== String(recruiter._id)) {
+        const viewer = await User.findById(viewerId).select("role").lean();
+        const isAdmin = viewer?.role === "admin";
+        if (!isAdmin) {
+          const link = await ConnectionRequest.findOne({
+            status: "accepted",
+            $or: [
+              { requester: viewerId, recipient: recruiter._id },
+              { requester: recruiter._id, recipient: viewerId },
+            ],
+          })
+            .select("_id")
+            .lean();
+          if (!link) {
+            const error = new Error(
+              "This employer has set their profile to private. Details are not available."
+            );
+            error.statusCode = 403;
+            throw error;
+          }
+        }
+      }
     }
 
     // Get full profile picture URL
@@ -169,6 +195,7 @@ class EmployerService {
     const formattedRecruiter = {
       id: recruiter._id.toString(),
       name: recruiter.fullName || "Unnamed Company",
+      profileVisibility: recruiter.profileVisibility || "public",
       logo: profilePictureUrl,
       location: recruiter.address || "No location provided",
       email: recruiter.email || "",

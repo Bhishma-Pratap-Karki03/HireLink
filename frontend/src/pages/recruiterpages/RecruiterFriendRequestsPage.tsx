@@ -1,8 +1,10 @@
+import PortalFooter from "../../components/PortalFooter";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import RecruiterSidebar from "../../components/recruitercomponents/RecruiterSidebar";
 import RecruiterTopBar from "../../components/recruitercomponents/RecruiterTopBar";
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
+import { connectSocket, getSocket } from "../../lib/socketClient";
 import "../../styles/RecruiterFriendRequestsPage.css";
 
 type FriendRequestItem = {
@@ -101,12 +103,35 @@ const RecruiterFriendRequestsPage = () => {
   }, []);
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      if (document.hidden) return;
+    const token = localStorage.getItem("authToken") || "";
+    if (!token) return;
+
+    const socket = connectSocket(token);
+    if (!socket) return;
+
+    const handleConnectionEvent = () => {
       fetchRequests(true);
       fetchFriends();
-    }, 2500);
-    return () => window.clearInterval(intervalId);
+    };
+    const handleVisibilityOrFocus = () => {
+      if (document.hidden) return;
+      handleConnectionEvent();
+    };
+
+    socket.on("connect", handleConnectionEvent);
+    socket.on("connection:request:new", handleConnectionEvent);
+    socket.on("connection:request:updated", handleConnectionEvent);
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    return () => {
+      const connectedSocket = getSocket();
+      connectedSocket?.off("connect", handleConnectionEvent);
+      connectedSocket?.off("connection:request:new", handleConnectionEvent);
+      connectedSocket?.off("connection:request:updated", handleConnectionEvent);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+    };
   }, []);
 
   const fetchFriends = async () => {
@@ -397,9 +422,12 @@ const RecruiterFriendRequestsPage = () => {
             </div>
           )}
         </section>
-      </main>
+              <PortalFooter />
+</main>
     </div>
   );
 };
 
 export default RecruiterFriendRequestsPage;
+
+

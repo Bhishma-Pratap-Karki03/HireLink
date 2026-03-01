@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import PortalFooter from "../../components/PortalFooter";
+import { useEffect, useMemo, useState } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +15,8 @@ import savedBookmarkIcon from "../../images/Recruiter Job Post Page Images/bookm
 import shareIcon from "../../images/Recruiter Job Post Page Images/shareFg.svg";
 import defaultLogo from "../../images/Recruiter Job Post Page Images/companyLogo.png";
 import closeIcon from "../../images/Candidate Profile Page Images/corss icon.png";
+import prevIcon from "../../images/Employers Page Images/Prev Icon.svg";
+import nextIcon from "../../images/Employers Page Images/Next Icon.svg";
 
 type SavedJobItem = {
   id: string;
@@ -27,6 +30,7 @@ type SavedJobItem = {
 };
 
 const SavedJobsPage = () => {
+  const ITEMS_PER_PAGE = 20;
   const navigate = useNavigate();
   const [savedJobs, setSavedJobs] = useState<SavedJobItem[]>([]);
   const [appliedJobs, setAppliedJobs] = useState<Record<string, boolean>>({});
@@ -64,6 +68,8 @@ const SavedJobsPage = () => {
   ];
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const resolveLogo = (logo?: string) => {
     if (!logo) return defaultLogo;
@@ -269,11 +275,57 @@ const SavedJobsPage = () => {
     fetchSaved();
   }, [navigate]);
 
+  const filteredSavedJobs = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return savedJobs;
+
+    return savedJobs.filter((job) =>
+      [
+        job.jobTitle,
+        job.companyName,
+        job.location,
+        job.jobType,
+        job.workMode,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)),
+    );
+  }, [savedJobs, searchQuery]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredSavedJobs.length / ITEMS_PER_PAGE),
+  );
+
+  const paginatedSavedJobs = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredSavedJobs.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredSavedJobs, currentPage]);
+
+  const visiblePages = useMemo(
+    () => Array.from({ length: Math.min(totalPages, 7) }, (_, index) => index + 1),
+    [totalPages],
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   return (
     <div className="candidate-dashboard-container">
       <SideNavigation />
-      <main className="savedjobs-main">
-        <CandidateTopBar />
+      <main className="savedjobs-main joblist-page">
+        <CandidateTopBar
+          showSearch
+          onSearch={setSearchQuery}
+          searchPlaceholder="Search saved jobs by role, company, city, location..."
+        />
 
         <div className="savedjobs-header">
           <h1>Saved Jobs</h1>
@@ -288,9 +340,12 @@ const SavedJobsPage = () => {
         {!loading && !error && savedJobs.length === 0 && (
           <div className="savedjobs-empty">No saved jobs yet.</div>
         )}
+        {!loading && !error && savedJobs.length > 0 && filteredSavedJobs.length === 0 && (
+          <div className="savedjobs-empty">No jobs match your search.</div>
+        )}
 
         <div className="joblist-grid savedjobs-grid">
-          {savedJobs.map((job) => (
+          {paginatedSavedJobs.map((job) => (
             <article key={job.id} className="joblist-card-item savedjobs-card">
               <div className="joblist-card-top">
                 <img
@@ -345,6 +400,46 @@ const SavedJobsPage = () => {
             </article>
           ))}
         </div>
+        {!loading && !error && filteredSavedJobs.length > 0 && (
+          <div className="joblist-pagination">
+            <div className="joblist-page-info">
+              Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
+              {(currentPage - 1) * ITEMS_PER_PAGE + paginatedSavedJobs.length} of{" "}
+              {filteredSavedJobs.length}
+            </div>
+            <div className="joblist-page-controls">
+              <button
+                className="joblist-page-nav"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                <img src={prevIcon} alt="Previous" />
+              </button>
+              <div className="joblist-page-numbers">
+                {visiblePages.map((pageNumber) => (
+                  <span
+                    key={pageNumber}
+                    className={`joblist-page-num ${
+                      pageNumber === currentPage ? "joblist-active" : ""
+                    }`}
+                    onClick={() => setCurrentPage(pageNumber)}
+                  >
+                    {pageNumber}
+                  </span>
+                ))}
+              </div>
+              <button
+                className="joblist-page-nav"
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                }
+                disabled={currentPage === totalPages}
+              >
+                <img src={nextIcon} alt="Next" />
+              </button>
+            </div>
+          </div>
+        )}
       {applyModalOpen && (
         <div className="apply-modal-overlay">
           <div className="apply-modal">
@@ -488,9 +583,12 @@ const SavedJobsPage = () => {
         </div>
       )}
 
-      </main>
+              <PortalFooter />
+</main>
     </div>
   );
 };
 
 export default SavedJobsPage;
+
+

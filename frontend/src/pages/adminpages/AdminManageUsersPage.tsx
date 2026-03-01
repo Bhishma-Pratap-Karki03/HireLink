@@ -21,6 +21,14 @@ type AdminUserItem = {
   profilePicture?: string;
 };
 
+type RoleChangeConfirmState = {
+  userId: string;
+  fullName: string;
+  email: string;
+  currentRole: "candidate" | "recruiter";
+  nextRole: "candidate" | "recruiter";
+};
+
 const AdminManageUsersPage = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<AdminUserItem[]>([]);
@@ -30,6 +38,12 @@ const AdminManageUsersPage = () => {
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [actingUserId, setActingUserId] = useState("");
+  const [blockConfirmUser, setBlockConfirmUser] = useState<AdminUserItem | null>(
+    null,
+  );
+  const [roleChangeConfirm, setRoleChangeConfirm] =
+    useState<RoleChangeConfirmState | null>(null);
+  const [openRoleUserId, setOpenRoleUserId] = useState<string | null>(null);
   const [isRoleOpen, setIsRoleOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const roleDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -86,6 +100,9 @@ const AdminManageUsersPage = () => {
       ) {
         setIsStatusOpen(false);
       }
+      if (!(event.target as HTMLElement).closest(".admin-manage-role-dropdown")) {
+        setOpenRoleUserId(null);
+      }
     };
 
     document.addEventListener("mousedown", handleOutsideClick);
@@ -119,7 +136,16 @@ const AdminManageUsersPage = () => {
     return `http://localhost:5000${value}`;
   };
 
-  const updateStatus = async (userId: string, action: "block" | "unblock") => {
+  const updateStatus = async (
+    userId: string,
+    action: "block" | "unblock",
+    sendEmailOverride?: boolean,
+  ) => {
+    const sendEmail =
+      typeof sendEmailOverride === "boolean"
+        ? sendEmailOverride
+        : action === "unblock";
+
     try {
       setActingUserId(userId);
       const response = await fetch(
@@ -130,7 +156,7 @@ const AdminManageUsersPage = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ action }),
+          body: JSON.stringify({ action, sendEmail }),
         },
       );
       const data = await response.json();
@@ -154,6 +180,7 @@ const AdminManageUsersPage = () => {
   const updateRole = async (
     userId: string,
     role: "candidate" | "recruiter",
+    sendEmail = false,
   ) => {
     try {
       setActingUserId(userId);
@@ -165,7 +192,7 @@ const AdminManageUsersPage = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ role }),
+          body: JSON.stringify({ role, sendEmail }),
         },
       );
       const data = await response.json();
@@ -195,6 +222,47 @@ const AdminManageUsersPage = () => {
       event.preventDefault();
       goToUserDetails(user);
     }
+  };
+
+  const openBlockConfirm = (userId: string) => {
+    const selectedUser = users.find((item) => item._id === userId) || null;
+    setBlockConfirmUser(selectedUser);
+  };
+
+  const closeBlockConfirm = () => {
+    setBlockConfirmUser(null);
+  };
+
+  const onBlockConfirm = async (sendEmail: boolean) => {
+    if (!blockConfirmUser) return;
+    const targetUserId = blockConfirmUser._id;
+    setBlockConfirmUser(null);
+    await updateStatus(targetUserId, "block", sendEmail);
+  };
+
+  const openRoleChangeConfirm = (
+    user: AdminUserItem,
+    nextRole: "candidate" | "recruiter",
+  ) => {
+    setRoleChangeConfirm({
+      userId: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      currentRole: user.role,
+      nextRole,
+    });
+  };
+
+  const closeRoleChangeConfirm = () => {
+    setRoleChangeConfirm(null);
+  };
+
+  const onRoleChangeConfirm = async () => {
+    if (!roleChangeConfirm) return;
+    const targetUserId = roleChangeConfirm.userId;
+    const targetRole = roleChangeConfirm.nextRole;
+    setRoleChangeConfirm(null);
+    await updateRole(targetUserId, targetRole, true);
   };
 
   return (
@@ -429,19 +497,59 @@ const AdminManageUsersPage = () => {
                     <div>{formatDate(user.createdAt)}</div>
                     <div>{formatDate(user.lastLoginAt)}</div>
                     <div className="admin-manage-actions">
-                      <select
-                        value={user.role}
-                        onChange={(event) =>
-                          updateRole(
-                            user._id,
-                            event.target.value as "candidate" | "recruiter",
-                          )
-                        }
-                        disabled={actingUserId === user._id}
-                      >
-                        <option value="candidate">Candidate</option>
-                        <option value="recruiter">Recruiter</option>
-                      </select>
+                      <div className="admin-manage-role-dropdown">
+                        <button
+                          type="button"
+                          className={`admin-manage-role-trigger ${
+                            openRoleUserId === user._id ? "open" : ""
+                          }`}
+                          onClick={() =>
+                            setOpenRoleUserId((prev) =>
+                              prev === user._id ? null : user._id,
+                            )
+                          }
+                          disabled={actingUserId === user._id}
+                        >
+                          <span>
+                            {user.role === "candidate" ? "Candidate" : "Recruiter"}
+                          </span>
+                        </button>
+                        <img
+                          src={dropdownArrow}
+                          alt=""
+                          aria-hidden="true"
+                          className={`admin-manage-role-caret ${
+                            openRoleUserId === user._id ? "open" : ""
+                          }`}
+                        />
+                        {openRoleUserId === user._id && (
+                          <div className="admin-manage-role-menu" role="listbox">
+                            {[
+                              { value: "candidate", label: "Candidate" },
+                              { value: "recruiter", label: "Recruiter" },
+                            ].map((item) => (
+                              <button
+                                key={item.value}
+                                type="button"
+                                className={`admin-manage-role-option ${
+                                  user.role === item.value ? "active" : ""
+                                }`}
+                                onClick={() => {
+                                  setOpenRoleUserId(null);
+                                  if (user.role !== item.value) {
+                                    openRoleChangeConfirm(
+                                      user,
+                                      item.value as "candidate" | "recruiter",
+                                    );
+                                  }
+                                }}
+                              >
+                                {item.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       {user.isBlocked ? (
                         <button
                           type="button"
@@ -455,7 +563,7 @@ const AdminManageUsersPage = () => {
                         <button
                           type="button"
                           className="action-block"
-                          onClick={() => updateStatus(user._id, "block")}
+                          onClick={() => openBlockConfirm(user._id)}
                           disabled={actingUserId === user._id}
                         >
                           Block
@@ -468,6 +576,103 @@ const AdminManageUsersPage = () => {
           </section>
         </div>
       </main>
+      {blockConfirmUser && (
+        <div
+          className="admin-manage-modal-backdrop"
+          onClick={closeBlockConfirm}
+          role="presentation"
+        >
+          <div
+            className="admin-manage-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-block-confirm-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="admin-block-confirm-title">Block User</h3>
+            <p>
+              Do you also want to send a block notification email to{" "}
+              <strong>{blockConfirmUser.email}</strong>?
+            </p>
+            <div className="admin-manage-modal-actions">
+              <button
+                type="button"
+                className="admin-manage-modal-btn cancel"
+                onClick={closeBlockConfirm}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="admin-manage-modal-btn neutral"
+                onClick={() => onBlockConfirm(false)}
+              >
+                Block Only
+              </button>
+              <button
+                type="button"
+                className="admin-manage-modal-btn primary"
+                onClick={() => onBlockConfirm(true)}
+              >
+                Block + Send Email
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {roleChangeConfirm && (
+        <div
+          className="admin-manage-modal-backdrop"
+          onClick={closeRoleChangeConfirm}
+          role="presentation"
+        >
+          <div
+            className="admin-manage-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-role-change-confirm-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="admin-role-change-confirm-title">Confirm Role Change</h3>
+            <p>
+              Change role for <strong>{roleChangeConfirm.fullName}</strong> (
+              <strong>{roleChangeConfirm.email}</strong>) from{" "}
+              <strong>
+                {roleChangeConfirm.currentRole === "candidate"
+                  ? "Candidate"
+                  : "Recruiter"}
+              </strong>{" "}
+              to{" "}
+              <strong>
+                {roleChangeConfirm.nextRole === "candidate"
+                  ? "Candidate"
+                  : "Recruiter"}
+              </strong>
+              ?
+            </p>
+            <p>
+              A role change notification email will be sent to this user after
+              confirmation.
+            </p>
+            <div className="admin-manage-modal-actions">
+              <button
+                type="button"
+                className="admin-manage-modal-btn cancel"
+                onClick={closeRoleChangeConfirm}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="admin-manage-modal-btn primary"
+                onClick={onRoleChangeConfirm}
+              >
+                Confirm + Send Email
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

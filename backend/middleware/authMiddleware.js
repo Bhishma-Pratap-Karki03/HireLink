@@ -61,4 +61,35 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+const optionalProtect = async (req, _res, next) => {
+  try {
+    let token;
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
+    }
+
+    if (!token) {
+      return next();
+    }
+
+    const decoded = verifyToken(token);
+    if (!decoded) return next();
+
+    const user = await User.findById(decoded.id).select("email role isBlocked");
+    if (!user || user.isBlocked) return next();
+
+    req.user = {
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    };
+    next();
+  } catch (_error) {
+    next();
+  }
+};
+
+module.exports = { protect, optionalProtect };

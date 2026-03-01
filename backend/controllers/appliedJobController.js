@@ -5,6 +5,8 @@ const AppliedJob = require("../models/appliedJobModel"); // Mongo model: stores 
 const JobPost = require("../models/jobPostModel"); // Mongo model: stores job post details (title, recruiterId, assessmentId, etc.)
 const User = require("../models/userModel"); // Mongo model: stores users and roles (candidate/recruiter/admin)
 const AtsReport = require("../models/atsReportModel"); // Mongo model: stores ATS extracted info and scores for an application
+const Notification = require("../models/notificationModel");
+const { getIO } = require("../socket");
 
 const AssessmentAttempt = require("../models/assessmentAttemptModel"); // Mongo model: candidate's assessment attempt (answers, score, submittedAt)
 const AdminAssessment = require("../models/adminAssessmentModel"); // Mongo model: assessments created by admin
@@ -29,6 +31,18 @@ const sanitize = (value) =>
     .replace(/[^a-zA-Z0-9]/g, "-")
     .replace(/-+/g, "-")
     .toLowerCase();
+
+const toStatusLabel = (status) => {
+  const labels = {
+    submitted: "Submitted",
+    reviewed: "Reviewed",
+    shortlisted: "Shortlisted",
+    interview: "Interview",
+    rejected: "Rejected",
+    hired: "Hired",
+  };
+  return labels[status] || "Updated";
+};
 
 // Candidate applies to a job
 // Handles resume upload/copy, creates application, and does a quick ATS pre-extraction
@@ -492,9 +506,62 @@ exports.updateApplicationStatus = async (req, res) => {
       });
     }
 
+    const previousStatus = application.status;
+
     // Update status and save
     application.status = status;
     await application.save();
+
+    if (previousStatus !== status) {
+      const recruiterActor = await User.findById(userId)
+        .select("fullName role profilePicture")
+        .lean();
+      const jobTitle = application.job?.jobTitle || application.jobTitle || "your application";
+      const statusLabel = toStatusLabel(status);
+
+      const notification = await Notification.create({
+        user: application.candidate,
+        actor: userId,
+        type: "application_status_updated",
+        application: application._id,
+        message: `Your application for "${jobTitle}" was updated to ${statusLabel}.`,
+      });
+
+      const unreadCount = await Notification.countDocuments({
+        user: application.candidate,
+        type: {
+          $in: [
+            "connection_request_received",
+            "connection_request_accepted",
+            "application_status_updated",
+          ],
+        },
+        isRead: false,
+      });
+
+      const io = getIO();
+      io?.to(`user:${application.candidate.toString()}`).emit(
+        "notification:connection:new",
+        {
+          notification: {
+            id: notification._id.toString(),
+            type: "application_status_updated",
+            isRead: false,
+            message: notification.message,
+            createdAt: notification.createdAt,
+            updatedAt: notification.updatedAt,
+            targetPath: "/candidate/applied-status",
+            actor: {
+              id: recruiterActor?._id?.toString() || userId,
+              fullName: recruiterActor?.fullName || "Recruiter",
+              role: recruiterActor?.role || "recruiter",
+              profilePicture: recruiterActor?.profilePicture || "",
+            },
+          },
+          unreadCount,
+        }
+      );
+    }
 
     // Return updated status
     return res.status(200).json({

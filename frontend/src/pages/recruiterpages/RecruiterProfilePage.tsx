@@ -1,3 +1,4 @@
+import PortalFooter from "../../components/PortalFooter";
 // RecruiterProfilePage.tsx - Updated with dynamic reviews management
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -1415,6 +1416,7 @@ const RecruiterProfilePage: React.FC = () => {
               </div>
             </div>
           </div>
+          <PortalFooter />
         </div>
       </div>
       {/* Profile Picture Editor Modal */}

@@ -1,3 +1,4 @@
+import PortalFooter from "../../components/PortalFooter";
 import { useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import RecruiterSidebar from "../../components/recruitercomponents/RecruiterSidebar";
@@ -26,9 +27,12 @@ const RecruiterMessagesPage = () => {
           selectedUserIdFromQuery={selectedUserId}
           onSelectUser={handleSelectUser}
         />
-      </main>
+              <PortalFooter />
+</main>
     </div>
   );
 };
 
 export default RecruiterMessagesPage;
+
+

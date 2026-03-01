@@ -142,7 +142,7 @@ const RecruiterProfilePictureEditor: React.FC<
 
           <div className="recruiter-visibility-row">
             <span className="recruiter-visibility-label">
-              Public Profile: {isPublicProfile ? "On" : "Off"}
+              Public Profile: {isPublicProfile ? "Public" : "Private"}
             </span>
             <button
               type="button"
@@ -154,7 +154,7 @@ const RecruiterProfilePictureEditor: React.FC<
                   : "Turn on public profile"
               }
             >
-              {isPublicProfile ? (
+              {!isPublicProfile ? (
                 <svg
                   width="44"
                   height="24"

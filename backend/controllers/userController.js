@@ -14,6 +14,11 @@ const Message = require("../models/messageModel");
 const ConnectionRequest = require("../models/connectionRequestModel");
 const SavedJob = require("../models/savedJobModel");
 const RecommendationHistory = require("../models/recommendationHistoryModel");
+const {
+  sendUserBlockedEmail,
+  sendUnblockAuditEmailToAdmin,
+  sendUserRoleChangedEmail,
+} = require("../utils/adminStatusEmailUtils");
 
 const ADMIN_EMAIL = "hirelinknp@gmail.com";
 
@@ -212,8 +217,9 @@ exports.updateUserStatusByAdmin = async (req, res, next) => {
     }
 
     const { userId } = req.params;
-    const { action } = req.body;
+    const { action, sendEmail } = req.body;
     const normalizedAction = String(action || "").toLowerCase();
+    const shouldSendEmail = Boolean(sendEmail);
 
     if (!["block", "unblock"].includes(normalizedAction)) {
       return res.status(400).json({
@@ -240,12 +246,31 @@ exports.updateUserStatusByAdmin = async (req, res, next) => {
     targetUser.isBlocked = normalizedAction === "block";
     await targetUser.save();
 
+    let emailSent = false;
+    if (shouldSendEmail) {
+      if (normalizedAction === "block") {
+        emailSent = await sendUserBlockedEmail({
+          toEmail: targetUser.email,
+          fullName: targetUser.fullName,
+          role: targetUser.role,
+        });
+      } else {
+        emailSent = await sendUnblockAuditEmailToAdmin({
+          adminEmail: ADMIN_EMAIL,
+          targetEmail: targetUser.email,
+          targetName: targetUser.fullName,
+          targetRole: targetUser.role,
+        });
+      }
+    }
+
     res.status(200).json({
       success: true,
       message:
         normalizedAction === "block"
           ? "User blocked successfully"
           : "User unblocked successfully",
+      emailSent,
       user: {
         id: targetUser._id,
         isBlocked: targetUser.isBlocked,
@@ -267,8 +292,9 @@ exports.updateUserRoleByAdmin = async (req, res, next) => {
     }
 
     const { userId } = req.params;
-    const { role } = req.body;
+    const { role, sendEmail } = req.body;
     const normalizedRole = String(role || "").toLowerCase();
+    const shouldSendEmail = Boolean(sendEmail);
 
     if (!["candidate", "recruiter"].includes(normalizedRole)) {
       return res.status(400).json({
@@ -292,12 +318,24 @@ exports.updateUserRoleByAdmin = async (req, res, next) => {
       });
     }
 
+    const previousRole = String(targetUser.role || "").toLowerCase();
     targetUser.role = normalizedRole;
     await targetUser.save();
+
+    let emailSent = false;
+    if (shouldSendEmail) {
+      emailSent = await sendUserRoleChangedEmail({
+        toEmail: targetUser.email,
+        fullName: targetUser.fullName,
+        previousRole,
+        newRole: normalizedRole,
+      });
+    }
 
     res.status(200).json({
       success: true,
       message: "User role updated successfully",
+      emailSent,
       user: {
         id: targetUser._id,
         role: targetUser.role,

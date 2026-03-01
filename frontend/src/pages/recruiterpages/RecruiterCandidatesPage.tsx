@@ -1,3 +1,4 @@
+import PortalFooter from "../../components/PortalFooter";
 import { useEffect, useMemo, useState } from "react";
 import RecruiterSidebar from "../../components/recruitercomponents/RecruiterSidebar";
 import RecruiterTopBar from "../../components/recruitercomponents/RecruiterTopBar";
@@ -234,9 +235,12 @@ const RecruiterCandidatesPage = () => {
             </section>
           </div>
         </div>
-      </main>
+              <PortalFooter />
+</main>
     </div>
   );
 };
 
 export default RecruiterCandidatesPage;
+
+

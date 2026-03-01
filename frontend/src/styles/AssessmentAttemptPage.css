@@ -135,6 +135,32 @@
   font-family: "Montserrat", sans-serif;
 }
 
+.assessment-writing-quill .ql-toolbar {
+  border: 1px solid #d7e0ef;
+  border-radius: 12px 12px 0 0;
+  background: #ffffff;
+}
+
+.assessment-writing-quill .ql-container {
+  border: 1px solid #d7e0ef;
+  border-top: 0;
+  border-radius: 0 0 12px 12px;
+  background: #ffffff;
+  min-height: 180px;
+}
+
+.assessment-writing-quill .ql-editor {
+  min-height: 160px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+  color: #1f2a3a;
+}
+
+.assessment-writing-quill .ql-editor.ql-blank::before {
+  color: #94a3b8;
+  font-style: normal;
+}
+
 .assessment-input {
   border-radius: 12px;
   border: 1px solid #d7e0ef;
@@ -208,6 +234,11 @@
 .assessment-attempt-card-submitted .assessment-textarea {
   background: #f8fbff;
   color: #334155;
+}
+
+.assessment-attempt-card-submitted .assessment-writing-quill .ql-toolbar,
+.assessment-attempt-card-submitted .assessment-writing-quill .ql-container {
+  background: #f8fbff;
 }
 
 .assessment-attempt-actions {

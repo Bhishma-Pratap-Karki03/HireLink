@@ -1,3 +1,4 @@
+import PortalFooter from "../../components/PortalFooter";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -498,19 +499,19 @@ const CandidateDashboard = () => {
             </article>
             <article className="candidate-insight-stat-card">
               <div className="candidate-insight-stat-content">
-                <h3>Response Rate</h3>
-                <p>{stats.applications.rates.responseRate}%</p>
-                <small>{stats.applications.responded} got recruiter response</small>
+                <h3>Saved Jobs</h3>
+                <p>{stats.savedJobs.total}</p>
+                <small>{stats.savedJobs.inRange} saved in selected range</small>
               </div>
-              <img src={statsMessageIcon} alt="Response rate" className="candidate-insight-stat-icon" />
+              <img src={statsMessageIcon} alt="Saved jobs" className="candidate-insight-stat-icon" />
             </article>
             <article className="candidate-insight-stat-card">
               <div className="candidate-insight-stat-content">
-                <h3>Hire Rate</h3>
-                <p>{stats.applications.rates.hireRate}%</p>
-                <small>{stats.applications.hired} hired in range</small>
+                <h3>Connections</h3>
+                <p>{stats.connections.accepted}</p>
+                <small>{stats.connections.pending} pending requests</small>
               </div>
-              <img src={statsOfferIcon} alt="Hire rate" className="candidate-insight-stat-icon" />
+              <img src={statsOfferIcon} alt="Connections" className="candidate-insight-stat-icon" />
             </article>
           </div>
 
@@ -652,9 +653,12 @@ const CandidateDashboard = () => {
           {loading && <div className="candidate-insight-state">Loading dashboard...</div>}
           {!loading && error && <div className="candidate-insight-state error">{error}</div>}
         </div>
-      </main>
+              <PortalFooter />
+</main>
     </div>
   );
 };
 
 export default CandidateDashboard;
+
+

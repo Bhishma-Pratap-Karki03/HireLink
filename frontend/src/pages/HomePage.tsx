@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -8,7 +8,6 @@ import "../styles/HomePage.css";
 import heroBadgeIcon from "../images/Public Page/I1_1112_1_3587.svg";
 import heroSearchIcon from "../images/Public Page/I1_1112_1_3605.svg";
 import heroLocationIcon from "../images/Public Page/I1_1112_1_3613.svg";
-import heroArrowIcon from "../images/Public Page/I1_1112_1_3609.svg";
 import heroBannerImage from "../images/Public Page/df6dadf31abcddb06b9e43b983e0fa10840be3a5.png";
 import heroSuccessIcon from "../images/Public Page/1_1389.svg";
 import heroTickIcon from "../images/Public Page/1_1396.svg";
@@ -465,9 +464,7 @@ const HomePage = () => {
                   placeholder="Location"
                   value={heroLocation}
                   onChange={(e) => setHeroLocation(e.target.value)}
-                />
-                <img src={heroArrowIcon} alt="arrow" className="arrow-icon" />
-              </div>
+                />              </div>
               <button className="find-btn" onClick={handleFindNow}>
                 Find now
               </button>
@@ -884,3 +881,4 @@ const HomePage = () => {
 };
 
 export default HomePage;
+

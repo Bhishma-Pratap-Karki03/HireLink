@@ -1,3 +1,4 @@
+import PortalFooter from "../../components/PortalFooter";
 import RecruiterSidebar from "../../components/recruitercomponents/RecruiterSidebar";
 import RecruiterTopBar from "../../components/recruitercomponents/RecruiterTopBar";
 import SettingsContent from "../../components/settingsContent/SettingsContent";
@@ -19,6 +20,7 @@ const RecruiterSettingsPage = () => {
             />
           </div>
         </div>
+        <PortalFooter />
       </div>
     </div>
   );

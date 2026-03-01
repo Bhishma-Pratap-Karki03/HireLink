@@ -1,3 +1,4 @@
+import PortalFooter from "../../components/PortalFooter";
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -2348,6 +2349,7 @@ const RecruiterJobPostPage: React.FC = () => {
               </div>
             </div>
           </div>
+          <PortalFooter />
         </div>
       </div>
     </div>

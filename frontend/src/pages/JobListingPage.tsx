@@ -26,14 +26,6 @@ import prevIcon from "../images/Employers Page Images/Prev Icon.svg";
 import nextIcon from "../images/Employers Page Images/Next Icon.svg";
 import minusIcon from "../images/Employers Page Images/minus.png";
 import plusIcon from "../images/Employers Page Images/expand.png";
-import brandSamsung from "../images/Job List Page Images/brand-samsung.svg";
-import brandGoogle from "../images/Job List Page Images/brand-google.svg";
-import brandFacebook from "../images/Job List Page Images/brand-facebook.svg";
-import brandPinterest from "../images/Job List Page Images/brand-pinterest.svg";
-import brandAvaya from "../images/Job List Page Images/brand-avaya.svg";
-import brandAvis from "../images/Job List Page Images/brand-avis.svg";
-import brandNielsen from "../images/Job List Page Images/brand-nielsen.svg";
-import brandDoordash from "../images/Job List Page Images/brand-doordash.svg";
 import dropdownArrow from "../images/Register Page Images/1_2307.svg";
 
 type JobCard = {
@@ -643,14 +635,6 @@ const JobListingPage = () => {
     savedBookmarkIcon,
     shareIcon,
     companyLogo,
-    brandSamsung,
-    brandGoogle,
-    brandFacebook,
-    brandPinterest,
-    brandAvaya,
-    brandAvis,
-    brandNielsen,
-    brandDoordash,
     prevIcon,
     nextIcon,
     minusIcon,
@@ -1459,9 +1443,11 @@ const JobListingPage = () => {
                         />
                         </button>
                       )}
-                      <button className="joblist-icon-btn">
-                        <img src={images.shareIcon} alt="Share" />
-                      </button>
+                      {userRole !== "admin" && (
+                        <button className="joblist-icon-btn">
+                          <img src={images.shareIcon} alt="Share" />
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="joblist-card-company">{job.companyName}</div>
@@ -1585,18 +1571,6 @@ const JobListingPage = () => {
         onConfirmRequirementsChange={setConfirmRequirements}
         onConfirmResumeChange={setConfirmResume}
       />
-      <section className="joblist-brands">
-        <div className="joblist-brands-row">
-          <img src={images.brandSamsung} alt="Samsung" />
-          <img src={images.brandGoogle} alt="Google" />
-          <img src={images.brandFacebook} alt="Facebook" />
-          <img src={images.brandPinterest} alt="Pinterest" />
-          <img src={images.brandAvaya} alt="Avaya" />
-          <img src={images.brandAvis} alt="Avis" />
-          <img src={images.brandNielsen} alt="Nielsen" />
-          <img src={images.brandDoordash} alt="DoorDash" />
-        </div>
-      </section>
 
       <Footer />
     </div>

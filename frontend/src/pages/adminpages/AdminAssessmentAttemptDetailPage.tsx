@@ -254,7 +254,10 @@ const AdminAssessmentAttemptDetailPage = () => {
                   {assessment.writingResponse && (
                     <div className="recruiter-assessment-page-block">
                       <span>Writing Submission</span>
-                      <pre>{assessment.writingResponse}</pre>
+                      <div
+                        className="assessment-richtext"
+                        dangerouslySetInnerHTML={{ __html: assessment.writingResponse }}
+                      />
                     </div>
                   )}
                 </>
