@@ -480,6 +480,30 @@
   color: #0f283c;
 }
 
+.candidate-project-review-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.candidate-project-review-section-head h5 {
+  margin: 0;
+}
+
+.candidate-project-review-section-toggle {
+  border: 1px solid #d7e3f0;
+  background: #ffffff;
+  color: #125aa9;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: "Montserrat", sans-serif;
+  cursor: pointer;
+}
+
 .candidate-project-review-list {
   display: flex;
   flex-direction: column;
@@ -556,6 +580,37 @@
   margin-top: 8px;
   font-size: 13px;
   color: #334155;
+}
+
+.candidate-project-review-text {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.candidate-project-review-text.expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: unset;
+  overflow: visible;
+}
+
+.candidate-project-review-read-toggle {
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #0068ce;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: "Montserrat", sans-serif;
+  cursor: pointer;
 }
 
 .candidate-project-review-empty {
@@ -761,6 +816,14 @@
   flex-shrink: 0;
 }
 
+.candidate-details-project-img {
+  object-fit: contain;
+  object-position: center;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+
 .candidate-project-details {
   display: flex;
   flex-direction: column;
@@ -891,5 +954,10 @@
   .candidate-project-img {
     width: 100%;
     height: 200px;
+  }
+
+  .candidate-details-project-img {
+    height: auto;
+    max-height: 260px;
   }
 }

@@ -4,21 +4,20 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../styles/Register.css";
 
-// Import images
-import heroBg from "../images/Register Page Images/79ebd70f3f76eb214e5a23bbdf28aea8bc96647b.png";
-import shape1 from "../images/Register Page Images/1_2320.svg";
-import shape2 from "../images/Register Page Images/1_2327.svg";
-import shape3 from "../images/Register Page Images/1_2457.svg";
-import shape4 from "../images/Register Page Images/1_2587.svg";
-import arrowIcon from "../images/Register Page Images/1_2716.svg";
 import candidateSelectedIcon from "../images/Register Page Images/Candidate Selected.png";
 import candidateUnselectedIcon from "../images/Register Page Images/Candidate Unselected.png";
 import recruiterSelectedIcon from "../images/Register Page Images/Recruiter Selected.png";
 import recruiterUnselectedIcon from "../images/Register Page Images/Recruiter Unselected.png";
+import registerAvatar1 from "../images/Login Page Images/avatar-1.jpg";
+import registerAvatar2 from "../images/Login Page Images/avatar-2.png";
+import registerAvatar3 from "../images/Login Page Images/avatar-3.png";
+import registerAvatar4 from "../images/Login Page Images/avatar-4.png";
+import searchIcon from "../images/Job List Page Images/search.svg";
+import testimonialStar from "../images/Public Page/I1_1436_1_3469.svg";
 
 const Register = () => {
   const [userType, setUserType] = useState<"candidate" | "recruiter">(
-    "candidate"
+    "candidate",
   );
   const [formData, setFormData] = useState({
     fullName: "",
@@ -27,17 +26,18 @@ const Register = () => {
     confirmPassword: "",
     terms: false,
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusType, setStatusType] = useState<"success" | "error" | null>(
-    null
+    null,
   );
   const [isLoading, setIsLoading] = useState(false);
   const [showVerificationLink, setShowVerificationLink] = useState(false);
   const [existingUserEmail, setExistingUserEmail] = useState<string>("");
   const navigate = useNavigate();
 
-  // Check if user is already logged in - REDIRECT TO APPROPRIATE HOME PAGE
   useEffect(() => {
     const token = localStorage.getItem("authToken");
     const userDataStr = localStorage.getItem("userData");
@@ -45,19 +45,13 @@ const Register = () => {
     if (token && userDataStr) {
       try {
         JSON.parse(userDataStr);
-        redirectBasedOnRole();
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-        // Clear invalid data
+        navigate("/home");
+      } catch {
         localStorage.removeItem("authToken");
         localStorage.removeItem("userData");
       }
     }
-  }, []);
-
-  const redirectBasedOnRole = () => {
-    navigate("/home");
-  };
+  }, [navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -66,7 +60,6 @@ const Register = () => {
       [name]: type === "checkbox" ? checked : value,
     }));
 
-    // Reset verification link when user changes email
     if (name === "email") {
       setShowVerificationLink(false);
     }
@@ -77,43 +70,38 @@ const Register = () => {
 
     if (isLoading) return;
 
-    // Clear previous status
     setStatusMessage(null);
     setStatusType(null);
     setShowVerificationLink(false);
 
-    // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setStatusMessage(
-        "Please enter a valid email address (example@domain.com)"
+        "Please enter a valid email address (example@domain.com)",
       );
       setStatusType("error");
       return;
     }
 
-    // Name validation
     if (formData.fullName.trim().length < 2) {
       setStatusMessage("Full name must be at least 2 characters long");
       setStatusType("error");
       return;
     }
 
-    // Password length validation
     if (formData.password.length < 8) {
       setStatusMessage("Password must be at least 8 characters long");
       setStatusType("error");
       return;
     }
 
-    // Password complexity validation
     if (
       !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(
-        formData.password
+        formData.password,
       )
     ) {
       setStatusMessage(
-        "Password must contain uppercase, lowercase, number, and special character"
+        "Password must contain uppercase, lowercase, number, and special character",
       );
       setStatusType("error");
       return;
@@ -148,21 +136,19 @@ const Register = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        // If user exists but is verified
         if (data.isVerified) {
           setStatusMessage(
-            data.message || "Email already verified. Please login."
+            data.message || "Email already verified. Please login.",
           );
           setStatusType("error");
           setIsLoading(false);
           return;
         }
 
-        // If user exists but not verified and has active code
         if (data.emailExists && data.hasActiveCode) {
           setStatusMessage(
             data.message ||
-              "Email already registered but not verified. Please enter the verification code."
+              "Email already registered but not verified. Please enter the verification code.",
           );
           setStatusType("error");
           setShowVerificationLink(true);
@@ -171,16 +157,14 @@ const Register = () => {
           return;
         }
 
-        // If user exists, not verified, and code expired
         if (data.emailExists && data.codeExpired) {
           setStatusMessage(
-            data.message || "Verification code expired. New code sent."
+            data.message || "Verification code expired. New code sent.",
           );
           setStatusType("success");
           setShowVerificationLink(true);
           setExistingUserEmail(data.email);
 
-          // Redirect to verification
           setTimeout(() => {
             navigate("/verify-email", {
               state: {
@@ -193,14 +177,10 @@ const Register = () => {
           return;
         }
 
-        // If user exists and requires verification (new registration flow)
         if (data.requiresVerification) {
-          setStatusMessage(
-            data.message || "Please verify your email to continue"
-          );
+          setStatusMessage(data.message || "Please verify your email to continue");
           setStatusType("success");
 
-          // Redirect to verification page
           setTimeout(() => {
             navigate("/verify-email", {
               state: {
@@ -213,21 +193,17 @@ const Register = () => {
           return;
         }
 
-        // Other errors
         setStatusMessage(data.message || "Registration failed");
         setStatusType("error");
         setIsLoading(false);
         return;
       }
 
-      // Registration successful (new user)
       setStatusMessage(
-        data.message ||
-          "Registration successful! Redirecting to verification..."
+        data.message || "Registration successful! Redirecting to verification...",
       );
       setStatusType("success");
 
-      // Clear the form
       setFormData({
         fullName: "",
         email: "",
@@ -236,7 +212,6 @@ const Register = () => {
         terms: false,
       });
 
-      // Redirect to verification page after 2 seconds
       setTimeout(() => {
         navigate("/verify-email", {
           state: {
@@ -245,8 +220,7 @@ const Register = () => {
           },
         });
       }, 500);
-    } catch (error) {
-      console.error("Error calling registration API:", error);
+    } catch {
       setStatusMessage("Something went wrong. Please try again.");
       setStatusType("error");
     } finally {
@@ -268,41 +242,140 @@ const Register = () => {
   return (
     <>
       <Navbar />
-      <section
-        id="hero"
-        className="hero-section"
-        style={{ backgroundImage: `url(${heroBg})` }}
-      >
-        <div className="hero-bg-overlay"></div>
-        <div className="decorative-shapes">
-          <img src={shape1} alt="decorative shape" className="shape shape-1" />
-          <img src={shape2} alt="decorative shape" className="shape shape-2" />
-          <img src={shape3} alt="decorative shape" className="shape shape-3" />
-          <img src={shape4} alt="decorative shape" className="shape shape-4" />
-        </div>
-        <div className="container hero-content">
-          <h1>Register</h1>
-          <p className="breadcrumbs">
-            <Link to="/">Home</Link>
-            <img src={arrowIcon} alt="arrow icon" />
-            <span>Register</span>
-          </p>
-        </div>
-      </section>
+      <main id="register" className="register-page-wrap">
+        <section className="register-left-panel">
+          <div className="register-left-circle-1" />
+          <div className="register-left-circle-2" />
+          <div className="register-dot-grid" />
 
-      <section id="registration" className="registration-section">
-        <div className="container">
-          <div className="form-wrapper">
-            <div className="form-header1">
-              <h2>Register Now</h2>
-              <div className="title-underline">
-                <div className="title-underline-accent"></div>
+          <div className="register-left-top">
+            <div className="register-left-badge">
+              <span className="pulse" /> #1 Smart Recruitment Platform
+            </div>
+            <h1>
+              Find Your <span>Dream Job</span>
+              <br />
+              with HireLink
+            </h1>
+            <p>
+              Connect with top employers, build your skills portfolio, and get
+              AI-matched to jobs that truly fit you.
+            </p>
+
+            <div className="register-stat-row">
+              <div className="register-stat-item">
+                <span className="register-stat-num">
+                  65<em>k+</em>
+                </span>
+                <span className="register-stat-lbl">Active Jobs</span>
+              </div>
+              <div className="register-stat-item">
+                <span className="register-stat-num">
+                  18<em>k+</em>
+                </span>
+                <span className="register-stat-lbl">Candidates</span>
+              </div>
+              <div className="register-stat-item">
+                <span className="register-stat-num">
+                  30<em>k+</em>
+                </span>
+                <span className="register-stat-lbl">Companies</span>
               </div>
             </div>
+          </div>
 
-            <div className="user-type-selector">
+          <div className="register-illustration">
+            <div className="register-ill-scene">
+              <div className="register-ill-main-card">
+                <div className="register-ill-card-top">
+                  <div className="register-ill-co-logo">
+                    <img src={searchIcon} alt="Search" />
+                  </div>
+                  <div>
+                    <div className="register-ill-co-name">Google Inc.</div>
+                    <div className="register-ill-role">Sr. UX/UI Designer</div>
+                  </div>
+                </div>
+                <div className="register-ill-tags">
+                  <span className="register-ill-tag">Full-Time</span>
+                  <span className="register-ill-tag green">Remote</span>
+                  <span className="register-ill-tag">Kathmandu</span>
+                </div>
+                <div className="register-ill-card-foot">
+                  <div className="register-ill-salary">
+                    $4,500 <small>/ mo</small>
+                  </div>
+                  <div className="register-ill-apply">Apply Now</div>
+                </div>
+              </div>
+
+              <div className="register-float-card top">
+                <div className="register-fc-label">New Applicants</div>
+                <div className="register-avatar-stack">
+                  <span className="register-av">
+                    <img src={registerAvatar1} alt="" />
+                  </span>
+                  <span className="register-av">
+                    <img src={registerAvatar2} alt="" />
+                  </span>
+                  <span className="register-av">
+                    <img src={registerAvatar3} alt="" />
+                  </span>
+                  <span className="register-av">
+                    <img src={registerAvatar4} alt="" />
+                  </span>
+                  <span className="register-av-more">+</span>
+                </div>
+                <div className="register-fc-count">1.7k+ applicants</div>
+                <div className="register-fc-sub">This week</div>
+              </div>
+
+              <div className="register-float-card bottom">
+                <div className="register-fc-label">Your AI Match</div>
+                <div className="register-match-num">96%</div>
+                <div className="register-match-bar-bg">
+                  <div className="register-match-bar" />
+                </div>
+                <div className="register-match-sub">Excellent fit for this role</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="register-left-bottom">
+            <div className="register-lb-photo">
+              <img src={registerAvatar1} alt="Rashed Kabir" />
+            </div>
+            <div className="register-lb-text">
+              <div className="register-lb-name">Rashed Kabir</div>
+              <div className="register-lb-stars">
+                <img src={testimonialStar} alt="star" />
+                <img src={testimonialStar} alt="star" />
+                <img src={testimonialStar} alt="star" />
+                <img src={testimonialStar} alt="star" />
+                <img src={testimonialStar} alt="star" />
+              </div>
+              <p>
+                "HireLink matched me with my dream job in under 2 weeks. The AI
+                recommendations were incredibly accurate!"
+              </p>
+              <strong>Rashed Kabir · Lead Designer, Google</strong>
+            </div>
+          </div>
+        </section>
+
+        <section className="register-right-panel">
+          <div className="register-form-box">
+            <div className="register-form-header">
+              <div className="register-form-kicker">Create account</div>
+              <h2>Register on HireLink</h2>
+              <p>
+                Already have an account? <Link to="/login">Login now</Link>
+              </p>
+            </div>
+
+            <div className="register-user-type-selector">
               <button
-                className={`user-type-btn ${
+                className={`register-user-type-btn ${
                   userType === "candidate" ? "active" : ""
                 }`}
                 onClick={() => setUserType("candidate")}
@@ -319,7 +392,7 @@ const Register = () => {
                 Candidate
               </button>
               <button
-                className={`user-type-btn ${
+                className={`register-user-type-btn ${
                   userType === "recruiter" ? "active" : ""
                 }`}
                 onClick={() => setUserType("recruiter")}
@@ -337,113 +410,144 @@ const Register = () => {
               </button>
             </div>
 
-            <form className="registration-form" onSubmit={handleSubmit}>
-              <div className="form-group">
-                <input
-                  type="text"
-                  id="fullName"
-                  name="fullName"
-                  placeholder={
-                    userType === "recruiter" ? "Company Name" : "Full Name"
-                  }
-                  value={formData.fullName}
-                  onChange={handleInputChange}
-                  required
-                />
+            <form className="register-form" onSubmit={handleSubmit}>
+              <div className="register-field">
+                <label htmlFor="fullName">
+                  {userType === "recruiter" ? "Company Name" : "Full Name"}
+                </label>
+                <div className="register-input-wrap">
+                  <input
+                    type="text"
+                    id="fullName"
+                    name="fullName"
+                    placeholder={
+                      userType === "recruiter" ? "Company Name" : "Full Name"
+                    }
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
               </div>
-              <div className="form-group">
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  placeholder="Email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                />
+
+              <div className="register-field">
+                <label htmlFor="email">Email Address</label>
+                <div className="register-input-wrap">
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="you@example.com"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
               </div>
-              <div className="form-group">
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  placeholder="Password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
-                />
+
+              <div className="register-field">
+                <label htmlFor="password">Password</label>
+                <div className="register-input-wrap">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    id="password"
+                    name="password"
+                    placeholder="Enter your password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="register-toggle-pw"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    <svg viewBox="0 0 24 24">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <div className="form-group">
-                <input
-                  type="password"
-                  id="confirm-password"
-                  name="confirmPassword"
-                  placeholder="Confirm Password"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  required
-                />
+
+              <div className="register-field">
+                <label htmlFor="confirm-password">Confirm Password</label>
+                <div className="register-input-wrap">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    id="confirm-password"
+                    name="confirmPassword"
+                    placeholder="Confirm password"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="register-toggle-pw"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    aria-label={
+                      showConfirmPassword
+                        ? "Hide confirm password"
+                        : "Show confirm password"
+                    }
+                  >
+                    <svg viewBox="0 0 24 24">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <div className="form-check">
+
+              <label className="register-terms-check">
                 <input
                   type="checkbox"
                   id="terms"
                   name="terms"
                   checked={formData.terms}
                   onChange={handleInputChange}
-                  required
                 />
-                <label htmlFor="terms">
-                  Accept our terms and conditions and privacy policy
-                </label>
-              </div>
-              <button type="submit" className="btn-submit" disabled={isLoading}>
+                <span className="register-checkmark" />
+                Accept our terms and conditions and privacy policy
+              </label>
+
+              <button type="submit" className="register-submit-btn" disabled={isLoading}>
                 {isLoading ? "Registering..." : "Register Now"}
               </button>
             </form>
 
-            <div className="login-prompt-wrapper">
-              <p className="login-prompt">
+            <div className="register-login-prompt-wrapper">
+              <p className="register-login-prompt">
                 Already have an account? <Link to="/login">Login</Link>
               </p>
 
               {statusMessage && (
-                <div>
+                <div className="register-status-wrap">
                   <p
                     className={`status-message ${
-                      statusType === "success"
-                        ? "status-success"
-                        : "status-error"
+                      statusType === "success" ? "status-success" : "status-error"
                     }`}
                   >
                     {statusMessage}
                   </p>
 
                   {showVerificationLink && existingUserEmail && (
-                    <div style={{ marginTop: "10px", textAlign: "center" }}>
-                      <button
-                        onClick={handleGoToVerification}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "#0068ce",
-                          textDecoration: "underline",
-                          cursor: "pointer",
-                          fontSize: "14px",
-                          padding: "0",
-                          fontFamily: "inherit",
-                        }}
-                      >
-                        Go to Verification Page
-                      </button>
-                    </div>
+                    <button
+                      className="register-verify-link-btn"
+                      onClick={handleGoToVerification}
+                      type="button"
+                    >
+                      Go to Verification Page
+                    </button>
                   )}
                 </div>
               )}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
       <Footer />
     </>
   );

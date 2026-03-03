@@ -12,8 +12,7 @@ import heroCircle from "../images/Employers Page Images/8_205.svg";
 import heroIcon1 from "../images/Employers Page Images/8_208.svg";
 import heroIcon2 from "../images/Employers Page Images/8_209.svg";
 
-// Use the same icon names from your HTML code
-import locationIcon from "../images/Employers Page Images/5_107.svg";
+import locationIcon from "../images/Employers Page Images/location-icond.svg";
 import sizeIcon from "../images/Employers Page Images/5_115.svg";
 import emailIcon from "../images/Employers Page Images/5_124.svg";
 import foundedIcon from "../images/Employers Page Images/5_131.svg";
@@ -25,6 +24,7 @@ import jobCardLocationIcon from "../images/Job List Page Images/location.svg";
 import jobCardTypeIcon from "../images/Job List Page Images/job-type.svg";
 import jobCardWorkModeIcon from "../images/Job List Page Images/work-mode.svg";
 import jobCardBookmarkIcon from "../images/Recruiter Job Post Page Images/bookmarkIcon.svg";
+import jobCardSavedBookmarkIcon from "../images/Recruiter Job Post Page Images/bookmarkFilled.svg";
 import jobCardShareIcon from "../images/Recruiter Job Post Page Images/shareFg.svg";
 
 // Share and save icons
@@ -77,6 +77,7 @@ interface Job {
   location: string;
   workMode: string;
   logo: string;
+  assessmentRequired?: boolean;
 }
 
 // Define interface for Review
@@ -87,6 +88,7 @@ interface Review {
   reviewerName: string;
   reviewerLocation: string;
   reviewerRole: string;
+  reviewerUserType?: string;
   date: string;
   reviewerAvatar: string;
 }
@@ -131,15 +133,19 @@ const EmployerDetailsPage = () => {
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionState>("none");
   const [sendingConnection, setSendingConnection] = useState(false);
-  const [mutualConnections, setMutualConnections] = useState<MutualConnection[]>([]);
+  const [mutualConnections, setMutualConnections] = useState<
+    MutualConnection[]
+  >([]);
   const userDataStr = localStorage.getItem("userData");
   const currentUser = userDataStr ? JSON.parse(userDataStr) : null;
   const currentUserId =
     currentUser?.id || currentUser?._id || currentUser?.userId || "";
   const isAdminViewer =
-    currentUser?.email === "hirelinknp@gmail.com" || currentUser?.role === "admin";
+    currentUser?.email === "hirelinknp@gmail.com" ||
+    currentUser?.role === "admin";
   const isAllowedRole =
     currentUser?.role === "candidate" || currentUser?.role === "recruiter";
+  const userRole = currentUser?.role || "";
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
@@ -154,6 +160,8 @@ const EmployerDetailsPage = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [jobsError, setJobsError] = useState<string | null>(null);
+  const [appliedJobs, setAppliedJobs] = useState<Record<string, boolean>>({});
+  const [savedJobs, setSavedJobs] = useState<Record<string, boolean>>({});
 
   // Fetch company details from backend
   const fetchCompanyDetails = async () => {
@@ -246,7 +254,9 @@ const EmployerDetailsPage = () => {
           setError(null);
 
           // Keep hero card visible by loading basic employer listing data.
-          const listResponse = await fetch("http://localhost:5000/api/employers");
+          const listResponse = await fetch(
+            "http://localhost:5000/api/employers",
+          );
           const listData = await listResponse.json();
 
           if (listResponse.ok && Array.isArray(listData?.recruiters)) {
@@ -308,6 +318,7 @@ const EmployerDetailsPage = () => {
         location: job.location || "Location",
         workMode: job.workMode || "remote",
         logo: resolveLogo(job.companyLogo || company?.logo),
+        assessmentRequired: Boolean(job.assessmentRequired),
       }));
 
       setJobs(mappedJobs);
@@ -410,6 +421,18 @@ const EmployerDetailsPage = () => {
     }
   }, [company?.name, isPrivateProfile]);
 
+  useEffect(() => {
+    if (jobs.length === 0) {
+      setAppliedJobs({});
+      setSavedJobs({});
+      return;
+    }
+
+    const ids = jobs.map((job) => job.id);
+    fetchAppliedStatuses(ids);
+    fetchSavedStatuses(ids);
+  }, [jobs, userRole]);
+
   const formatWorkMode = (mode?: string) => {
     if (!mode) return "Remote";
     const normalized = mode.toLowerCase();
@@ -427,7 +450,8 @@ const EmployerDetailsPage = () => {
 
   useEffect(() => {
     const fetchConnectionStatus = async () => {
-      if (!company?.id || !currentUserId || company.id === currentUserId) return;
+      if (!company?.id || !currentUserId || company.id === currentUserId)
+        return;
       if (!isAllowedRole) return;
 
       const token = localStorage.getItem("authToken");
@@ -442,7 +466,8 @@ const EmployerDetailsPage = () => {
         );
         const data = await res.json();
         if (!res.ok) return;
-        const next = (data?.statuses?.[company.id] || "none") as ConnectionState;
+        const next = (data?.statuses?.[company.id] ||
+          "none") as ConnectionState;
         setConnectionStatus(next);
       } catch {
         setConnectionStatus("none");
@@ -494,8 +519,86 @@ const EmployerDetailsPage = () => {
     navigate(`/jobs/${jobId}`);
   };
 
-  const handleApplyNow = (jobId: string) => {
-    console.log("Apply for job:", jobId);
+  const handleApplyNow = (job: Job) => {
+    if (!userRole) {
+      navigate("/login");
+      return;
+    }
+
+    if (userRole !== "candidate" || appliedJobs[job.id]) return;
+    navigate(`/jobs/${job.id}`);
+  };
+
+  const fetchAppliedStatuses = async (jobIds: string[]) => {
+    const token = localStorage.getItem("authToken");
+    if (!token || userRole !== "candidate") {
+      setAppliedJobs({});
+      return;
+    }
+
+    try {
+      const entries = await Promise.all(
+        jobIds.map(async (jobId) => {
+          const res = await fetch(
+            `http://localhost:5000/api/applications/status/${jobId}`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+          const data = await res.json();
+          return [jobId, Boolean(data?.applied)] as const;
+        }),
+      );
+      setAppliedJobs(Object.fromEntries(entries));
+    } catch {
+      setAppliedJobs({});
+    }
+  };
+
+  const fetchSavedStatuses = async (jobIds: string[]) => {
+    const token = localStorage.getItem("authToken");
+    if (!token || userRole !== "candidate") {
+      setSavedJobs({});
+      return;
+    }
+
+    try {
+      const entries = await Promise.all(
+        jobIds.map(async (jobId) => {
+          const res = await fetch(
+            `http://localhost:5000/api/saved-jobs/status/${jobId}`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+          const data = await res.json();
+          return [jobId, Boolean(data?.saved)] as const;
+        }),
+      );
+      setSavedJobs(Object.fromEntries(entries));
+    } catch {
+      setSavedJobs({});
+    }
+  };
+
+  const toggleSaveJob = async (jobId: string) => {
+    const token = localStorage.getItem("authToken");
+    if (!token || userRole !== "candidate") {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:5000/api/saved-jobs/toggle", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ jobId }),
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+      setSavedJobs((prev) => ({ ...prev, [jobId]: Boolean(data?.saved) }));
+    } catch {
+      // no-op
+    }
   };
 
   const handleShare = () => {
@@ -601,6 +704,11 @@ const EmployerDetailsPage = () => {
   };
 
   const handleSubmitReview = async () => {
+    if (isSelfProfile) {
+      setReviewError("You cannot review your own company profile.");
+      return;
+    }
+
     if (newReview.rating === 0) {
       setReviewError("Please select a rating");
       return;
@@ -921,6 +1029,11 @@ const EmployerDetailsPage = () => {
 
   // Handle opening review form
   const handleOpenReviewForm = () => {
+    if (isSelfProfile) {
+      setReviewError("You cannot review your own company profile.");
+      return;
+    }
+
     if (!isLoggedIn) {
       navigate("/login", {
         state: {
@@ -1021,10 +1134,15 @@ const EmployerDetailsPage = () => {
                                 ? "is-friend"
                                 : ""
                           }`}
-                          disabled={sendingConnection || connectionStatus !== "none"}
+                          disabled={
+                            sendingConnection || connectionStatus !== "none"
+                          }
                           onClick={handleSendConnection}
                         >
-                          <img src={connectionActionIcon} alt={connectionLabel} />
+                          <img
+                            src={connectionActionIcon}
+                            alt={connectionLabel}
+                          />
                           <span>{connectionLabel}</span>
                         </button>
                         <button
@@ -1102,69 +1220,206 @@ const EmployerDetailsPage = () => {
 
           {/* Company Content */}
           {!loading && !error && company && !isPrivateProfile && (
-            <div className="employer-details-content-grid">
-              {/* Left Column */}
-              <div className="employer-details-content-left">
-                {/* Overview Section */}
-                <div className="employer-details-overview-section">
-                  <h2>Overview</h2>
-                  <div className="employer-details-overview-text">
-                    {company.about ? (
-                      <div
-                        dangerouslySetInnerHTML={{ __html: company.about }}
-                      />
-                    ) : (
-                      <p>No company description available.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Gallery Section */}
-                <div className="employer-details-gallery-section">
-                  <h2>Life at {company.name}</h2>
-                  <div className="employer-details-gallery-grid">
-                    {company.workspaceImages &&
-                    company.workspaceImages.length > 0 ? (
-                      company.workspaceImages.map((image, index) => (
-                        <img
-                          key={index}
-                          src={image}
-                          alt={`Life at ${company.name} ${index + 1}`}
-                          className="employer-details-gallery-img"
-                          onError={(e) => {
-                            e.currentTarget.src =
-                              "https://via.placeholder.com/300x200?text=Workspace+Image";
-                          }}
+            <>
+              <div className="employer-details-content-grid">
+                {/* Left Column */}
+                <div className="employer-details-content-left">
+                  {/* Overview Section */}
+                  <div className="employer-details-overview-section">
+                    <h2>Overview</h2>
+                    <div className="employer-details-overview-text">
+                      {company.about ? (
+                        <div
+                          dangerouslySetInnerHTML={{ __html: company.about }}
                         />
-                      ))
-                    ) : (
-                      <p className="employer-details-no-gallery">
-                        No workspace images available.
-                      </p>
-                    )}
+                      ) : (
+                        <p>No company description available.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Gallery Section */}
+                  <div className="employer-details-gallery-section">
+                    <h2>Life at {company.name}</h2>
+                    <div className="employer-details-gallery-grid">
+                      {company.workspaceImages &&
+                      company.workspaceImages.length > 0 ? (
+                        company.workspaceImages.map((image, index) => (
+                          <img
+                            key={index}
+                            src={image}
+                            alt={`Life at ${company.name} ${index + 1}`}
+                            className="employer-details-gallery-img"
+                            onError={(e) => {
+                              e.currentTarget.src =
+                                "https://via.placeholder.com/300x200?text=Workspace+Image";
+                            }}
+                          />
+                        ))
+                      ) : (
+                        <p className="employer-details-no-gallery">
+                          No workspace images available.
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Enhanced Reviews Section */}
-                <div className="employer-details-reviews-section">
-                  <div className="employer-details-reviews-header">
-                    <div>
-                      <h2>Company Reviews</h2>
-                      <div className="employer-details-overall-rating">
-                        <div className="employer-details-rating-big">
-                          {averageRating.toFixed(1)}
+                {/* Right Column - Sidebar */}
+                <aside className="employer-details-sidebar">
+                  <div className="employer-details-sidebar-card">
+                    <div className="employer-details-sidebar-header">
+                      <img
+                        src={company.logo || defaultLogo}
+                        alt={company.name}
+                        className="employer-details-sidebar-logo"
+                        onError={handleImageError}
+                      />
+                      <h3>{company.name}</h3>
+                      {company.websiteUrl && (
+                        <a
+                          href={
+                            company.websiteUrl.startsWith("http")
+                              ? company.websiteUrl
+                              : `https://${company.websiteUrl}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="employer-details-website-link"
+                        >
+                          Visit Website
+                        </a>
+                      )}
+                    </div>
+
+                    <div className="employer-details-divider"></div>
+
+                    <div className="employer-details-sidebar-info">
+                      <div className="employer-details-info-item">
+                        <div className="employer-details-icon-box">
+                          <img src={locationIcon} alt="Location" />
                         </div>
-                        <div className="employer-details-rating-details">
-                          <div className="employer-details-stars-large">
-                            {renderStars(averageRating, "large")}
-                          </div>
-                          <span className="employer-details-review-count">
-                            {reviews.length} reviews
+                        <div className="employer-details-info-text">
+                          <span className="employer-details-info-label">
+                            Location
+                          </span>
+                          <span className="employer-details-info-value">
+                            {company.location || "Not specified"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="employer-details-info-item">
+                        <div className="employer-details-icon-box">
+                          <img src={sizeIcon} alt="Size" />
+                        </div>
+                        <div className="employer-details-info-text">
+                          <span className="employer-details-info-label">
+                            Company Size
+                          </span>
+                          <span className="employer-details-info-value">
+                            {company.companySize || "Not specified"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="employer-details-info-item">
+                        <div className="employer-details-icon-box">
+                          <img src={emailIcon} alt="Email" />
+                        </div>
+                        <div className="employer-details-info-text">
+                          <span className="employer-details-info-label">
+                            Email
+                          </span>
+                          <span className="employer-details-info-value">
+                            {company.email || "Not provided"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="employer-details-info-item">
+                        <div className="employer-details-icon-box">
+                          <img src={foundedIcon} alt="Founded" />
+                        </div>
+                        <div className="employer-details-info-text">
+                          <span className="employer-details-info-label">
+                            Founded
+                          </span>
+                          <span className="employer-details-info-value">
+                            {company.foundedYear || "Not specified"}
                           </span>
                         </div>
                       </div>
                     </div>
-                    {isLoggedIn ? (
+
+                    <div className="employer-details-divider"></div>
+
+                    {/* Connect with Us Section */}
+                    <div className="employer-details-connect-section">
+                      <h4>Connect with Us</h4>
+                      <div className="employer-details-connect-buttons">
+                        <button
+                          className="employer-details-connect-btn facebook"
+                          onClick={() =>
+                            handleSocialLink(company.facebookUrl, "Facebook")
+                          }
+                        >
+                          <img src={facebookIcon} alt="Facebook" />
+                          <span>Facebook</span>
+                        </button>
+                        <button
+                          className="employer-details-connect-btn linkedin"
+                          onClick={() =>
+                            handleSocialLink(company.linkedinUrl, "LinkedIn")
+                          }
+                        >
+                          <img src={linkedinIcon} alt="LinkedIn" />
+                          <span>LinkedIn</span>
+                        </button>
+                        <button
+                          className="employer-details-connect-btn instagram"
+                          onClick={() =>
+                            handleSocialLink(company.instagramUrl, "Instagram")
+                          }
+                        >
+                          <img src={instagramIcon} alt="Instagram" />
+                          <span>Instagram</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {!isAdminViewer && (
+                      <button
+                        className="employer-details-send-message-btn"
+                        onClick={handleSendMessage}
+                      >
+                        Send Message
+                      </button>
+                    )}
+                  </div>
+                </aside>
+              </div>
+              {/* Enhanced Reviews Section */}
+              <div className="employer-details-reviews-section">
+                <div className="employer-details-reviews-header">
+                  <div>
+                    <h2>Company Reviews</h2>
+                    <div className="employer-details-overall-rating">
+                      <div className="employer-details-rating-big">
+                        {averageRating.toFixed(1)}
+                      </div>
+                      <div className="employer-details-rating-details">
+                        <div className="employer-details-stars-large">
+                          {renderStars(averageRating, "large")}
+                        </div>
+                        <span className="employer-details-review-count">
+                          {reviews.length} reviews
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {!isSelfProfile &&
+                    (isLoggedIn ? (
                       <button
                         className="employer-details-write-review-btn"
                         onClick={handleOpenReviewForm}
@@ -1190,444 +1445,318 @@ const EmployerDetailsPage = () => {
                       >
                         Login to Write Review
                       </button>
-                    )}
+                    ))}
+                </div>
+
+                {/* My Review Quick Actions */}
+                {isLoggedIn &&
+                  existingReview &&
+                  !showReviewForm &&
+                  existingReview.text &&
+                  !isPlaceholderText(existingReview.text) && (
+                    <div className="employer-details-my-review">
+                      <div className="employer-details-my-review-body"></div>
+                    </div>
+                  )}
+
+                {/* All Reviews Section */}
+                <div className="employer-details-all-reviews">
+                  <div className="employer-details-all-reviews-header">
+                    <h3>
+                      All Reviews (
+                      {
+                        reviews.filter(
+                          (review) =>
+                            review.text && !isPlaceholderText(review.text),
+                        ).length
+                      }
+                      )
+                    </h3>
+                    <button
+                      className="employer-details-toggle-reviews-btn"
+                      onClick={() => setShowAllReviews(!showAllReviews)}
+                    >
+                      {showAllReviews ? "Hide Reviews" : "Show Reviews"}
+                      <span className="employer-details-toggle-icon">
+                        {showAllReviews ? "▲" : "▼"}
+                      </span>
+                    </button>
                   </div>
 
-                  {/* My Review Quick Actions */}
-                  {isLoggedIn &&
-                    existingReview &&
-                    !showReviewForm &&
-                    existingReview.text &&
-                    !isPlaceholderText(existingReview.text) && (
-                      <div className="employer-details-my-review">
-                        <div className="employer-details-my-review-body"></div>
-                      </div>
-                    )}
-
-                  {/* All Reviews Section */}
-                  <div className="employer-details-all-reviews">
-                    <div className="employer-details-all-reviews-header">
-                      <h3>
-                        All Reviews (
-                        {
-                          reviews.filter(
-                            (review) =>
-                              review.text && !isPlaceholderText(review.text),
-                          ).length
-                        }
+                  {showAllReviews && (
+                    <div className="employer-details-reviews-grid">
+                      {reviews
+                        .filter(
+                          (review) =>
+                            review.text && !isPlaceholderText(review.text),
                         )
-                      </h3>
-                      <button
-                        className="employer-details-toggle-reviews-btn"
-                        onClick={() => setShowAllReviews(!showAllReviews)}
-                      >
-                        {showAllReviews ? "Hide Reviews" : "Show Reviews"}
-                        <span className="employer-details-toggle-icon">
-                          {showAllReviews ? "▲" : "▼"}
-                        </span>
-                      </button>
-                    </div>
-
-                    {showAllReviews && (
-                      <div className="employer-details-reviews-grid">
-                        {reviews
-                          .filter(
-                            (review) =>
-                              review.text && !isPlaceholderText(review.text),
-                          )
-                          .map((review) => (
-                            <div
-                              key={review.id}
-                              className={`employer-details-review-card-small ${
-                                expandedReviewId === review.id ? "expanded" : ""
-                              }`}
-                              onClick={() => toggleReviewExpansion(review.id)}
-                            >
-                              <div className="employer-details-review-header-small">
-                                <div className="employer-details-reviewer-avatar-small">
-                                  {review.reviewerAvatar ? (
-                                    <img
-                                      src={review.reviewerAvatar}
-                                      alt={review.reviewerName}
-                                      className="employer-details-reviewer-avatar-img"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = "none";
-                                        e.currentTarget.parentElement!.innerHTML = `<span>${review.reviewerName.charAt(
-                                          0,
-                                        )}</span>`;
-                                      }}
-                                    />
-                                  ) : (
-                                    <span>{review.reviewerName.charAt(0)}</span>
-                                  )}
-                                </div>
-                                <div className="employer-details-reviewer-info-small">
-                                  <span className="employer-details-reviewer-name-small">
-                                    {review.reviewerName}
-                                  </span>
-                                  <span className="employer-details-reviewer-location-small">
-                                    {review.reviewerLocation}
-                                  </span>
-                                </div>
-                                <div className="employer-details-review-rating-small">
-                                  {renderStars(review.rating, "small")}
-                                </div>
+                        .map((review) => (
+                          <div
+                            key={review.id}
+                            className={`employer-details-review-card-small ${
+                              expandedReviewId === review.id ? "expanded" : ""
+                            }`}
+                            onClick={() => toggleReviewExpansion(review.id)}
+                          >
+                            <div className="employer-details-review-header-small">
+                              <div
+                                className={`employer-details-reviewer-avatar-small ${
+                                  review.reviewerUserType === "recruiter" ||
+                                  review.reviewerRole?.toLowerCase() ===
+                                    "recruiter"
+                                    ? "employer-details-reviewer-avatar-small-logo"
+                                    : ""
+                                }`}
+                              >
+                                {review.reviewerAvatar ? (
+                                  <img
+                                    src={review.reviewerAvatar}
+                                    alt={review.reviewerName}
+                                    className={`employer-details-reviewer-avatar-img ${
+                                      review.reviewerUserType === "recruiter" ||
+                                      review.reviewerRole?.toLowerCase() ===
+                                        "recruiter"
+                                        ? "employer-details-reviewer-avatar-logo"
+                                        : ""
+                                    }`}
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = "none";
+                                      e.currentTarget.parentElement!.innerHTML = `<span>${review.reviewerName.charAt(
+                                        0,
+                                      )}</span>`;
+                                    }}
+                                  />
+                                ) : (
+                                  <span>{review.reviewerName.charAt(0)}</span>
+                                )}
                               </div>
-
-                              {/* Show preview text when not expanded */}
-                              {expandedReviewId !== review.id && (
-                                <p className="employer-details-review-preview-small">
-                                  {getPreviewText(review.text)}
-                                </p>
-                              )}
-
-                              {/* Show full text when expanded */}
-                              {expandedReviewId === review.id && (
-                                <p className="employer-details-review-text-small">
-                                  {review.text}
-                                </p>
-                              )}
-
-                              <div className="employer-details-review-footer-small">
-                                <span className="employer-details-review-date-small">
-                                  {review.date}
+                              <div className="employer-details-reviewer-info-small">
+                                <span className="employer-details-reviewer-name-small">
+                                  {review.reviewerName}
                                 </span>
-                                <span
-                                  className={
-                                    expandedReviewId === review.id
-                                      ? "employer-details-read-less"
-                                      : "employer-details-read-more"
-                                  }
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleReviewExpansion(review.id);
-                                  }}
-                                >
-                                  {expandedReviewId === review.id
-                                    ? "Show less"
-                                    : "Read more"}
+                                <span className="employer-details-reviewer-location-small">
+                                  {review.reviewerLocation}
+                                </span>
+                              </div>
+                              <div className="employer-details-review-rating-small">
+                                {renderStars(review.rating, "small")}
+                              </div>
+                            </div>
+
+                            {/* Show preview text when not expanded */}
+                            {expandedReviewId !== review.id && (
+                              <p className="employer-details-review-preview-small">
+                                {getPreviewText(review.text)}
+                              </p>
+                            )}
+
+                            {/* Show full text when expanded */}
+                            {expandedReviewId === review.id && (
+                              <p className="employer-details-review-text-small">
+                                {review.text}
+                              </p>
+                            )}
+
+                            <div className="employer-details-review-footer-small">
+                              <span className="employer-details-review-date-small">
+                                {review.date}
+                              </span>
+                              <span
+                                className={
+                                  expandedReviewId === review.id
+                                    ? "employer-details-read-less"
+                                    : "employer-details-read-more"
+                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleReviewExpansion(review.id);
+                                }}
+                              >
+                                {expandedReviewId === review.id
+                                  ? "Show less"
+                                  : "Read more"}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Write Review Form - Full Width */}
+                {!isSelfProfile && showReviewForm && (
+                  <div className="employer-details-write-review-form-wrapper full-width">
+                    <div className="employer-details-write-review-content full-width">
+                      <div className="employer-details-write-review-form">
+                        {isLoggedIn ? (
+                          // User is logged in - show review form
+                          <>
+                            <h3>
+                              {existingReview
+                                ? "Edit Your Review"
+                                : "Share Your Experience"}
+                            </h3>
+                            <p>
+                              {existingReview
+                                ? `Update your review for ${company.name}`
+                                : `Help others make informed decisions about working at ${company.name}`}
+                            </p>
+
+                            {reviewError && (
+                              <div
+                                className={`employer-details-review-${
+                                  reviewError.includes("successfully")
+                                    ? "success"
+                                    : "error"
+                                }`}
+                              >
+                                {reviewError}
+                              </div>
+                            )}
+
+                            <div className="employer-details-form-group">
+                              <label>Overall Rating *</label>
+                              <div className="employer-details-star-input">
+                                {renderRatingStars()}
+                                <span className="employer-details-rating-text-input">
+                                  {newReview.rating || hoveredRating || 0} out
+                                  of 5
                                 </span>
                               </div>
                             </div>
-                          ))}
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Write Review Form - Full Width */}
-                  {showReviewForm && (
-                    <div className="employer-details-write-review-form-wrapper full-width">
-                      <div className="employer-details-write-review-content full-width">
-                        <div className="employer-details-write-review-form">
-                          {isLoggedIn ? (
-                            // User is logged in - show review form
-                            <>
-                              <h3>
-                                {existingReview
-                                  ? "Edit Your Review"
-                                  : "Share Your Experience"}
-                              </h3>
-                              <p>
-                                {existingReview
-                                  ? `Update your review for ${company.name}`
-                                  : `Help others make informed decisions about working at ${company.name}`}
-                              </p>
-
-                              {reviewError && (
-                                <div
-                                  className={`employer-details-review-${
-                                    reviewError.includes("successfully")
-                                      ? "success"
-                                      : "error"
-                                  }`}
-                                >
-                                  {reviewError}
-                                </div>
-                              )}
-
-                              <div className="employer-details-form-group">
-                                <label>Overall Rating *</label>
-                                <div className="employer-details-star-input">
-                                  {renderRatingStars()}
-                                  <span className="employer-details-rating-text-input">
-                                    {newReview.rating || hoveredRating || 0} out
-                                    of 5
-                                  </span>
-                                </div>
+                            <div className="employer-details-form-group">
+                              <label>Your Review *</label>
+                              <textarea
+                                placeholder="Tell us more about the pros and cons.. What did you like? What could be improved?"
+                                className="employer-details-review-textarea"
+                                rows={5}
+                                value={newReview.description}
+                                onChange={(e) =>
+                                  setNewReview({
+                                    ...newReview,
+                                    description: e.target.value,
+                                  })
+                                }
+                              />
+                              <div className="employer-details-review-hint">
+                                Be honest and specific about your experience
                               </div>
+                            </div>
 
-                              <div className="employer-details-form-group">
-                                <label>Your Review *</label>
-                                <textarea
-                                  placeholder="Tell us more about the pros and cons.. What did you like? What could be improved?"
-                                  className="employer-details-review-textarea"
-                                  rows={5}
-                                  value={newReview.description}
-                                  onChange={(e) =>
-                                    setNewReview({
-                                      ...newReview,
-                                      description: e.target.value,
-                                    })
-                                  }
-                                />
-                                <div className="employer-details-review-hint">
-                                  Be honest and specific about your experience
-                                </div>
-                              </div>
-
-                              <div className="employer-details-form-actions">
-                                <button
-                                  className="employer-details-submit-review-btn"
-                                  onClick={
-                                    existingReview
-                                      ? handleUpdateReview
-                                      : handleSubmitReview
-                                  }
-                                  disabled={submittingReview}
-                                >
-                                  {submittingReview
-                                    ? "Submitting..."
-                                    : existingReview
-                                      ? "Update Review"
-                                      : "Submit Review"}
-                                </button>
-                                {existingReview && (
-                                  <>
-                                    {!showDeleteConfirm ? (
+                            <div className="employer-details-form-actions">
+                              <button
+                                className="employer-details-submit-review-btn"
+                                onClick={
+                                  existingReview
+                                    ? handleUpdateReview
+                                    : handleSubmitReview
+                                }
+                                disabled={submittingReview}
+                              >
+                                {submittingReview
+                                  ? "Submitting..."
+                                  : existingReview
+                                    ? "Update Review"
+                                    : "Submit Review"}
+                              </button>
+                              {existingReview && (
+                                <>
+                                  {!showDeleteConfirm ? (
+                                    <button
+                                      className="employer-details-delete-review-btn"
+                                      onClick={() => setShowDeleteConfirm(true)}
+                                      disabled={submittingReview}
+                                    >
+                                      Delete Review
+                                    </button>
+                                  ) : (
+                                    <div className="employer-details-inline-confirm">
+                                      <span>Delete your review?</span>
                                       <button
-                                        className="employer-details-delete-review-btn"
+                                        className="employer-details-confirm-btn"
+                                        onClick={handleDeleteReview}
+                                        disabled={submittingReview}
+                                      >
+                                        {submittingReview
+                                          ? "Deleting..."
+                                          : "Yes"}
+                                      </button>
+                                      <button
+                                        className="employer-details-cancel-confirm-btn"
                                         onClick={() =>
-                                          setShowDeleteConfirm(true)
+                                          setShowDeleteConfirm(false)
                                         }
                                         disabled={submittingReview}
                                       >
-                                        Delete Review
+                                        No
                                       </button>
-                                    ) : (
-                                      <div className="employer-details-inline-confirm">
-                                        <span>Delete your review?</span>
-                                        <button
-                                          className="employer-details-confirm-btn"
-                                          onClick={handleDeleteReview}
-                                          disabled={submittingReview}
-                                        >
-                                          {submittingReview
-                                            ? "Deleting..."
-                                            : "Yes"}
-                                        </button>
-                                        <button
-                                          className="employer-details-cancel-confirm-btn"
-                                          onClick={() =>
-                                            setShowDeleteConfirm(false)
-                                          }
-                                          disabled={submittingReview}
-                                        >
-                                          No
-                                        </button>
-                                      </div>
-                                    )}
-                                  </>
-                                )}
-                                <button
-                                  className="employer-details-cancel-review-btn"
-                                  onClick={() => {
-                                    setShowReviewForm(false);
-                                    setReviewError(null);
-                                  }}
-                                  disabled={submittingReview}
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            </>
-                          ) : (
-                            // User is NOT logged in - show login prompt
-                            <div className="employer-details-login-prompt">
-                              <h3>Login Required</h3>
-                              <p>
-                                Please login to submit a review for{" "}
-                                {company.name}
-                              </p>
-                              <button
-                                className="employer-details-login-btn"
-                                onClick={() => {
-                                  navigate("/login", {
-                                    state: {
-                                      from: `/employers/${id}`,
-                                      message: "Please login to write a review",
-                                    },
-                                  });
-                                }}
-                              >
-                                Login Now
-                              </button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
                               <button
                                 className="employer-details-cancel-review-btn"
-                                onClick={() => setShowReviewForm(false)}
-                                style={{
-                                  marginTop: "10px",
-                                  display: "block",
-                                  width: "100%",
+                                onClick={() => {
+                                  setShowReviewForm(false);
+                                  setReviewError(null);
                                 }}
+                                disabled={submittingReview}
                               >
                                 Cancel
                               </button>
                             </div>
-                          )}
-                        </div>
+                          </>
+                        ) : (
+                          // User is NOT logged in - show login prompt
+                          <div className="employer-details-login-prompt">
+                            <h3>Login Required</h3>
+                            <p>
+                              Please login to submit a review for {company.name}
+                            </p>
+                            <button
+                              className="employer-details-login-btn"
+                              onClick={() => {
+                                navigate("/login", {
+                                  state: {
+                                    from: `/employers/${id}`,
+                                    message: "Please login to write a review",
+                                  },
+                                });
+                              }}
+                            >
+                              Login Now
+                            </button>
+                            <button
+                              className="employer-details-cancel-review-btn"
+                              onClick={() => setShowReviewForm(false)}
+                              style={{
+                                marginTop: "10px",
+                                display: "block",
+                                width: "100%",
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+                      </div>
 
-                        <div className="employer-details-review-illustration">
-                          <img
-                            src={reviewIllustration}
-                            alt="Review Illustration"
-                            className="employer-details-illustration-img"
-                          />
-                          <p className="employer-details-illustration-text">
-                            Your review helps others find their perfect
-                            workplace
-                          </p>
-                        </div>
+                      <div className="employer-details-review-illustration">
+                        <img
+                          src={reviewIllustration}
+                          alt="Review Illustration"
+                          className="employer-details-illustration-img"
+                        />
+                        <p className="employer-details-illustration-text">
+                          Your review helps others find their perfect workplace
+                        </p>
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
-
-              {/* Right Column - Sidebar */}
-              <aside className="employer-details-sidebar">
-                <div className="employer-details-sidebar-card">
-                  <div className="employer-details-sidebar-header">
-                    <img
-                      src={company.logo || defaultLogo}
-                      alt={company.name}
-                      className="employer-details-sidebar-logo"
-                      onError={handleImageError}
-                    />
-                    <h3>{company.name}</h3>
-                    {company.websiteUrl && (
-                      <a
-                        href={
-                          company.websiteUrl.startsWith("http")
-                            ? company.websiteUrl
-                            : `https://${company.websiteUrl}`
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="employer-details-website-link"
-                      >
-                        Visit Website
-                      </a>
-                    )}
-                  </div>
-
-                  <div className="employer-details-divider"></div>
-
-                  <div className="employer-details-sidebar-info">
-                    <div className="employer-details-info-item">
-                      <div className="employer-details-icon-box">
-                        <img src={locationIcon} alt="Location" />
-                      </div>
-                      <div className="employer-details-info-text">
-                        <span className="employer-details-info-label">
-                          Location
-                        </span>
-                        <span className="employer-details-info-value">
-                          {company.location || "Not specified"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="employer-details-info-item">
-                      <div className="employer-details-icon-box">
-                        <img src={sizeIcon} alt="Size" />
-                      </div>
-                      <div className="employer-details-info-text">
-                        <span className="employer-details-info-label">
-                          Company Size
-                        </span>
-                        <span className="employer-details-info-value">
-                          {company.companySize || "Not specified"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="employer-details-info-item">
-                      <div className="employer-details-icon-box">
-                        <img src={emailIcon} alt="Email" />
-                      </div>
-                      <div className="employer-details-info-text">
-                        <span className="employer-details-info-label">
-                          Email
-                        </span>
-                        <span className="employer-details-info-value">
-                          {company.email || "Not provided"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="employer-details-info-item">
-                      <div className="employer-details-icon-box">
-                        <img src={foundedIcon} alt="Founded" />
-                      </div>
-                      <div className="employer-details-info-text">
-                        <span className="employer-details-info-label">
-                          Founded
-                        </span>
-                        <span className="employer-details-info-value">
-                          {company.foundedYear || "Not specified"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="employer-details-divider"></div>
-
-                  {/* Connect with Us Section */}
-                  <div className="employer-details-connect-section">
-                    <h4>Connect with Us</h4>
-                    <div className="employer-details-connect-buttons">
-                      <button
-                        className="employer-details-connect-btn facebook"
-                        onClick={() =>
-                          handleSocialLink(company.facebookUrl, "Facebook")
-                        }
-                      >
-                        <img src={facebookIcon} alt="Facebook" />
-                        <span>Facebook</span>
-                      </button>
-                      <button
-                        className="employer-details-connect-btn linkedin"
-                        onClick={() =>
-                          handleSocialLink(company.linkedinUrl, "LinkedIn")
-                        }
-                      >
-                        <img src={linkedinIcon} alt="LinkedIn" />
-                        <span>LinkedIn</span>
-                      </button>
-                      <button
-                        className="employer-details-connect-btn instagram"
-                        onClick={() =>
-                          handleSocialLink(company.instagramUrl, "Instagram")
-                        }
-                      >
-                        <img src={instagramIcon} alt="Instagram" />
-                        <span>Instagram</span>
-                      </button>
-                    </div>
-
-                  </div>
-
-                  {!isAdminViewer && (
-                    <button
-                      className="employer-details-send-message-btn"
-                      onClick={handleSendMessage}
-                    >
-                      Send Message
-                    </button>
-                  )}
-                </div>
-              </aside>
-            </div>
+            </>
           )}
 
           {!loading && isPrivateProfile && company && (
@@ -1678,9 +1807,21 @@ const EmployerDetailsPage = () => {
                         />
                         {!isAdminViewer && (
                           <div className="joblist-card-actions">
-                            <button className="joblist-icon-btn">
-                              <img src={jobCardBookmarkIcon} alt="Bookmark" />
-                            </button>
+                            {userRole === "candidate" && (
+                              <button
+                                className="joblist-icon-btn"
+                                onClick={() => toggleSaveJob(job.id)}
+                              >
+                                <img
+                                  src={
+                                    savedJobs[job.id]
+                                      ? jobCardSavedBookmarkIcon
+                                      : jobCardBookmarkIcon
+                                  }
+                                  alt="Bookmark"
+                                />
+                              </button>
+                            )}
                             <button className="joblist-icon-btn">
                               <img src={jobCardShareIcon} alt="Share" />
                             </button>
@@ -1710,14 +1851,24 @@ const EmployerDetailsPage = () => {
                         >
                           View Details
                         </button>
-                        {!isAdminViewer && (
-                          <button
-                            className="joblist-btn-primary"
-                            onClick={() => handleApplyNow(job.id)}
-                          >
-                            Apply Now
-                          </button>
-                        )}
+                        {!isAdminViewer &&
+                          (userRole === "candidate" || !userRole) && (
+                            <button
+                              className={`joblist-btn-primary ${
+                                userRole === "candidate" && appliedJobs[job.id]
+                                  ? "joblist-btn-applied"
+                                  : ""
+                              }`}
+                              onClick={() => handleApplyNow(job)}
+                              disabled={
+                                userRole === "candidate" && appliedJobs[job.id]
+                              }
+                            >
+                              {userRole === "candidate" && appliedJobs[job.id]
+                                ? "Applied"
+                                : "Apply Now"}
+                            </button>
+                          )}
                       </div>
                     </article>
                   ))}
@@ -1734,4 +1885,3 @@ const EmployerDetailsPage = () => {
 };
 
 export default EmployerDetailsPage;
-

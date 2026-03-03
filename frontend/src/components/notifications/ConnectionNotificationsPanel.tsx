@@ -11,7 +11,9 @@ type NotificationItem = {
   type:
     | "connection_request_received"
     | "connection_request_accepted"
-    | "application_status_updated";
+    | "application_status_updated"
+    | "project_review_received"
+    | "company_review_received";
   isRead: boolean;
   message: string;
   createdAt: string;
@@ -243,7 +245,7 @@ const ConnectionNotificationsPanel = ({
       <header className="connection-notification-header">
         <div>
           <h1>Notifications</h1>
-          <p>Connection and application update notification history.</p>
+          <p>Connection, application, and review notification history.</p>
         </div>
         <div className="connection-notification-filter">
           <input
@@ -311,6 +313,9 @@ const ConnectionNotificationsPanel = ({
                         className={`connection-notification-badge ${
                           item.type === "application_status_updated"
                             ? "application"
+                            : item.type === "project_review_received" ||
+                                item.type === "company_review_received"
+                              ? "review"
                             : item.type === "connection_request_accepted"
                             ? "accepted"
                             : "new-request"
@@ -318,6 +323,9 @@ const ConnectionNotificationsPanel = ({
                       >
                         {item.type === "application_status_updated"
                           ? "Application"
+                          : item.type === "project_review_received" ||
+                              item.type === "company_review_received"
+                            ? "Review"
                           : item.type === "connection_request_accepted"
                           ? "Accepted"
                           : "New Request"}

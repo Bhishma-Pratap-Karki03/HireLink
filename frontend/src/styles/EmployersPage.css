@@ -535,6 +535,15 @@
   white-space: pre-line;
 }
 
+.employerspublic-company-email {
+  font-size: 13px;
+  color: #1e2937;
+  margin: 6px 0 0 0;
+  line-height: 1.4;
+  font-family: "Montserrat", sans-serif;
+  word-break: break-word;
+}
+
 .employerspublic-card-footer {
   display: flex;
   justify-content: center;

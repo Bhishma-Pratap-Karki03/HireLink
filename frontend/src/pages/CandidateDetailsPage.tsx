@@ -213,6 +213,12 @@ const CandidateDetailsPage = () => {
   const [projectReviewFormOpen, setProjectReviewFormOpen] = useState<
     Record<string, boolean>
   >({});
+  const [expandedProjectReviews, setExpandedProjectReviews] = useState<
+    Record<string, boolean>
+  >({});
+  const [projectReviewSectionOpen, setProjectReviewSectionOpen] = useState<
+    Record<string, boolean>
+  >({});
   const [showcaseAssessments, setShowcaseAssessments] = useState<
     ShowcaseAssessment[]
   >([]);
@@ -417,6 +423,24 @@ const CandidateDetailsPage = () => {
         : connectIcon;
   const isSelfProfile = Boolean(profile?.id && profile.id === currentUserId);
   const canReviewProject = !isSelfProfile && isAllowedRole && connectionStatus === "friend";
+
+  const getProjectReviewStateKey = (projectKey: string, reviewId: string) =>
+    `${projectKey}:${reviewId}`;
+
+  const toggleProjectReviewExpansion = (projectKey: string, reviewId: string) => {
+    const stateKey = getProjectReviewStateKey(projectKey, reviewId);
+    setExpandedProjectReviews((prev) => ({
+      ...prev,
+      [stateKey]: !prev[stateKey],
+    }));
+  };
+
+  const toggleProjectReviewSection = (projectKey: string) => {
+    setProjectReviewSectionOpen((prev) => ({
+      ...prev,
+      [projectKey]: !(prev[projectKey] ?? false),
+    }));
+  };
 
   const getProjectKey = (project: Project) => project._id || project.id || "";
 
@@ -976,7 +1000,7 @@ const CandidateDetailsPage = () => {
                       <img
                         src={getProjectImageUrl(item.coverImage)}
                         alt={item.projectTitle || "Project"}
-                        className="candidate-project-img"
+                        className="candidate-project-img candidate-details-project-img"
                         onError={(event) => {
                           event.currentTarget.src = projectImage;
                         }}
@@ -1052,44 +1076,95 @@ const CandidateDetailsPage = () => {
                         <div className="candidate-project-reviews">
                           {projectReviews[getProjectKey(item)]?.length ? (
                             <>
-                              <h5>Project Reviews</h5>
-                              <div className="candidate-project-review-list">
-                                {projectReviews[getProjectKey(item)].map((review) => (
-                                  <div key={review.id} className="candidate-project-review-item">
-                                    <div className="candidate-project-review-header">
-                                      <div className="candidate-project-review-author">
-                                        <img
-                                          src={review.reviewerAvatar || defaultAvatar}
-                                          alt={review.reviewerName}
-                                          className={
-                                            review.reviewerUserType === "recruiter" ||
-                                            review.reviewerRole?.toLowerCase() === "recruiter"
-                                              ? "candidate-project-review-logo"
-                                              : ""
-                                          }
-                                        />
-                                        <div>
-                                          <strong>{review.reviewerName}</strong>
-                                          <span>{review.reviewerRole || "User"}</span>
-                                        </div>
-                                      </div>
-                                      <div className="candidate-project-review-meta">
-                                        <div className="candidate-project-review-stars">
-                                          {Array.from({ length: 5 }).map((_, i) => (
-                                            <img
-                                              key={i}
-                                              src={i < review.rating ? starIcon : emptyStarIcon}
-                                              alt="star"
-                                            />
-                                          ))}
-                                        </div>
-                                        <small>{review.date || ""}</small>
-                                      </div>
-                                    </div>
-                                    <p>{review.text}</p>
-                                  </div>
-                                ))}
+                              <div className="candidate-project-review-section-head">
+                                <h5>Project Reviews</h5>
+                                <button
+                                  type="button"
+                                  className="candidate-project-review-section-toggle"
+                                  onClick={() =>
+                                    toggleProjectReviewSection(getProjectKey(item))
+                                  }
+                                >
+                                  {(projectReviewSectionOpen[getProjectKey(item)] ?? false)
+                                    ? "Collapse"
+                                    : "Expand"}
+                                </button>
                               </div>
+                              {(projectReviewSectionOpen[getProjectKey(item)] ?? false) && (
+                              <div className="candidate-project-review-list">
+                                {projectReviews[getProjectKey(item)].map((review) => {
+                                  const projectKey = getProjectKey(item);
+                                  const expansionKey = getProjectReviewStateKey(
+                                    projectKey,
+                                    review.id,
+                                  );
+                                  const isExpanded = Boolean(
+                                    expandedProjectReviews[expansionKey],
+                                  );
+                                  const hasLongText =
+                                    (review.text || "").trim().length > 180;
+
+                                  return (
+                                    <div
+                                      key={review.id}
+                                      className="candidate-project-review-item"
+                                    >
+                                      <div className="candidate-project-review-header">
+                                        <div className="candidate-project-review-author">
+                                          <img
+                                            src={review.reviewerAvatar || defaultAvatar}
+                                            alt={review.reviewerName}
+                                            className={
+                                              review.reviewerUserType === "recruiter" ||
+                                              review.reviewerRole?.toLowerCase() === "recruiter"
+                                                ? "candidate-project-review-logo"
+                                                : ""
+                                            }
+                                          />
+                                          <div>
+                                            <strong>{review.reviewerName}</strong>
+                                            <span>{review.reviewerRole || "User"}</span>
+                                          </div>
+                                        </div>
+                                        <div className="candidate-project-review-meta">
+                                          <div className="candidate-project-review-stars">
+                                            {Array.from({ length: 5 }).map((_, i) => (
+                                              <img
+                                                key={i}
+                                                src={i < review.rating ? starIcon : emptyStarIcon}
+                                                alt="star"
+                                              />
+                                            ))}
+                                          </div>
+                                          <small>{review.date || ""}</small>
+                                        </div>
+                                      </div>
+                                      <p
+                                        className={`candidate-project-review-text ${
+                                          isExpanded ? "expanded" : ""
+                                        }`}
+                                      >
+                                        {review.text}
+                                      </p>
+                                      {hasLongText && (
+                                        <button
+                                          type="button"
+                                          className="candidate-project-review-read-toggle"
+                                          onClick={() =>
+                                            toggleProjectReviewExpansion(
+                                              projectKey,
+                                              review.id,
+                                            )
+                                          }
+                                        >
+                                          {isExpanded ? "Show less" : "Read more"}
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              )}
                             </>
                           ) : null}
 

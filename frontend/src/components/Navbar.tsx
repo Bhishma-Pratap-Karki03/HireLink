@@ -37,6 +37,8 @@ interface NotificationItem {
     | "connection_request_received"
     | "connection_request_accepted"
     | "application_status_updated"
+    | "project_review_received"
+    | "company_review_received"
     | "message_received";
   isRead: boolean;
   message: string;
@@ -887,17 +889,23 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
                                       ? "status-message-pill"
                                       : item.type === "application_status_updated"
                                         ? "status-application"
+                                      : item.type === "project_review_received" ||
+                                          item.type === "company_review_received"
+                                        ? "status-review"
                                       : item.type === "connection_request_accepted"
-                                      ? "status-accepted"
-                                      : "status-new-request"
+                                        ? "status-accepted"
+                                        : "status-new-request"
                                   }`}
                                 >
                                   {item.type === "message_received"
                                     ? "Message"
                                     : item.type === "application_status_updated"
                                       ? "Application"
+                                    : item.type === "project_review_received" ||
+                                        item.type === "company_review_received"
+                                      ? "Review"
                                     : item.type === "connection_request_accepted"
-                                    ? "Accepted"
+                                      ? "Accepted"
                                     : "New Request"}
                                 </span>
                                 <span className="notification-time">
@@ -1262,15 +1270,21 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
                   className={`notification-status-badge ${
                     item.type === "application_status_updated"
                       ? "status-application"
+                      : item.type === "project_review_received" ||
+                          item.type === "company_review_received"
+                        ? "status-review"
                       : item.type === "connection_request_accepted"
-                      ? "status-accepted"
-                      : "status-new-request"
+                        ? "status-accepted"
+                        : "status-new-request"
                   }`}
                 >
                   {item.type === "application_status_updated"
                     ? "Application"
+                    : item.type === "project_review_received" ||
+                        item.type === "company_review_received"
+                      ? "Review"
                     : item.type === "connection_request_accepted"
-                    ? "Accepted"
+                      ? "Accepted"
                     : "New Request"}
                 </span>
               </div>

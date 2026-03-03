@@ -330,14 +330,13 @@ const CandidateProfilePage = () => {
         });
 
       setAllQuizResults(results);
-      const storedIds = Array.isArray(showcaseData?.attemptIds)
-        ? showcaseData.attemptIds
-        : [];
+      const hasStoredSelection = Array.isArray(showcaseData?.attemptIds);
+      const storedIds = hasStoredSelection ? showcaseData.attemptIds : [];
       const validStoredIds = storedIds.filter((id: any) =>
         results.some((r) => r.id === id),
       );
       const defaultIds = results.slice(0, 5).map((r) => r.id);
-      const idsToUse = validStoredIds.length > 0 ? validStoredIds : defaultIds;
+      const idsToUse = hasStoredSelection ? validStoredIds : defaultIds;
       setVisibleQuizIds(idsToUse);
       setQuizResults(results.filter((r) => idsToUse.includes(r.id)).slice(0, 5));
     } catch (error) {

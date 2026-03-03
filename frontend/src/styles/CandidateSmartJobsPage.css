@@ -2,13 +2,27 @@
   flex-grow: 1;
   min-width: 0;
   min-height: 100vh;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: visible;
+  background: #eff3f7;
+}
+
+.candidate-smart-main > .candidate-top-bar {
+  width: 100% !important;
+  margin: 0 !important;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.candidate-smart-content-wrapper {
   padding: 40px;
   display: flex;
   flex-direction: column;
   gap: 24px;
-  overflow-y: visible;
-  overflow-x: hidden;
-  background: #eff3f7;
 }
 
 .candidate-smart-shell {
@@ -435,7 +449,12 @@
 }
 
 @media (max-width: 992px) {
-  .candidate-smart-main {
+  .candidate-smart-main > .candidate-top-bar {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .candidate-smart-content-wrapper {
     padding: 20px;
     gap: 16px;
   }
@@ -462,7 +481,7 @@
 }
 
 /* Smart Jobs UI Enhancement */
-.candidate-smart-main {
+.candidate-smart-content-wrapper {
   padding: 40px;
   gap: 18px;
 }
@@ -589,7 +608,7 @@
 }
 
 @media (max-width: 1080px) {
-  .candidate-smart-main {
+  .candidate-smart-content-wrapper {
     padding: 20px;
   }
 
@@ -604,7 +623,12 @@
 }
 
 @media (max-width: 768px) {
-  .candidate-smart-main {
+  .candidate-smart-main > .candidate-top-bar {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .candidate-smart-content-wrapper {
     padding: 24px;
   }
 

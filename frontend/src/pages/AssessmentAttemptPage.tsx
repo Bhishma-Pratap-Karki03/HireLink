@@ -247,9 +247,12 @@ const AssessmentAttemptPage = () => {
         (assessment.type === "task" || assessment.type === "code") &&
         assessment.codeSubmission === "file" &&
         !selectedCodeFile &&
-        !codeFileUrl
+        !codeFileUrl &&
+        !codeLink.trim()
       ) {
-        setMessage("Please upload a PDF, DOC, DOCX, or ZIP file before submitting.");
+        setMessage(
+          "Please upload a PDF, DOC, DOCX, or ZIP file, or provide a task link before submitting.",
+        );
         submitGuard.current = false;
         return;
       }
@@ -601,11 +604,12 @@ const AssessmentAttemptPage = () => {
                         />
                       )
                     ) : (
-                      <div>
+                      <div className="assessment-file-upload-panel">
                         {!isReadOnly ? (
                           <>
                             <input
-                              className="assessment-input"
+                              id="assessment-code-file-input"
+                              className="assessment-file-hidden-input"
                               type="file"
                               accept=".pdf,.doc,.docx,.zip,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip,application/x-zip-compressed"
                               onChange={(e) => {
@@ -613,20 +617,37 @@ const AssessmentAttemptPage = () => {
                                 setSelectedCodeFile(file);
                               }}
                             />
-                            <p>
-                              Allowed file types: PDF, DOC, DOCX, ZIP (max 10MB).
-                            </p>
+                            <label
+                              htmlFor="assessment-code-file-input"
+                              className="assessment-upload-area"
+                            >
+                              <div className="assessment-upload-text">
+                                <p className="assessment-upload-title">
+                                  Click to upload submitted file
+                                </p>
+                                <p className="assessment-upload-subtitle">
+                                  Allowed file types: PDF, DOC, DOCX, ZIP (max 10MB)
+                                </p>
+                              </div>
+                              <span className="assessment-upload-browse-btn">
+                                Browse File
+                              </span>
+                            </label>
                             {selectedCodeFile && (
-                              <p>
-                                Selected: {selectedCodeFile.name}
-                                {selectedCodeFile.size
-                                  ? ` (${formatFileSize(selectedCodeFile.size)})`
-                                  : ""}
-                              </p>
+                              <div className="assessment-file-selected">
+                                <span className="assessment-file-selected-name">
+                                  {selectedCodeFile.name}
+                                </span>
+                                <span className="assessment-file-selected-size">
+                                  {selectedCodeFile.size
+                                    ? formatFileSize(selectedCodeFile.size)
+                                    : ""}
+                                </span>
+                              </div>
                             )}
                             {!selectedCodeFile && codeFileUrl && (
-                              <p>
-                                Current upload:{" "}
+                              <p className="assessment-file-current">
+                                Current upload:
                                 <a
                                   className="assessment-link-output"
                                   href={`http://localhost:5000${codeFileUrl}`}
@@ -637,19 +658,53 @@ const AssessmentAttemptPage = () => {
                                 </a>
                               </p>
                             )}
+                            <div className="assessment-upload-separator">
+                              <span>or submit task link</span>
+                            </div>
+                            <input
+                              className="assessment-input"
+                              placeholder="Paste task link (optional if file is uploaded)"
+                              value={codeLink}
+                              onChange={(e) => setCodeLink(e.target.value)}
+                            />
+                            {codeLink.trim() && (
+                              <a
+                                className="assessment-link-output"
+                                href={codeLink}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {codeLink}
+                              </a>
+                            )}
                           </>
-                        ) : codeFileUrl ? (
-                          <a
-                            className="assessment-link-output"
-                            href={`http://localhost:5000${codeFileUrl}`}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {codeFileName || "View uploaded file"}
-                            {codeFileSize ? ` (${formatFileSize(codeFileSize)})` : ""}
-                          </a>
                         ) : (
-                          <p>No file uploaded.</p>
+                          <>
+                            {codeFileUrl ? (
+                              <a
+                                className="assessment-link-output"
+                                href={`http://localhost:5000${codeFileUrl}`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {codeFileName || "View uploaded file"}
+                                {codeFileSize ? ` (${formatFileSize(codeFileSize)})` : ""}
+                              </a>
+                            ) : null}
+                            {codeLink.trim() ? (
+                              <a
+                                className="assessment-link-output"
+                                href={codeLink}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {codeLink}
+                              </a>
+                            ) : null}
+                            {!codeFileUrl && !codeLink.trim() ? (
+                              <p className="assessment-file-empty">No file or task link submitted.</p>
+                            ) : null}
+                          </>
                         )}
                       </div>
                     )}

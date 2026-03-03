@@ -20,7 +20,9 @@ import AdminTopBar from "../../components/admincomponents/AdminTopBar";
 import statsTotalUsersIcon from "../../images/Candidate Profile Page Images/statsTotalUsersIcon.png";
 import statsTotalJobsIcon from "../../images/Candidate Profile Page Images/stats-applied-icon.svg";
 import statsApplicationsIcon from "../../images/Candidate Profile Page Images/statsCandidatesIcon.png";
+import adminAssessmentIcon from "../../images/Candidate Profile Page Images/adminAssessmentIcon.png";
 import statsBlockedUsersIcon from "../../images/Candidate Profile Page Images/stats-reject.svg";
+import assessmentAttemptsIcon from "../../images/Candidate Profile Page Images/assessment-attempts-icon.png";
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
 import "../../styles/AdminDashboard.css";
 
@@ -551,7 +553,7 @@ const AdminDashboard = () => {
                       </small>
                     </div>
                     <img
-                      src={statsApplicationsIcon}
+                      src={adminAssessmentIcon}
                       alt="Admin assessments"
                       className="admin-dashboard-stat-icon"
                     />
@@ -559,11 +561,13 @@ const AdminDashboard = () => {
                   <article className="admin-dashboard-stat-card">
                     <div className="admin-dashboard-stat-content">
                       <h3>Total Assessment Attempts</h3>
-                      <p>{stats.assessments.adminInsights?.totalAttempts || 0}</p>
+                      <p>
+                        {stats.assessments.adminInsights?.totalAttempts || 0}
+                      </p>
                       <small>All attempts in selected date range</small>
                     </div>
                     <img
-                      src={statsTotalJobsIcon}
+                      src={assessmentAttemptsIcon}
                       alt="Total assessment attempts"
                       className="admin-dashboard-stat-icon"
                     />

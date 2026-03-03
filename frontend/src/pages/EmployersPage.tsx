@@ -36,6 +36,7 @@ interface Company {
   name: string;
   logo: string;
   location: string;
+  email?: string;
   vacancies: number;
   isFeatured: boolean;
   companySize?: string;
@@ -131,6 +132,7 @@ const EmployersPage = () => {
             name: recruiter.name,
             logo: recruiter.logo || defaultLogo,
             location: recruiter.location,
+            email: recruiter.email || "",
             vacancies: recruiter.vacancies,
             isFeatured: recruiter.isFeatured,
             companySize: recruiter.companySize,
@@ -774,6 +776,9 @@ const EmployersPage = () => {
                                   <br />
                                 </span>
                               ))}
+                            </p>
+                            <p className="employerspublic-company-email">
+                              {company.email || "Email not available"}
                             </p>
                             <div className="employerspublic-vacancy-tag">
                               {company.vacancies} Vacancy

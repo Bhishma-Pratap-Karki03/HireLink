@@ -218,6 +218,76 @@
   border-bottom: none;
 }
 
+.admin-manage-pagination {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-top: 1px solid #e7eef8;
+}
+
+.admin-manage-page-info {
+  font-size: 13px;
+  color: #5f6f88;
+  margin-left: auto;
+  order: 2;
+}
+
+.admin-manage-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  order: 1;
+}
+
+.admin-manage-page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-manage-page-num {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e2937;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.admin-manage-page-num.active {
+  background: #e0d6fc;
+  color: #000000;
+  font-weight: 600;
+}
+
+.admin-manage-page-nav {
+  border: none;
+  background: none;
+  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.admin-manage-page-nav img {
+  width: 22px;
+  height: 22px;
+}
+
+.admin-manage-page-nav:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .admin-manage-user-cell {
   display: flex;
   align-items: center;
@@ -523,7 +593,8 @@
   }
 
   .admin-manage-table-head,
-  .admin-manage-row {
+  .admin-manage-row,
+  .admin-manage-pagination {
     min-width: 980px;
   }
 }

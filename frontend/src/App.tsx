@@ -23,6 +23,7 @@ import AdminDashboard from "./pages/adminpages/AdminDashboard";
 import NotFoundPage from "./pages/NotFoundPage";
 import HomePage from "./pages/HomePage";
 import AboutUsPage from "./pages/AboutUsPage";
+import UnderConstructionPage from "./pages/UnderConstructionPage";
 import EmployersPage from "./pages/EmployersPage";
 import EmployerDetailsPage from "./pages/EmployerDetailsPage";
 import JobListingPage from "./pages/JobListingPage";
@@ -137,6 +138,10 @@ function App() {
         <Route path="/" element={<RootRedirect />} />
         <Route path="/home" element={<HomePage />} />
         <Route path="/about-us" element={<AboutUsPage />} />
+        <Route
+          path="/under-construction/:slug"
+          element={<UnderConstructionPage />}
+        />
 
         {/* Public routes - redirect if already authenticated */}
         <Route

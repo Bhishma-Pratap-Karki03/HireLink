@@ -11,7 +11,7 @@ import jobPostingsIcon from "../../images/Recruiter Profile Page Images/6_312.sv
 import messagesIcon from "../../images/Recruiter Profile Page Images/6_317.svg";
 import settingsIcon from "../../images/Recruiter Profile Page Images/6_335.svg";
 import friendRequestsIcon from "../../images/Recruiter Profile Page Images/friend-request.svg";
-import notificationIcon from "../../images/Recruiter Profile Page Images/notification icon.svg";
+import notificationIcon from "../../images/Recruiter Profile Page Images/notification-icon.png";
 
 interface UserData {
   id: string;
@@ -234,7 +234,6 @@ const RecruiterSidebar: React.FC = () => {
         <h3 className="recruiter-user-name">{userName}</h3>
 
         {/* REMOVED currentJobTitle display */}
-
       </div>
 
       <nav className="recruiter-sidebar-nav">

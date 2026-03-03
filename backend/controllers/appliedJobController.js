@@ -534,6 +534,8 @@ exports.updateApplicationStatus = async (req, res) => {
             "connection_request_received",
             "connection_request_accepted",
             "application_status_updated",
+            "project_review_received",
+            "company_review_received",
           ],
         },
         isRead: false,

@@ -5,6 +5,13 @@ const User = require("../models/userModel");
 const { getIO } = require("../socket");
 
 const ALLOWED_ROLES = new Set(["candidate", "recruiter"]);
+const FEED_NOTIFICATION_TYPES = [
+  "connection_request_received",
+  "connection_request_accepted",
+  "application_status_updated",
+  "project_review_received",
+  "company_review_received",
+];
 
 const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
@@ -24,11 +31,16 @@ const mapNotification = (item) => {
       ? `${actorName} accepted your connection request.`
       : item.type === "connection_request_received"
         ? `${actorName} sent you a connection request.`
+        : item.type === "project_review_received"
+          ? item.message || `${actorName} reviewed your project.`
+          : item.type === "company_review_received"
+            ? item.message || `${actorName} reviewed your company profile.`
         : item.message || "Your application status was updated.";
   const targetPath =
-    item.type === "application_status_updated"
+    item.targetPath ||
+    (item.type === "application_status_updated"
       ? "/candidate/applied-status"
-      : buildProfilePath(item.actor);
+      : buildProfilePath(item.actor));
   return {
     id: item._id.toString(),
     type: item.type,
@@ -603,11 +615,7 @@ exports.getRecentConnectionNotifications = async (req, res, next) => {
     const query = {
       user: userId,
       type: {
-        $in: [
-          "connection_request_received",
-          "connection_request_accepted",
-          "application_status_updated",
-        ],
+        $in: FEED_NOTIFICATION_TYPES,
       },
     };
     if (q) {
@@ -645,11 +653,7 @@ exports.getRecentConnectionNotifications = async (req, res, next) => {
     const unreadCount = await Notification.countDocuments({
       user: userId,
       type: {
-        $in: [
-          "connection_request_received",
-          "connection_request_accepted",
-          "application_status_updated",
-        ],
+        $in: FEED_NOTIFICATION_TYPES,
       },
       isRead: false,
     });
@@ -694,11 +698,7 @@ exports.markConnectionNotificationRead = async (req, res, next) => {
         _id: notificationId,
         user: userId,
         type: {
-          $in: [
-            "connection_request_received",
-            "connection_request_accepted",
-            "application_status_updated",
-          ],
+          $in: FEED_NOTIFICATION_TYPES,
         },
       },
       { $set: { isRead: true } },
@@ -717,11 +717,7 @@ exports.markConnectionNotificationRead = async (req, res, next) => {
     const unreadCount = await Notification.countDocuments({
       user: userId,
       type: {
-        $in: [
-          "connection_request_received",
-          "connection_request_accepted",
-          "application_status_updated",
-        ],
+        $in: FEED_NOTIFICATION_TYPES,
       },
       isRead: false,
     });
@@ -759,11 +755,7 @@ exports.deleteConnectionNotification = async (req, res, next) => {
       _id: notificationId,
       user: userId,
       type: {
-        $in: [
-          "connection_request_received",
-          "connection_request_accepted",
-          "application_status_updated",
-        ],
+        $in: FEED_NOTIFICATION_TYPES,
       },
     }).lean();
 
@@ -777,11 +769,7 @@ exports.deleteConnectionNotification = async (req, res, next) => {
     const unreadCount = await Notification.countDocuments({
       user: userId,
       type: {
-        $in: [
-          "connection_request_received",
-          "connection_request_accepted",
-          "application_status_updated",
-        ],
+        $in: FEED_NOTIFICATION_TYPES,
       },
       isRead: false,
     });

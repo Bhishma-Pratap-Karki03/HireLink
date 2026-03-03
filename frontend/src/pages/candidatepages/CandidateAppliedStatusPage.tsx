@@ -161,6 +161,7 @@ const CandidateAppliedStatusPage = () => {
           searchPlaceholder="Search by job title..."
           onSearch={setTitleSearch}
         />
+        <div className="candidate-applied-content-wrapper">
         <section className="candidate-applied-shell">
           <div className="candidate-applied-stats">
             <article className="candidate-applied-stat-card">
@@ -315,8 +316,9 @@ const CandidateAppliedStatusPage = () => {
             )}
           </section>
         </section>
-              <PortalFooter />
-</main>
+        <PortalFooter />
+        </div>
+      </main>
     </div>
   );
 };

@@ -47,14 +47,28 @@
 .admin-settings-main {
   flex-grow: 1;
   min-width: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: visible;
+  background: #eff3f7;
+  min-height: 100vh;
+}
+
+.candidate-settings-main > .candidate-top-bar {
+  width: 100% !important;
+  margin: 0 !important;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.candidate-settings-content-wrapper {
   padding: 40px;
   display: flex;
   flex-direction: column;
   gap: 24px;
-  overflow-y: visible;
-  overflow-x: hidden;
-  background: #eff3f7;
-  min-height: 100vh;
 }
 
 .settings-page-shell {
@@ -234,5 +248,25 @@
   .recruiter-profile-content-wrapper {
     padding: 20px;
     padding-top: 104px;
+  }
+
+  .candidate-settings-main > .candidate-top-bar {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .candidate-settings-content-wrapper {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .candidate-settings-main > .candidate-top-bar {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .candidate-settings-content-wrapper {
+    padding: 24px;
   }
 }

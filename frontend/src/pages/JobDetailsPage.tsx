@@ -13,7 +13,7 @@ import heroIcon1 from "../images/Employers Page Images/8_208.svg";
 import heroIcon2 from "../images/Employers Page Images/8_209.svg";
 
 // Job list icons (paths reserved in Job List Page Images)
-import locationIcon from "../images/Job List Page Images/location.svg";
+import locationIcon from "../images/Employers Page Images/location-icond.svg";
 import jobTypeIcon from "../images/Job List Page Images/job-type.svg";
 import workModeIcon from "../images/Job List Page Images/work-mode.svg";
 
@@ -29,12 +29,12 @@ import stageIcon7 from "../images/Job List Page Images/interview-stage-7.png";
 // Sidebar icons (placeholders in Job List Page Images)
 import employeeTypeIcon from "../images/Job List Page Images/employee-type.svg";
 import emailIcon from "../images/Job List Page Images/email.svg";
-import salaryIcon from "../images/Job List Page Images/salary.svg";
+import salaryIcon from "../images/Job List Page Images/salary-icon.svg";
 import departmentIcon from "../images/Job List Page Images/department.svg";
-import experienceIcon from "../images/Job List Page Images/experience.svg";
+import experienceIcon from "../images/Job List Page Images/experience-icon.svg";
 import qualificationIcon from "../images/Job List Page Images/qualification.svg";
-import levelIcon from "../images/Job List Page Images/level.svg";
-import genderIcon from "../images/Job List Page Images/gender.svg";
+import levelIcon from "../images/Job List Page Images/job-level-icon.svg";
+import genderIcon from "../images/Job List Page Images/gender-icon.png";
 import calendarIcon from "../images/Job List Page Images/clock.svg";
 import expiryIcon from "../images/Job List Page Images/expiry.svg";
 

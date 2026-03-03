@@ -8,6 +8,8 @@ import statsActiveJobsIcon from "../../images/Candidate Profile Page Images/stat
 import statsInactiveJobsIcon from "../../images/Candidate Profile Page Images/stats-reject.svg";
 import statsApplicantsIcon from "../../images/Candidate Profile Page Images/statsCandidatesIcon.png";
 import dropdownArrow from "../../images/Register Page Images/1_2307.svg";
+import prevIcon from "../../images/Employers Page Images/Prev Icon.svg";
+import nextIcon from "../../images/Employers Page Images/Next Icon.svg";
 
 type AdminJobItem = {
   _id: string;
@@ -32,6 +34,8 @@ const AdminManageJobsPage = () => {
   const [actingJobId, setActingJobId] = useState("");
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const statusDropdownRef = useRef<HTMLDivElement | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const JOBS_PER_PAGE = 20;
 
   const token = localStorage.getItem("authToken") || "";
 
@@ -79,6 +83,7 @@ const AdminManageJobsPage = () => {
 
   const onSearchSubmit = (event: FormEvent) => {
     event.preventDefault();
+    setCurrentPage(1);
     fetchJobs();
   };
 
@@ -89,6 +94,21 @@ const AdminManageJobsPage = () => {
     const applicants = jobs.reduce((sum, job) => sum + (job.applicantsCount || 0), 0);
     return { total, active, inactive, applicants };
   }, [jobs]);
+
+  const totalPages = Math.max(1, Math.ceil(jobs.length / JOBS_PER_PAGE));
+  const paginatedJobs = jobs.slice(
+    (currentPage - 1) * JOBS_PER_PAGE,
+    currentPage * JOBS_PER_PAGE,
+  );
+  const showingStart = jobs.length === 0 ? 0 : (currentPage - 1) * JOBS_PER_PAGE + 1;
+  const showingEnd =
+    jobs.length === 0 ? 0 : Math.min(currentPage * JOBS_PER_PAGE, jobs.length);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const formatDate = (value?: string) => {
     if (!value) return "-";
@@ -221,6 +241,7 @@ const AdminManageJobsPage = () => {
                         }`}
                         onClick={() => {
                           setStatusFilter(item.value);
+                          setCurrentPage(1);
                           setIsStatusOpen(false);
                         }}
                       >
@@ -254,7 +275,7 @@ const AdminManageJobsPage = () => {
 
               {!loading &&
                 !error &&
-                jobs.map((job) => (
+                paginatedJobs.map((job) => (
                   <article className="admin-manage-jobs-row" key={job._id}>
                     <div className="admin-manage-jobs-job-cell">
                       <button
@@ -316,6 +337,53 @@ const AdminManageJobsPage = () => {
                     </div>
                   </article>
                 ))}
+              {!loading && !error && jobs.length > 0 && (
+                <div className="admin-manage-jobs-pagination">
+                  <div className="admin-manage-jobs-page-controls">
+                    <button
+                      className="admin-manage-jobs-page-nav"
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <img src={prevIcon} alt="Previous" />
+                    </button>
+                    <div className="admin-manage-jobs-page-numbers">
+                      {Array.from({ length: Math.min(totalPages, 7) }, (_, index) => {
+                        let pageNum = index + 1;
+                        if (totalPages > 7 && currentPage > 4) {
+                          pageNum = Math.min(
+                            totalPages - 6 + index,
+                            currentPage - 3 + index,
+                          );
+                        }
+                        return pageNum;
+                      }).map((pageNum) => (
+                        <button
+                          key={pageNum}
+                          className={`admin-manage-jobs-page-num ${
+                            currentPage === pageNum ? "active" : ""
+                          }`}
+                          onClick={() => setCurrentPage(pageNum)}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      className="admin-manage-jobs-page-nav"
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                      }
+                      disabled={currentPage === totalPages}
+                    >
+                      <img src={nextIcon} alt="Next" />
+                    </button>
+                  </div>
+                  <div className="admin-manage-jobs-page-info">
+                    Showing {showingStart} to {showingEnd} of {jobs.length}
+                  </div>
+                </div>
+              )}
             </section>
           </section>
         </div>

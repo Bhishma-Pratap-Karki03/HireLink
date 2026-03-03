@@ -18,10 +18,10 @@ import type { ChartOptions } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import CandidateSidebar from "../../components/candidatecomponents/CandidateSidebar";
 import CandidateTopBar from "../../components/candidatecomponents/CandidateTopBar";
-import statsAppliedIcon from "../../images/Candidate Profile Page Images/stats-applied-icon.svg";
+import statsAppliedIcon from "../../images/Candidate Profile Page Images/Total-Applications.png";
 import statsInterviewIcon from "../../images/Candidate Profile Page Images/stats-interview-icon.png";
-import statsOfferIcon from "../../images/Candidate Profile Page Images/stats-offer-icon.svg";
-import statsMessageIcon from "../../images/Candidate Profile Page Images/message-icon.svg";
+import connections from "../../images/Candidate Profile Page Images/connections.png";
+import savedjobs from "../../images/Candidate Profile Page Images/Saved-Jobs.png";
 import "../../styles/CandidateDashboard.css";
 
 ChartJS.register(
@@ -81,7 +81,7 @@ type CandidateDashboardStats = {
     labels: string[];
     applications: number[];
     savedJobs: number[];
-    recommendationRuns: number[];
+    adminAssessments: number[];
   };
   distributions: {
     applicationStatuses: { labels: string[]; values: number[] };
@@ -123,7 +123,7 @@ const emptyStats: CandidateDashboardStats = {
   assessments: { submitted: 0, inProgress: 0, avgQuizScore: 0 },
   messaging: { totalReceived: 0, unreadReceived: 0 },
   connections: { pending: 0, accepted: 0 },
-  trends: { labels: [], applications: [], savedJobs: [], recommendationRuns: [] },
+  trends: { labels: [], applications: [], savedJobs: [], adminAssessments: [] },
   distributions: {
     applicationStatuses: { labels: [], values: [] },
     workModes: { labels: [], values: [] },
@@ -160,7 +160,9 @@ const formatDate = (value?: string) => {
 const CandidateDashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState<CandidateDashboardStats>(emptyStats);
-  const [recentApplications, setRecentApplications] = useState<RecentApplication[]>([]);
+  const [recentApplications, setRecentApplications] = useState<
+    RecentApplication[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fromDate, setFromDate] = useState(daysAgoInputValue(29));
@@ -168,7 +170,7 @@ const CandidateDashboard = () => {
   const [trendVisibility, setTrendVisibility] = useState({
     applications: true,
     savedJobs: true,
-    recommendationRuns: true,
+    adminAssessments: true,
   });
 
   const fetchStats = async (from: string, to: string) => {
@@ -222,9 +224,9 @@ const CandidateDashboard = () => {
         backgroundColor: "rgba(20, 184, 166, 0.13)",
       },
       {
-        key: "recommendationRuns" as const,
-        label: "Recommendation Runs",
-        data: stats.trends.recommendationRuns,
+        key: "adminAssessments" as const,
+        label: "Admin Quiz/Assessment Done",
+        data: stats.trends.adminAssessments,
         borderColor: "#f59e0b",
         backgroundColor: "rgba(245, 158, 11, 0.12)",
       },
@@ -285,7 +287,14 @@ const CandidateDashboard = () => {
 
   const pipelineData = useMemo(
     () => ({
-      labels: ["Submitted", "Reviewed", "Shortlisted", "Interview", "Hired", "Rejected"],
+      labels: [
+        "Submitted",
+        "Reviewed",
+        "Shortlisted",
+        "Interview",
+        "Hired",
+        "Rejected",
+      ],
       datasets: [
         {
           label: "Applications",
@@ -301,7 +310,14 @@ const CandidateDashboard = () => {
             stats.applications.hired || 0,
             stats.applications.rejected || 0,
           ],
-          backgroundColor: ["#3b82f6", "#8b5cf6", "#14b8a6", "#f59e0b", "#22c55e", "#ef4444"],
+          backgroundColor: [
+            "#3b82f6",
+            "#8b5cf6",
+            "#14b8a6",
+            "#f59e0b",
+            "#22c55e",
+            "#ef4444",
+          ],
           borderRadius: 8,
           maxBarThickness: 24,
         },
@@ -321,7 +337,11 @@ const CandidateDashboard = () => {
         x: {
           beginAtZero: true,
           grid: { color: "rgba(131, 151, 177, 0.20)" },
-          ticks: { color: "#6a829d", precision: 0, font: { size: 11, weight: 600 } },
+          ticks: {
+            color: "#6a829d",
+            precision: 0,
+            font: { size: 11, weight: 600 },
+          },
         },
         y: {
           grid: { display: false },
@@ -390,7 +410,13 @@ const CandidateDashboard = () => {
       datasets: [
         {
           data: stats.distributions.jobTypes.values,
-          backgroundColor: ["#1459b8", "#3b82f6", "#14b8a6", "#f59e0b", "#8b5cf6"],
+          backgroundColor: [
+            "#1459b8",
+            "#3b82f6",
+            "#14b8a6",
+            "#f59e0b",
+            "#8b5cf6",
+          ],
           borderWidth: 0,
         },
       ],
@@ -403,7 +429,11 @@ const CandidateDashboard = () => {
     return `${((value / total) * 100).toFixed(1)}%`;
   };
 
-  const buildLegend = (labels: string[], values: number[], colors: string[]) => {
+  const buildLegend = (
+    labels: string[],
+    values: number[],
+    colors: string[],
+  ) => {
     const total = values.reduce((sum, value) => sum + value, 0);
     return labels.map((label, idx) => ({
       label,
@@ -417,7 +447,9 @@ const CandidateDashboard = () => {
       buildLegend(
         stats.distributions.applicationStatuses.labels,
         stats.distributions.applicationStatuses.values,
-        applicationStatusColors.length > 0 ? applicationStatusColors : chartPalette,
+        applicationStatusColors.length > 0
+          ? applicationStatusColors
+          : chartPalette,
       ),
     [stats.distributions.applicationStatuses, applicationStatusColors],
   );
@@ -442,7 +474,9 @@ const CandidateDashboard = () => {
     [stats.distributions.jobTypes],
   );
 
-  const toggleTrendSeries = (key: "applications" | "savedJobs" | "recommendationRuns") => {
+  const toggleTrendSeries = (
+    key: "applications" | "savedJobs" | "adminAssessments",
+  ) => {
     setTrendVisibility((prev) => {
       const next = !prev[key];
       const activeCount = Object.values(prev).filter(Boolean).length;
@@ -460,16 +494,26 @@ const CandidateDashboard = () => {
           <div className="candidate-insight-header-row">
             <div className="candidate-insight-header-copy">
               <h1>Candidate Dashboard</h1>
-              <p>Application progress, profile activity, and career insights.</p>
+              <p>
+                Application progress, profile activity, and career insights.
+              </p>
             </div>
             <div className="candidate-insight-inline-filters">
               <div className="candidate-insight-date-field">
                 <label>From</label>
-                <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                />
               </div>
               <div className="candidate-insight-date-field">
                 <label>To</label>
-                <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                />
               </div>
               <button
                 className="candidate-insight-apply-filter"
@@ -487,7 +531,11 @@ const CandidateDashboard = () => {
                 <p>{stats.applications.total}</p>
                 <small>{stats.applications.inRange} in selected range</small>
               </div>
-              <img src={statsAppliedIcon} alt="Applications" className="candidate-insight-stat-icon" />
+              <img
+                src={statsAppliedIcon}
+                alt="Applications"
+                className="candidate-insight-stat-icon"
+              />
             </article>
             <article className="candidate-insight-stat-card">
               <div className="candidate-insight-stat-content">
@@ -495,7 +543,11 @@ const CandidateDashboard = () => {
                 <p>{stats.applications.activePipeline}</p>
                 <small>Submitted, reviewed, shortlisted, interview</small>
               </div>
-              <img src={statsInterviewIcon} alt="Shortlisted" className="candidate-insight-stat-icon" />
+              <img
+                src={statsInterviewIcon}
+                alt="Shortlisted"
+                className="candidate-insight-stat-icon"
+              />
             </article>
             <article className="candidate-insight-stat-card">
               <div className="candidate-insight-stat-content">
@@ -503,7 +555,11 @@ const CandidateDashboard = () => {
                 <p>{stats.savedJobs.total}</p>
                 <small>{stats.savedJobs.inRange} saved in selected range</small>
               </div>
-              <img src={statsMessageIcon} alt="Saved jobs" className="candidate-insight-stat-icon" />
+              <img
+                src={savedjobs}
+                alt="Saved jobs"
+                className="candidate-insight-stat-icon"
+              />
             </article>
             <article className="candidate-insight-stat-card">
               <div className="candidate-insight-stat-content">
@@ -511,7 +567,11 @@ const CandidateDashboard = () => {
                 <p>{stats.connections.accepted}</p>
                 <small>{stats.connections.pending} pending requests</small>
               </div>
-              <img src={statsOfferIcon} alt="Connections" className="candidate-insight-stat-icon" />
+              <img
+                src={connections}
+                alt="Connections"
+                className="candidate-insight-stat-icon"
+              />
             </article>
           </div>
 
@@ -559,19 +619,29 @@ const CandidateDashboard = () => {
               <h2>Application Status Split</h2>
               <div className="candidate-insight-donut-layout">
                 <div className="candidate-insight-donut-chart-wrap">
-                  <Doughnut data={applicationStatusData} options={donutOptions} />
+                  <Doughnut
+                    data={applicationStatusData}
+                    options={donutOptions}
+                  />
                 </div>
                 <div className="candidate-insight-donut-legend">
                   {applicationLegend.map((item) => (
-                    <div key={`status-${item.label}`} className="candidate-insight-donut-legend-item">
+                    <div
+                      key={`status-${item.label}`}
+                      className="candidate-insight-donut-legend-item"
+                    >
                       <span className="candidate-insight-donut-legend-left">
                         <span
                           className="candidate-insight-donut-legend-dot"
                           style={{ backgroundColor: item.color }}
                         />
-                        <span className="candidate-insight-donut-legend-label">{item.label}</span>
+                        <span className="candidate-insight-donut-legend-label">
+                          {item.label}
+                        </span>
                       </span>
-                      <span className="candidate-insight-donut-legend-value">{item.percent}</span>
+                      <span className="candidate-insight-donut-legend-value">
+                        {item.percent}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -588,15 +658,22 @@ const CandidateDashboard = () => {
                 </div>
                 <div className="candidate-insight-donut-legend">
                   {workModeLegend.map((item) => (
-                    <div key={`work-${item.label}`} className="candidate-insight-donut-legend-item">
+                    <div
+                      key={`work-${item.label}`}
+                      className="candidate-insight-donut-legend-item"
+                    >
                       <span className="candidate-insight-donut-legend-left">
                         <span
                           className="candidate-insight-donut-legend-dot"
                           style={{ backgroundColor: item.color }}
                         />
-                        <span className="candidate-insight-donut-legend-label">{item.label}</span>
+                        <span className="candidate-insight-donut-legend-label">
+                          {item.label}
+                        </span>
                       </span>
-                      <span className="candidate-insight-donut-legend-value">{item.percent}</span>
+                      <span className="candidate-insight-donut-legend-value">
+                        {item.percent}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -610,15 +687,22 @@ const CandidateDashboard = () => {
                 </div>
                 <div className="candidate-insight-donut-legend">
                   {jobTypeLegend.map((item) => (
-                    <div key={`type-${item.label}`} className="candidate-insight-donut-legend-item">
+                    <div
+                      key={`type-${item.label}`}
+                      className="candidate-insight-donut-legend-item"
+                    >
                       <span className="candidate-insight-donut-legend-left">
                         <span
                           className="candidate-insight-donut-legend-dot"
                           style={{ backgroundColor: item.color }}
                         />
-                        <span className="candidate-insight-donut-legend-label">{item.label}</span>
+                        <span className="candidate-insight-donut-legend-label">
+                          {item.label}
+                        </span>
                       </span>
-                      <span className="candidate-insight-donut-legend-value">{item.percent}</span>
+                      <span className="candidate-insight-donut-legend-value">
+                        {item.percent}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -645,20 +729,24 @@ const CandidateDashboard = () => {
                 </article>
               ))}
               {!loading && recentApplications.length === 0 && (
-                <div className="candidate-insight-state">No recent applications.</div>
+                <div className="candidate-insight-state">
+                  No recent applications.
+                </div>
               )}
             </div>
           </section>
 
-          {loading && <div className="candidate-insight-state">Loading dashboard...</div>}
-          {!loading && error && <div className="candidate-insight-state error">{error}</div>}
+          {loading && (
+            <div className="candidate-insight-state">Loading dashboard...</div>
+          )}
+          {!loading && error && (
+            <div className="candidate-insight-state error">{error}</div>
+          )}
         </div>
-              <PortalFooter />
-</main>
+        <PortalFooter />
+      </main>
     </div>
   );
 };
 
 export default CandidateDashboard;
-
-

@@ -19,6 +19,8 @@ const notificationSchema = new mongoose.Schema(
         "connection_request_received",
         "connection_request_accepted",
         "application_status_updated",
+        "project_review_received",
+        "company_review_received",
       ],
       required: true,
       index: true,
@@ -41,6 +43,11 @@ const notificationSchema = new mongoose.Schema(
     message: {
       type: String,
       required: true,
+      trim: true,
+    },
+    targetPath: {
+      type: String,
+      default: "",
       trim: true,
     },
   },

@@ -518,6 +518,11 @@
   color: #b91c1c;
 }
 
+.notification-status-badge.status-review {
+  background: #ede9fe;
+  color: #4338ca;
+}
+
 .notification-status-badge.status-message-pill {
   background: #ede9fe;
   color: #5b21b6;

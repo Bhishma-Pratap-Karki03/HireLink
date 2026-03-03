@@ -33,13 +33,13 @@ const Footer = () => {
                   <Link to="/about-us">About us</Link>
                 </li>
                 <li>
-                  <a href="#">Our Team</a>
+                  <Link to="/under-construction/our-team">Our Team</Link>
                 </li>
                 <li>
-                  <a href="#">Products</a>
+                  <Link to="/under-construction/products">Products</Link>
                 </li>
                 <li>
-                  <a href="#">Contact</a>
+                  <Link to="/under-construction/contact">Contact</Link>
                 </li>
               </ul>
             </div>
@@ -47,16 +47,16 @@ const Footer = () => {
               <h4>Product</h4>
               <ul>
                 <li>
-                  <a href="#">Feature</a>
+                  <Link to="/under-construction/feature">Feature</Link>
                 </li>
                 <li>
-                  <a href="#">Pricing</a>
+                  <Link to="/under-construction/pricing">Pricing</Link>
                 </li>
                 <li>
-                  <a href="#">Credit</a>
+                  <Link to="/under-construction/credit">Credit</Link>
                 </li>
                 <li>
-                  <a href="#">FAQ</a>
+                  <Link to="/under-construction/faq">FAQ</Link>
                 </li>
               </ul>
             </div>
@@ -64,16 +64,16 @@ const Footer = () => {
               <h4>Download</h4>
               <ul>
                 <li>
-                  <a href="#">iOS</a>
+                  <Link to="/under-construction/ios">iOS</Link>
                 </li>
                 <li>
-                  <a href="#">Android</a>
+                  <Link to="/under-construction/android">Android</Link>
                 </li>
                 <li>
-                  <a href="#">Microsoft</a>
+                  <Link to="/under-construction/microsoft">Microsoft</Link>
                 </li>
                 <li>
-                  <a href="#">Desktop</a>
+                  <Link to="/under-construction/desktop">Desktop</Link>
                 </li>
               </ul>
             </div>
@@ -81,16 +81,16 @@ const Footer = () => {
               <h4>Support</h4>
               <ul>
                 <li>
-                  <a href="#">Privacy</a>
+                  <Link to="/under-construction/privacy">Privacy</Link>
                 </li>
                 <li>
-                  <a href="#">Help</a>
+                  <Link to="/under-construction/help">Help</Link>
                 </li>
                 <li>
-                  <a href="#">Terms</a>
+                  <Link to="/under-construction/terms">Terms</Link>
                 </li>
                 <li>
-                  <a href="#">FAQ</a>
+                  <Link to="/under-construction/faq">FAQ</Link>
                 </li>
               </ul>
             </div>

@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import RecruiterSidebar from "../../components/recruitercomponents/RecruiterSidebar";
 import RecruiterTopBar from "../../components/recruitercomponents/RecruiterTopBar";
 import addIcon from "../../images/Recruiter Profile Page Images/plus icon.svg";
+import prevIcon from "../../images/Employers Page Images/Prev Icon.svg";
+import nextIcon from "../../images/Employers Page Images/Next Icon.svg";
 import "../../styles/RecruiterJobPostingsListPage.css";
 
 type RecruiterJobItem = {
@@ -31,10 +33,29 @@ const RecruiterJobPostingsListPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const jobsPerPage = 20;
 
   const filteredJobs = jobs.filter((job) =>
     job.jobTitle.toLowerCase().includes(titleSearch.trim().toLowerCase()),
   );
+  const totalPages = Math.max(1, Math.ceil(filteredJobs.length / jobsPerPage));
+  const startIndex = filteredJobs.length === 0 ? 0 : (currentPage - 1) * jobsPerPage + 1;
+  const endIndex = filteredJobs.length === 0 ? 0 : Math.min(currentPage * jobsPerPage, filteredJobs.length);
+  const paginatedJobs = filteredJobs.slice(
+    (currentPage - 1) * jobsPerPage,
+    currentPage * jobsPerPage,
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [titleSearch, jobs.length]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const toggleActive = async (jobId: string, nextValue: boolean) => {
     const token = localStorage.getItem("authToken");
@@ -136,7 +157,7 @@ const RecruiterJobPostingsListPage = () => {
           )}
 
           <div className="recruiter-joblist-grid">
-            {filteredJobs.map((job) => (
+            {paginatedJobs.map((job) => (
               <article key={job._id} className="recruiter-joblist-card">
                 <div className="recruiter-joblist-card-header">
                   <h3>{job.jobTitle}</h3>
@@ -196,6 +217,55 @@ const RecruiterJobPostingsListPage = () => {
               </article>
             ))}
           </div>
+
+          {!loading && !error && filteredJobs.length > 0 && (
+            <div className="recruiter-joblist-pagination">
+              <div className="recruiter-joblist-page-controls">
+                <button
+                  className="recruiter-joblist-page-nav"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <img src={prevIcon} alt="Previous" />
+                </button>
+                <div className="recruiter-joblist-page-numbers">
+                  {Array.from(
+                    { length: Math.min(totalPages, 7) },
+                    (_, index) => {
+                      let pageNum = index + 1;
+                      if (totalPages > 7 && currentPage > 4) {
+                        pageNum = Math.min(
+                          totalPages - 6 + index,
+                          currentPage - 3 + index,
+                        );
+                      }
+                      return pageNum;
+                    },
+                  ).map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      className={`recruiter-joblist-page-num ${currentPage === pageNum ? "active" : ""}`}
+                      onClick={() => setCurrentPage(pageNum)}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  className="recruiter-joblist-page-nav"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  <img src={nextIcon} alt="Next" />
+                </button>
+              </div>
+              <div className="recruiter-joblist-page-info">
+                Showing {startIndex} to {endIndex} of {filteredJobs.length}
+              </div>
+            </div>
+          )}
         </div>
               <PortalFooter />
 </main>

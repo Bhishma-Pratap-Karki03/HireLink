@@ -13,8 +13,8 @@ import jobAlertsIcon from "../../images/Candidate Profile Page Images/261_1929.s
 import savedJobIcon from "../../images/Candidate Profile Page Images/261_1935.svg";
 import settingsIcon from "../../images/Candidate Profile Page Images/261_1942.svg";
 import friendRequestsIcon from "../../images/Recruiter Profile Page Images/friend-request.svg";
-import appliedStatusIcon from "../../images/Candidate Profile Page Images/communication.png";
-import notificationIcon from "../../images/Recruiter Profile Page Images/notification icon.svg";
+import appliedStatusIcon from "../../images/Job List Page Images/applied-status-icon.png";
+import notificationIcon from "../../images/Recruiter Profile Page Images/notification-icon.png";
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
 
 interface UserData {

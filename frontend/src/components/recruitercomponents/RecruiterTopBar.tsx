@@ -22,6 +22,8 @@ interface NotificationItem {
     | "connection_request_received"
     | "connection_request_accepted"
     | "application_status_updated"
+    | "project_review_received"
+    | "company_review_received"
     | "message_received";
   isRead: boolean;
   message: string;
@@ -73,6 +75,7 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
 }) => {
   const navigate = useNavigate();
   const notificationRef = useRef<HTMLDivElement | null>(null);
+  const toastTimersRef = useRef<Record<string, number>>({});
   const parsedUser =
     typeof window !== "undefined"
       ? (() => {
@@ -97,6 +100,8 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
   >([]);
   const [connectionUnreadCount, setConnectionUnreadCount] = useState(0);
   const [messageUnreadCount, setMessageUnreadCount] = useState(0);
+  const [notificationToasts, setNotificationToasts] = useState<NotificationItem[]>([]);
+  const [dismissingToastIds, setDismissingToastIds] = useState<string[]>([]);
 
   const notificationItems = useMemo(() => {
     return [...connectionNotificationItems, ...messageNotificationItems]
@@ -105,6 +110,33 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
   }, [connectionNotificationItems, messageNotificationItems]);
 
   const unreadNotificationCount = connectionUnreadCount + messageUnreadCount;
+
+  const getNotificationLabel = (type: NotificationItem["type"]) => {
+    if (type === "message_received") return "Message";
+    if (type === "application_status_updated") return "Application";
+    if (type === "project_review_received" || type === "company_review_received") {
+      return "Review";
+    }
+    if (type === "connection_request_accepted") return "Accepted";
+    return "New Request";
+  };
+
+  const dismissToast = (notificationId: string) => {
+    setDismissingToastIds((prev) =>
+      prev.includes(notificationId) ? prev : [...prev, notificationId],
+    );
+    window.setTimeout(() => {
+      setNotificationToasts((prev) =>
+        prev.filter((item) => item.id !== notificationId),
+      );
+      setDismissingToastIds((prev) => prev.filter((id) => id !== notificationId));
+      const activeTimer = toastTimersRef.current[notificationId];
+      if (activeTimer) {
+        window.clearTimeout(activeTimer);
+        delete toastTimersRef.current[notificationId];
+      }
+    }, 280);
+  };
 
   const fetchConnectionNotifications = async (silent = false) => {
     const token = localStorage.getItem("authToken");
@@ -238,6 +270,8 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
   };
 
   const handleNotificationClick = async (item: NotificationItem) => {
+    dismissToast(item.id);
+
     if (item.type === "message_received") {
       setMessageNotificationItems((prev) =>
         prev.map((entry) =>
@@ -303,6 +337,32 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
   }, []);
 
   useEffect(() => {
+    notificationToasts.forEach((toast) => {
+      if (toastTimersRef.current[toast.id]) return;
+      toastTimersRef.current[toast.id] = window.setTimeout(() => {
+        dismissToast(toast.id);
+      }, 20000);
+    });
+
+    Object.keys(toastTimersRef.current).forEach((toastId) => {
+      const stillExists = notificationToasts.some((item) => item.id === toastId);
+      if (!stillExists) {
+        window.clearTimeout(toastTimersRef.current[toastId]);
+        delete toastTimersRef.current[toastId];
+      }
+    });
+  }, [notificationToasts]);
+
+  useEffect(() => {
+    return () => {
+      Object.keys(toastTimersRef.current).forEach((toastId) => {
+        window.clearTimeout(toastTimersRef.current[toastId]);
+      });
+      toastTimersRef.current = {};
+    };
+  }, []);
+
+  useEffect(() => {
     const token = localStorage.getItem("authToken") || "";
     if (!token || userRole !== "recruiter") return;
 
@@ -324,6 +384,10 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
           ? Number(payload.unreadCount)
           : prev + 1,
       );
+      setNotificationToasts((prev) => {
+        const merged = [incoming, ...prev.filter((item) => item.id !== incoming.id)];
+        return merged.slice(0, 3);
+      });
     };
 
     const handleMessageNotification = (payload: any) => {
@@ -387,9 +451,10 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
   };
 
   return (
-    <header
-      className={`recruiter-top-bar${showSearch ? " has-search" : ""}`}
-    >
+    <>
+      <header
+        className={`recruiter-top-bar${showSearch ? " has-search" : ""}`}
+      >
       {showSearch && (
         <div className="recruiter-search-container">
           <img src={searchIcon} alt="Search" className="recruiter-search-icon" />
@@ -474,13 +539,7 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
                         <div className="recruiter-top-notification-content">
                           <div className="recruiter-top-notification-top">
                             <span className="recruiter-top-notification-status">
-                              {item.type === "message_received"
-                                ? "Message"
-                                : item.type === "application_status_updated"
-                                  ? "Application"
-                                  : item.type === "connection_request_accepted"
-                                    ? "Accepted"
-                                    : "New Request"}
+                              {getNotificationLabel(item.type)}
                             </span>
                             <span className="recruiter-top-notification-time">
                               {new Date(
@@ -500,7 +559,57 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
           )}
         </div>
       </div>
-    </header>
+      </header>
+      {notificationToasts.length > 0 && (
+        <div className="recruiter-top-toast-stack">
+          {notificationToasts.map((item) => (
+            <div
+              key={item.id}
+              className={`recruiter-top-toast ${
+                dismissingToastIds.includes(item.id) ? "is-dismissing" : ""
+              }`}
+              role="button"
+              tabIndex={0}
+              onClick={() => handleNotificationClick(item)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  handleNotificationClick(item);
+                }
+              }}
+            >
+              <button
+                type="button"
+                className="recruiter-top-toast-close"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  dismissToast(item.id);
+                }}
+                aria-label="Dismiss notification"
+              >
+                x
+              </button>
+              <div className="recruiter-top-toast-head">
+                <img
+                  src={resolveAvatar(item.actor?.profilePicture)}
+                  alt={item.actor?.fullName || "User"}
+                  className={`recruiter-top-toast-avatar ${
+                    item.actor?.role === "recruiter" ? "recruiter-logo" : ""
+                  }`}
+                  onError={(e) => {
+                    e.currentTarget.src = defaultAvatar;
+                  }}
+                />
+                <span className="recruiter-top-notification-status">
+                  {getNotificationLabel(item.type)}
+                </span>
+              </div>
+              <p className="recruiter-top-toast-message">{item.message}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
   );
 };
 

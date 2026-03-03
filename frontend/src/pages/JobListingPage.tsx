@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -27,6 +27,7 @@ import nextIcon from "../images/Employers Page Images/Next Icon.svg";
 import minusIcon from "../images/Employers Page Images/minus.png";
 import plusIcon from "../images/Employers Page Images/expand.png";
 import dropdownArrow from "../images/Register Page Images/1_2307.svg";
+import closeIcon from "../images/Candidate Profile Page Images/corss icon.png";
 
 type JobCard = {
   id: string;
@@ -44,6 +45,13 @@ type ApplyModalJob = {
   companyName: string;
   education?: string;
   experience?: string;
+};
+
+type ConnectedUser = {
+  id: string;
+  fullName: string;
+  role: string;
+  email?: string;
 };
 
 type AppliedFilters = {
@@ -146,8 +154,20 @@ const JobListingPage = () => {
   const [savedJobs, setSavedJobs] = useState<Record<string, boolean>>({});
   const [confirmRequirements, setConfirmRequirements] = useState(false);
   const [confirmResume, setConfirmResume] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareJob, setShareJob] = useState<JobCard | null>(null);
+  const [shareLink, setShareLink] = useState("");
+  const [shareUsers, setShareUsers] = useState<ConnectedUser[]>([]);
+  const [selectedShareUserId, setSelectedShareUserId] = useState("");
+  const [shareUserQuery, setShareUserQuery] = useState("");
+  const [isShareUserDropdownOpen, setIsShareUserDropdownOpen] = useState(false);
+  const [isShareLoading, setIsShareLoading] = useState(false);
+  const [isSendingShare, setIsSendingShare] = useState(false);
+  const [shareMessage, setShareMessage] = useState("");
+  const [shareError, setShareError] = useState("");
   const sortDropdownRef = useRef<HTMLDivElement | null>(null);
   const currencyDropdownRef = useRef<HTMLDivElement | null>(null);
+  const shareUserDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
@@ -494,6 +514,12 @@ const JobListingPage = () => {
       ) {
         setIsCurrencyOpen(false);
       }
+      if (
+        shareUserDropdownRef.current &&
+        !shareUserDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsShareUserDropdownOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleOutsideClick);
@@ -510,6 +536,22 @@ const JobListingPage = () => {
           : filterCurrency === "GBP"
             ? "GBP (GBP)"
             : "Select currency";
+
+  const filteredShareUsers = useMemo(() => {
+    const normalizedQuery = shareUserQuery.trim().toLowerCase();
+    if (!normalizedQuery) return shareUsers;
+
+    return shareUsers.filter((user) => {
+      const name = (user.fullName || "").toLowerCase();
+      const email = (user.email || "").toLowerCase();
+      const role = (user.role || "").toLowerCase();
+      return (
+        name.includes(normalizedQuery) ||
+        email.includes(normalizedQuery) ||
+        role.includes(normalizedQuery)
+      );
+    });
+  }, [shareUsers, shareUserQuery]);
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -763,6 +805,105 @@ const JobListingPage = () => {
       setApplyError(err?.message || "Failed to apply");
     } finally {
       setApplyLoading(false);
+    }
+  };
+
+  const closeShareModal = () => {
+    setIsShareModalOpen(false);
+    setShareJob(null);
+    setShareLink("");
+    setSelectedShareUserId("");
+    setShareUserQuery("");
+    setIsShareUserDropdownOpen(false);
+    setShareMessage("");
+    setShareError("");
+  };
+
+  const openShareModal = async (job: JobCard) => {
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
+    const nextLink = `${origin}/jobs/${job.id}`;
+
+    setShareJob(job);
+    setShareLink(nextLink);
+    setIsShareModalOpen(true);
+    setShareMessage("");
+    setShareError("");
+    setSelectedShareUserId("");
+    setShareUserQuery("");
+    setIsShareUserDropdownOpen(false);
+
+    const token = localStorage.getItem("authToken");
+    if (!token || !userRole || (userRole !== "candidate" && userRole !== "recruiter")) {
+      setShareUsers([]);
+      return;
+    }
+
+    try {
+      setIsShareLoading(true);
+      const res = await fetch("http://localhost:5000/api/connections/friends", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.message || "Failed to load connected users");
+      }
+      setShareUsers(data?.friends || []);
+    } catch (err: any) {
+      setShareUsers([]);
+      setShareError(err?.message || "Failed to load connected users");
+    } finally {
+      setIsShareLoading(false);
+    }
+  };
+
+  const handleCopyShareLink = async () => {
+    if (!shareLink) return;
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setShareMessage("Link copied.");
+      setShareError("");
+    } catch {
+      setShareError("Unable to copy link.");
+    }
+  };
+
+  const handleShareToUser = async () => {
+    if (!selectedShareUserId || !shareJob || !shareLink) {
+      setShareError("Please select a user to share.");
+      return;
+    }
+
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      setShareError("Please log in to share with users.");
+      return;
+    }
+
+    try {
+      setIsSendingShare(true);
+      setShareError("");
+      const content = `Check out this job: ${shareJob.jobTitle} at ${shareJob.companyName}\n${shareLink}`;
+      const res = await fetch("http://localhost:5000/api/messages/send", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          receiverId: selectedShareUserId,
+          content,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.message || "Failed to share job");
+      }
+      setShareMessage("Job shared successfully.");
+    } catch (err: any) {
+      setShareError(err?.message || "Failed to share job.");
+    } finally {
+      setIsSendingShare(false);
     }
   };
 
@@ -1444,7 +1585,10 @@ const JobListingPage = () => {
                         </button>
                       )}
                       {userRole !== "admin" && (
-                        <button className="joblist-icon-btn">
+                        <button
+                          className="joblist-icon-btn"
+                          onClick={() => openShareModal(job)}
+                        >
                           <img src={images.shareIcon} alt="Share" />
                         </button>
                       )}
@@ -1572,12 +1716,116 @@ const JobListingPage = () => {
         onConfirmResumeChange={setConfirmResume}
       />
 
+      {isShareModalOpen && shareJob && (
+        <div className="joblist-share-overlay" onClick={closeShareModal}>
+          <div className="joblist-share-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="joblist-share-header">
+              <h3>Share Job</h3>
+              <button type="button" onClick={closeShareModal}>
+                <img src={closeIcon} alt="Close" />
+              </button>
+            </div>
+            <p className="joblist-share-job-title">
+              {shareJob.jobTitle} - {shareJob.companyName}
+            </p>
+            <div className="joblist-share-link-row">
+              <input type="text" value={shareLink} readOnly />
+              <button type="button" onClick={handleCopyShareLink}>
+                Copy Link
+              </button>
+            </div>
+
+            {(userRole === "candidate" || userRole === "recruiter") && (
+              <div className="joblist-share-user-wrap">
+                <label htmlFor="job-share-user">Share to connected user</label>
+                <div className="joblist-share-user-combobox" ref={shareUserDropdownRef}>
+                  <div className="joblist-share-user-input-wrap">
+                    <input
+                      id="job-share-user"
+                      type="text"
+                      value={shareUserQuery}
+                      placeholder={
+                        isShareLoading
+                          ? "Loading users..."
+                          : shareUsers.length === 0
+                            ? "No connected users"
+                            : "Search and select user"
+                      }
+                      onFocus={() => setIsShareUserDropdownOpen(true)}
+                      onChange={(e) => {
+                        setShareUserQuery(e.target.value);
+                        setSelectedShareUserId("");
+                        setIsShareUserDropdownOpen(true);
+                      }}
+                      disabled={isShareLoading || shareUsers.length === 0}
+                    />
+                    <button
+                      type="button"
+                      className="joblist-share-user-toggle"
+                      onClick={() => setIsShareUserDropdownOpen((prev) => !prev)}
+                      disabled={isShareLoading || shareUsers.length === 0}
+                    >
+                      <span>{isShareUserDropdownOpen ? "^" : "v"}</span>
+                    </button>
+                  </div>
+                  {isShareUserDropdownOpen && shareUsers.length > 0 && (
+                    <div className="joblist-share-user-list">
+                      {filteredShareUsers.length > 0 ? (
+                        filteredShareUsers.map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            className={`joblist-share-user-option ${
+                              selectedShareUserId === user.id ? "active" : ""
+                            }`}
+                            onClick={() => {
+                              setSelectedShareUserId(user.id);
+                              setShareUserQuery(`${user.fullName} (${user.role})`);
+                              setIsShareUserDropdownOpen(false);
+                            }}
+                          >
+                            <span>{user.fullName}</span>
+                            <small>{user.email || user.role}</small>
+                          </button>
+                        ))
+                      ) : (
+                        <p className="joblist-share-user-empty">No users found.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="joblist-share-send-btn"
+                  onClick={handleShareToUser}
+                  disabled={isSendingShare || !selectedShareUserId}
+                >
+                  {isSendingShare ? "Sharing..." : "Share to User"}
+                </button>
+              </div>
+            )}
+
+            {!userRole && (
+              <p className="joblist-share-helper">
+                Log in as candidate/recruiter to share this job with connected users.
+              </p>
+            )}
+
+            {shareMessage && <p className="joblist-share-success">{shareMessage}</p>}
+            {shareError && <p className="joblist-share-error">{shareError}</p>}
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );
 };
 
 export default JobListingPage;
+
+
+
 
 
 

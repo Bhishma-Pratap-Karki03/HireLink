@@ -10,12 +10,14 @@ const CandidateSettingsPage = () => {
       <CandidateSidebar />
       <main className="candidate-settings-main">
         <CandidateTopBar />
-        <SettingsContent
-          title="Settings"
-          subtitle="Update your password and manage your account access."
-        />
-              <PortalFooter />
-</main>
+        <div className="candidate-settings-content-wrapper">
+          <SettingsContent
+            title="Settings"
+            subtitle="Update your password and manage your account access."
+          />
+          <PortalFooter />
+        </div>
+      </main>
     </div>
   );
 };

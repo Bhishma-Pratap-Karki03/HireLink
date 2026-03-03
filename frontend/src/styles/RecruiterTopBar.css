@@ -312,3 +312,73 @@
     font-size: 18px;
   }
 }
+
+.recruiter-top-toast-stack {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 2100;
+}
+
+.recruiter-top-toast {
+  width: min(360px, calc(100vw - 32px));
+  background: #ffffff;
+  border: 1px solid #d9e6f5;
+  border-radius: 14px;
+  box-shadow: 0 18px 38px rgba(15, 40, 60, 0.2);
+  padding: 12px 14px;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.26s ease, opacity 0.26s ease;
+}
+
+.recruiter-top-toast.is-dismissing {
+  transform: translateX(120%);
+  opacity: 0;
+}
+
+.recruiter-top-toast-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: none;
+  background: #f3f7fb;
+  color: #40536c;
+  border-radius: 8px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.recruiter-top-toast-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.recruiter-top-toast-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #d6e4f4;
+}
+
+.recruiter-top-toast-avatar.recruiter-logo {
+  border-radius: 8px;
+  object-fit: contain;
+  border: none;
+  background: transparent;
+}
+
+.recruiter-top-toast-message {
+  margin: 0;
+  color: #24374f;
+  font-size: 14px;
+  line-height: 1.4;
+  padding-right: 20px;
+}

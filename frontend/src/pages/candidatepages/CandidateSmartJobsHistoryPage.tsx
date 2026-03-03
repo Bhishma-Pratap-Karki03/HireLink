@@ -111,6 +111,7 @@ const CandidateSmartJobsHistoryPage = () => {
           searchPlaceholder="Search by job title, company, or location..."
           onSearch={setSearchQuery}
         />
+        <div className="candidate-smart-content-wrapper">
         <section className="candidate-smart-shell">
           <header className="candidate-smart-header">
             <div className="candidate-smart-header-left">
@@ -224,8 +225,9 @@ const CandidateSmartJobsHistoryPage = () => {
             </div>
           )}
         </section>
-              <PortalFooter />
-</main>
+        <PortalFooter />
+        </div>
+      </main>
     </div>
   );
 };

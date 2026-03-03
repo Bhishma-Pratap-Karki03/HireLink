@@ -6,6 +6,8 @@ import "../../styles/AdminManageUsersPage.css";
 import "../../styles/AdminAssessmentsPage.css";
 import actionEyeIcon from "../../images/Candidate Profile Page Images/eyeIcon.svg";
 import deleteIcon from "../../images/Recruiter Profile Page Images/6_80.svg";
+import prevIcon from "../../images/Employers Page Images/Prev Icon.svg";
+import nextIcon from "../../images/Employers Page Images/Next Icon.svg";
 
 type AttemptItem = {
   id: string;
@@ -38,6 +40,8 @@ const AdminAssessmentAttemptsPage = () => {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [dismissingId, setDismissingId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ATTEMPTS_PER_PAGE = 20;
 
   const fetchAttempts = async () => {
     const token = localStorage.getItem("authToken");
@@ -82,8 +86,36 @@ const AdminAssessmentAttemptsPage = () => {
     });
   }, [attempts, search, typeFilter]);
 
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredAttempts.length / ATTEMPTS_PER_PAGE),
+  );
+  const paginatedAttempts = filteredAttempts.slice(
+    (currentPage - 1) * ATTEMPTS_PER_PAGE,
+    currentPage * ATTEMPTS_PER_PAGE,
+  );
+  const showingStart =
+    filteredAttempts.length === 0
+      ? 0
+      : (currentPage - 1) * ATTEMPTS_PER_PAGE + 1;
+  const showingEnd =
+    filteredAttempts.length === 0
+      ? 0
+      : Math.min(currentPage * ATTEMPTS_PER_PAGE, filteredAttempts.length);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, typeFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const onSearchSubmit = (event: FormEvent) => {
     event.preventDefault();
+    setCurrentPage(1);
     setSearch(searchInput);
   };
 
@@ -169,7 +201,7 @@ const AdminAssessmentAttemptsPage = () => {
 
                 {!loading &&
                   !error &&
-                  filteredAttempts.map((item) => (
+                  paginatedAttempts.map((item) => (
                     <article
                       className="admin-manage-row admin-assessment-attempts-table-row"
                       key={item.id}
@@ -213,6 +245,61 @@ const AdminAssessmentAttemptsPage = () => {
                       </div>
                     </article>
                   ))}
+                {!loading && !error && filteredAttempts.length > 0 && (
+                  <div className="admin-manage-pagination">
+                    <div className="admin-manage-page-controls">
+                      <button
+                        className="admin-manage-page-nav"
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.max(1, prev - 1))
+                        }
+                        disabled={currentPage === 1}
+                      >
+                        <img src={prevIcon} alt="Previous" />
+                      </button>
+                      <div className="admin-manage-page-numbers">
+                        {Array.from(
+                          { length: Math.min(totalPages, 7) },
+                          (_, index) => {
+                            let pageNum = index + 1;
+                            if (totalPages > 7 && currentPage > 4) {
+                              pageNum = Math.min(
+                                totalPages - 6 + index,
+                                currentPage - 3 + index,
+                              );
+                            }
+                            return pageNum;
+                          },
+                        ).map((pageNum) => (
+                          <button
+                            key={pageNum}
+                            className={`admin-manage-page-num ${
+                              currentPage === pageNum ? "active" : ""
+                            }`}
+                            onClick={() => setCurrentPage(pageNum)}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        className="admin-manage-page-nav"
+                        onClick={() =>
+                          setCurrentPage((prev) =>
+                            Math.min(totalPages, prev + 1),
+                          )
+                        }
+                        disabled={currentPage === totalPages}
+                      >
+                        <img src={nextIcon} alt="Next" />
+                      </button>
+                    </div>
+                    <div className="admin-manage-page-info">
+                      Showing {showingStart} to {showingEnd} of{" "}
+                      {filteredAttempts.length}
+                    </div>
+                  </div>
+                )}
               </section>
             </div>
           </div>

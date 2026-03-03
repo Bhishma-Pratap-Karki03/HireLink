@@ -6,11 +6,13 @@ import "../../styles/AdminAssessmentsPage.css";
 import "../../styles/AdminManageUsersPage.css";
 import editIcon from "../../images/Recruiter Profile Page Images/6_215.svg";
 import deleteIcon from "../../images/Recruiter Profile Page Images/6_80.svg";
-import statsTotalUsersIcon from "../../images/Candidate Profile Page Images/statsTotalUsersIcon.png";
-import statsAppliedIcon from "../../images/Candidate Profile Page Images/stats-applied-icon.svg";
+import totalassessmentIcon from "../../images/Candidate Profile Page Images/totalassessmentIcon.png";
+import activeAssessmentIcon from "../../images/Candidate Profile Page Images/activeAssessmentIcon.png";
 import statsRejectedIcon from "../../images/Candidate Profile Page Images/stats-reject.svg";
-import statsCandidatesIcon from "../../images/Candidate Profile Page Images/statsCandidatesIcon.png";
+import totalAttempts from "../../images/Candidate Profile Page Images/assessment-attempts-icon.png";
 import dropdownArrow from "../../images/Register Page Images/1_2307.svg";
+import prevIcon from "../../images/Employers Page Images/Prev Icon.svg";
+import nextIcon from "../../images/Employers Page Images/Next Icon.svg";
 
 type AssessmentItem = {
   id: string;
@@ -37,8 +39,10 @@ const AdminAssessmentsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [isTypeOpen, setIsTypeOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const typeDropdownRef = useRef<HTMLDivElement | null>(null);
   const statusDropdownRef = useRef<HTMLDivElement | null>(null);
+  const ASSESSMENTS_PER_PAGE = 20;
 
   const fetchAssessments = async () => {
     try {
@@ -96,7 +100,9 @@ const AdminAssessmentsPage: React.FC = () => {
       if (!response.ok) {
         throw new Error(data?.message || "Failed to delete assessment");
       }
-      setAssessments((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+      setAssessments((prev) =>
+        prev.filter((item) => item.id !== deleteTarget.id),
+      );
       setDeleteTarget(null);
     } catch (err: any) {
       setError(err?.message || "Failed to delete assessment");
@@ -138,7 +144,8 @@ const AdminAssessmentsPage: React.FC = () => {
           item.difficulty.toLowerCase().includes(query)
         : true;
 
-      const matchesType = typeFilter === "all" ? true : item.type === typeFilter;
+      const matchesType =
+        typeFilter === "all" ? true : item.type === typeFilter;
       const matchesStatus =
         statusFilter === "all" ? true : item.status === statusFilter;
 
@@ -161,8 +168,36 @@ const AdminAssessmentsPage: React.FC = () => {
     [filteredAssessments],
   );
 
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredAssessments.length / ASSESSMENTS_PER_PAGE),
+  );
+  const paginatedAssessments = filteredAssessments.slice(
+    (currentPage - 1) * ASSESSMENTS_PER_PAGE,
+    currentPage * ASSESSMENTS_PER_PAGE,
+  );
+  const showingStart =
+    filteredAssessments.length === 0
+      ? 0
+      : (currentPage - 1) * ASSESSMENTS_PER_PAGE + 1;
+  const showingEnd =
+    filteredAssessments.length === 0
+      ? 0
+      : Math.min(currentPage * ASSESSMENTS_PER_PAGE, filteredAssessments.length);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, typeFilter, statusFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const onSearchSubmit = (event: FormEvent) => {
     event.preventDefault();
+    setCurrentPage(1);
     setSearch(searchInput);
   };
 
@@ -204,14 +239,14 @@ const AdminAssessmentsPage: React.FC = () => {
                     <h3>{insights.total}</h3>
                     <span>Total Assessments</span>
                   </div>
-                  <img src={statsTotalUsersIcon} alt="Total assessments" />
+                  <img src={totalassessmentIcon} alt="Total assessments" />
                 </article>
                 <article className="admin-manage-stat-card admin-assessments-stat-card">
                   <div>
                     <h3>{insights.active}</h3>
                     <span>Active</span>
                   </div>
-                  <img src={statsAppliedIcon} alt="Active assessments" />
+                  <img src={activeAssessmentIcon} alt="Active assessments" />
                 </article>
                 <article className="admin-manage-stat-card admin-assessments-stat-card">
                   <div>
@@ -225,7 +260,7 @@ const AdminAssessmentsPage: React.FC = () => {
                     <h3>{insights.attempts}</h3>
                     <span>Total Attempts</span>
                   </div>
-                  <img src={statsCandidatesIcon} alt="Total attempts" />
+                  <img src={totalAttempts} alt="Total attempts" />
                 </article>
               </div>
 
@@ -274,7 +309,10 @@ const AdminAssessmentsPage: React.FC = () => {
                     />
                   </button>
                   {isTypeOpen && (
-                    <div className="admin-assessments-filter-menu" role="listbox">
+                    <div
+                      className="admin-assessments-filter-menu"
+                      role="listbox"
+                    >
                       {[
                         { value: "all", label: "All Type" },
                         { value: "quiz", label: "Quiz" },
@@ -330,7 +368,10 @@ const AdminAssessmentsPage: React.FC = () => {
                     />
                   </button>
                   {isStatusOpen && (
-                    <div className="admin-assessments-filter-menu" role="listbox">
+                    <div
+                      className="admin-assessments-filter-menu"
+                      role="listbox"
+                    >
                       {[
                         { value: "all", label: "All Status" },
                         { value: "active", label: "Active" },
@@ -368,10 +409,14 @@ const AdminAssessmentsPage: React.FC = () => {
                 </header>
 
                 {loading && (
-                  <div className="admin-manage-state admin-assessments-state">Loading...</div>
+                  <div className="admin-manage-state admin-assessments-state">
+                    Loading...
+                  </div>
                 )}
                 {error && !loading && (
-                  <div className="admin-manage-state admin-assessments-state error">{error}</div>
+                  <div className="admin-manage-state admin-assessments-state error">
+                    {error}
+                  </div>
                 )}
                 {!loading && !error && filteredAssessments.length === 0 && (
                   <div className="admin-manage-state admin-assessments-state">
@@ -380,14 +425,16 @@ const AdminAssessmentsPage: React.FC = () => {
                 )}
                 {!loading &&
                   !error &&
-                  filteredAssessments.map((item) => (
+                  paginatedAssessments.map((item) => (
                     <div
                       key={item.id}
                       className="admin-manage-row admin-assessments-table-row"
                     >
                       <span>{item.title}</span>
                       <span className={`chip ${item.type}`}>{item.type}</span>
-                      <span className={`chip ${item.status}`}>{item.status}</span>
+                      <span className={`chip ${item.status}`}>
+                        {item.status}
+                      </span>
                       <span>{item.difficulty}</span>
                       <span>{item.actualAttempts}</span>
                       <span>
@@ -417,6 +464,61 @@ const AdminAssessmentsPage: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                {!loading && !error && filteredAssessments.length > 0 && (
+                  <div className="admin-manage-pagination">
+                    <div className="admin-manage-page-controls">
+                      <button
+                        className="admin-manage-page-nav"
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.max(1, prev - 1))
+                        }
+                        disabled={currentPage === 1}
+                      >
+                        <img src={prevIcon} alt="Previous" />
+                      </button>
+                      <div className="admin-manage-page-numbers">
+                        {Array.from(
+                          { length: Math.min(totalPages, 7) },
+                          (_, index) => {
+                            let pageNum = index + 1;
+                            if (totalPages > 7 && currentPage > 4) {
+                              pageNum = Math.min(
+                                totalPages - 6 + index,
+                                currentPage - 3 + index,
+                              );
+                            }
+                            return pageNum;
+                          },
+                        ).map((pageNum) => (
+                          <button
+                            key={pageNum}
+                            className={`admin-manage-page-num ${
+                              currentPage === pageNum ? "active" : ""
+                            }`}
+                            onClick={() => setCurrentPage(pageNum)}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        className="admin-manage-page-nav"
+                        onClick={() =>
+                          setCurrentPage((prev) =>
+                            Math.min(totalPages, prev + 1),
+                          )
+                        }
+                        disabled={currentPage === totalPages}
+                      >
+                        <img src={nextIcon} alt="Next" />
+                      </button>
+                    </div>
+                    <div className="admin-manage-page-info">
+                      Showing {showingStart} to {showingEnd} of{" "}
+                      {filteredAssessments.length}
+                    </div>
+                  </div>
+                )}
               </section>
 
               {deleteTarget && (

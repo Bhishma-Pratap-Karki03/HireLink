@@ -154,145 +154,147 @@ const CandidateSmartJobsPage = () => {
       <CandidateSidebar />
       <main className="candidate-smart-main">
         <CandidateTopBar />
-        <section className="candidate-smart-shell">
-          <header className="candidate-smart-header">
-            <div className="candidate-smart-header-left">
-              <h2>Smart Jobs</h2>
-              <p>AI-ranked jobs based on your profile, skills, and experience.</p>
-              {!loading && !error && !hasRun && (
-                <p className="candidate-smart-helper-text">
-                  Click Run Recommendation to generate smart jobs.
-                </p>
-              )}
-            </div>
-            <div className="candidate-smart-header-right">
-              <div className="candidate-smart-filter-block">
-                <div className="candidate-smart-date-filter">
-                  <input
-                    type="date"
-                    value={draftDateFrom}
-                    onChange={(e) => setDraftDateFrom(e.target.value)}
-                    aria-label="From date"
-                  />
-                  <span>to</span>
-                  <input
-                    type="date"
-                    value={draftDateTo}
-                    onChange={(e) => setDraftDateTo(e.target.value)}
-                    aria-label="To date"
-                  />
+        <div className="candidate-smart-content-wrapper">
+          <section className="candidate-smart-shell">
+            <header className="candidate-smart-header">
+              <div className="candidate-smart-header-left">
+                <h2>Smart Jobs</h2>
+                <p>AI-ranked jobs based on your profile, skills, and experience.</p>
+                {!loading && !error && !hasRun && (
+                  <p className="candidate-smart-helper-text">
+                    Click Run Recommendation to generate smart jobs.
+                  </p>
+                )}
+              </div>
+              <div className="candidate-smart-header-right">
+                <div className="candidate-smart-filter-block">
+                  <div className="candidate-smart-date-filter">
+                    <input
+                      type="date"
+                      value={draftDateFrom}
+                      onChange={(e) => setDraftDateFrom(e.target.value)}
+                      aria-label="From date"
+                    />
+                    <span>to</span>
+                    <input
+                      type="date"
+                      value={draftDateTo}
+                      onChange={(e) => setDraftDateTo(e.target.value)}
+                      aria-label="To date"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="candidate-smart-apply-filter-btn"
+                    onClick={handleApplyDateFilter}
+                  >
+                    Apply Filter
+                  </button>
                 </div>
                 <button
                   type="button"
-                  className="candidate-smart-apply-filter-btn"
-                  onClick={handleApplyDateFilter}
+                  className="candidate-smart-run-btn"
+                  onClick={fetchRecommendations}
+                  disabled={loading}
                 >
-                  Apply Filter
+                  {loading ? "Running..." : "Run Recommendation"}
                 </button>
               </div>
-              <button
-                type="button"
-                className="candidate-smart-run-btn"
-                onClick={fetchRecommendations}
-                disabled={loading}
-              >
-                {loading ? "Running..." : "Run Recommendation"}
-              </button>
-            </div>
-          </header>
+            </header>
 
-          {loading && <div className="candidate-smart-state">Loading recommendations...</div>}
-          {!loading && error && (
-            <div className="candidate-smart-state candidate-smart-error">{error}</div>
-          )}
-          {!loading && !error && hasRun && (
-            <div className="candidate-smart-state">
-              Recommendation run completed. Use the eye icon in history to view the list.
-            </div>
-          )}
-          {!loading && history.length > 0 && (
-            <section className="candidate-smart-history">
-              <h4>Recommendation History</h4>
-              <div className="candidate-smart-history-list">
-                {paginatedHistory.map((row) => (
-                  <article key={row.id} className="candidate-smart-history-row-wrap">
-                    <div className="candidate-smart-history-row">
-                      <div>
-                        <strong>{formatDateTime(row.createdAt)}</strong>
-                        <p>{row.count} jobs recommended</p>
+            {loading && <div className="candidate-smart-state">Loading recommendations...</div>}
+            {!loading && error && (
+              <div className="candidate-smart-state candidate-smart-error">{error}</div>
+            )}
+            {!loading && !error && hasRun && (
+              <div className="candidate-smart-state">
+                Recommendation run completed. Use the eye icon in history to view the list.
+              </div>
+            )}
+            {!loading && history.length > 0 && (
+              <section className="candidate-smart-history">
+                <h4>Recommendation History</h4>
+                <div className="candidate-smart-history-list">
+                  {paginatedHistory.map((row) => (
+                    <article key={row.id} className="candidate-smart-history-row-wrap">
+                      <div className="candidate-smart-history-row">
+                        <div>
+                          <strong>{formatDateTime(row.createdAt)}</strong>
+                          <p>{row.count} jobs recommended</p>
+                        </div>
+                        <div className="candidate-smart-history-actions">
+                          <button
+                            type="button"
+                            className="candidate-smart-icon-btn"
+                            onClick={() => handleViewHistory(row.id)}
+                            title="View recommendation run"
+                          >
+                            <img src={eyeIcon} alt="View" />
+                          </button>
+                          <button
+                            type="button"
+                            className="candidate-smart-icon-btn"
+                            onClick={() => handleDeleteHistory(row.id)}
+                            title="Delete recommendation run"
+                          >
+                            <img src={deleteIcon} alt="Delete" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="candidate-smart-history-actions">
-                        <button
-                          type="button"
-                          className="candidate-smart-icon-btn"
-                          onClick={() => handleViewHistory(row.id)}
-                          title="View recommendation run"
-                        >
-                          <img src={eyeIcon} alt="View" />
-                        </button>
-                        <button
-                          type="button"
-                          className="candidate-smart-icon-btn"
-                          onClick={() => handleDeleteHistory(row.id)}
-                          title="Delete recommendation run"
-                        >
-                          <img src={deleteIcon} alt="Delete" />
-                        </button>
-                      </div>
+                    </article>
+                  ))}
+                  {filteredHistory.length === 0 && (
+                    <div className="candidate-smart-state">
+                      No recommendation history in selected date range.
                     </div>
-                  </article>
-                ))}
-                {filteredHistory.length === 0 && (
-                  <div className="candidate-smart-state">
-                    No recommendation history in selected date range.
+                  )}
+                </div>
+                {filteredHistory.length > 0 && (
+                  <div className="candidate-smart-pagination">
+                    <div className="candidate-smart-page-info">
+                      Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
+                      {(currentPage - 1) * ITEMS_PER_PAGE + paginatedHistory.length} of{" "}
+                      {filteredHistory.length}
+                    </div>
+                    <div className="candidate-smart-page-controls">
+                      <button
+                        className="candidate-smart-page-nav"
+                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <img src={prevIcon} alt="Previous" />
+                      </button>
+                      <div className="candidate-smart-page-numbers">
+                        {visiblePages.map((pageNumber) => (
+                          <span
+                            key={pageNumber}
+                            className={`candidate-smart-page-num ${
+                              pageNumber === currentPage ? "active" : ""
+                            }`}
+                            onClick={() => setCurrentPage(pageNumber)}
+                          >
+                            {pageNumber}
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        className="candidate-smart-page-nav"
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                        }
+                        disabled={currentPage === totalPages}
+                      >
+                        <img src={nextIcon} alt="Next" />
+                      </button>
+                    </div>
                   </div>
                 )}
-              </div>
-              {filteredHistory.length > 0 && (
-                <div className="candidate-smart-pagination">
-                  <div className="candidate-smart-page-info">
-                    Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
-                    {(currentPage - 1) * ITEMS_PER_PAGE + paginatedHistory.length} of{" "}
-                    {filteredHistory.length}
-                  </div>
-                  <div className="candidate-smart-page-controls">
-                    <button
-                      className="candidate-smart-page-nav"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      <img src={prevIcon} alt="Previous" />
-                    </button>
-                    <div className="candidate-smart-page-numbers">
-                      {visiblePages.map((pageNumber) => (
-                        <span
-                          key={pageNumber}
-                          className={`candidate-smart-page-num ${
-                            pageNumber === currentPage ? "active" : ""
-                          }`}
-                          onClick={() => setCurrentPage(pageNumber)}
-                        >
-                          {pageNumber}
-                        </span>
-                      ))}
-                    </div>
-                    <button
-                      className="candidate-smart-page-nav"
-                      onClick={() =>
-                        setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                      }
-                      disabled={currentPage === totalPages}
-                    >
-                      <img src={nextIcon} alt="Next" />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </section>
-          )}
-        </section>
-              <PortalFooter />
-</main>
+              </section>
+            )}
+          </section>
+          <PortalFooter />
+        </div>
+      </main>
     </div>
   );
 };

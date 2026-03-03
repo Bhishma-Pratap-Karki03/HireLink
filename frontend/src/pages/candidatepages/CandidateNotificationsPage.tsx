@@ -17,9 +17,11 @@ const CandidateNotificationsPage = () => {
           searchPlaceholder="Search notifications..."
           onSearch={setSearchQuery}
         />
-        <ConnectionNotificationsPanel role="candidate" searchQuery={searchQuery} />
-              <PortalFooter />
-</main>
+        <div className="candidate-notification-content-wrapper">
+          <ConnectionNotificationsPanel role="candidate" searchQuery={searchQuery} />
+          <PortalFooter />
+        </div>
+      </main>
     </div>
   );
 };

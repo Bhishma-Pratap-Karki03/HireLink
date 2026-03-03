@@ -436,14 +436,21 @@ const submitAttempt = async (req, res) => {
       attempt.answers.codeLink = "";
     }
 
+    const hasCodeFile = Boolean(attempt.answers?.codeFileUrl);
+    const hasCodeLink =
+      typeof attempt.answers?.codeLink === "string" &&
+      attempt.answers.codeLink.trim().length > 0;
+
     if (
       (assessment.type === "task" || assessment.type === "code") &&
       assessment.codeSubmission === "file" &&
-      !attempt.answers?.codeFileUrl
+      !hasCodeFile &&
+      !hasCodeLink
     ) {
       return res.status(400).json({
         success: false,
-        message: "Please upload a file (PDF, DOC, DOCX, or ZIP) before submitting.",
+        message:
+          "Please upload a file (PDF, DOC, DOCX, or ZIP) or provide a task link before submitting.",
       });
     }
 
@@ -605,14 +612,6 @@ const getCandidateShowcaseSubmissions = async (req, res) => {
         candidate: candidateId,
         status: "submitted",
       }).lean();
-    } else {
-      attempts = await AssessmentAttempt.find({
-        candidate: candidateId,
-        status: "submitted",
-      })
-        .sort({ submittedAt: -1, createdAt: -1 })
-        .limit(5)
-        .lean();
     }
 
     const orderMap = new Map(showcasedIds.map((id, index) => [id, index]));

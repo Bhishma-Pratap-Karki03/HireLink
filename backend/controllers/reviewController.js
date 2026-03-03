@@ -2,6 +2,16 @@
 const Review = require("../models/reviewModel");
 const User = require("../models/userModel");
 const ConnectionRequest = require("../models/connectionRequestModel");
+const Notification = require("../models/notificationModel");
+const { getIO } = require("../socket");
+
+const FEED_NOTIFICATION_TYPES = [
+  "connection_request_received",
+  "connection_request_accepted",
+  "application_status_updated",
+  "project_review_received",
+  "company_review_received",
+];
 
 const buildReviewPayload = (review, user) => ({
   id: review._id,
@@ -38,6 +48,51 @@ const areUsersConnected = async (userAId, userBId) => {
   return Boolean(link);
 };
 
+const emitReviewNotification = async ({
+  recipientId,
+  actor,
+  type,
+  message,
+  targetPath,
+}) => {
+  if (!recipientId || !actor?._id) return;
+  if (String(recipientId) === String(actor._id)) return;
+
+  const notification = await Notification.create({
+    user: recipientId,
+    actor: actor._id,
+    type,
+    message,
+    targetPath,
+  });
+
+  const unreadCount = await Notification.countDocuments({
+    user: recipientId,
+    type: { $in: FEED_NOTIFICATION_TYPES },
+    isRead: false,
+  });
+
+  const io = getIO();
+  io?.to(`user:${String(recipientId)}`).emit("notification:connection:new", {
+    notification: {
+      id: notification._id.toString(),
+      type,
+      isRead: false,
+      message,
+      createdAt: notification.createdAt,
+      updatedAt: notification.updatedAt,
+      targetPath,
+      actor: {
+        id: actor._id.toString(),
+        fullName: actor.fullName || "User",
+        role: actor.role || "",
+        profilePicture: actor.profilePicture || "",
+      },
+    },
+    unreadCount,
+  });
+};
+
 // Get all reviews for a company (public)
 const getCompanyReviews = async (req, res, next) => {
   try {
@@ -59,7 +114,7 @@ const getCompanyReviews = async (req, res, next) => {
       status: "published",
       isDeleted: false,
     })
-      .populate("userId", "fullName profilePicture address currentJobTitle")
+      .populate("userId", "fullName profilePicture address currentJobTitle role")
       .sort({ createdAt: -1 });
 
     // Calculate average rating
@@ -93,6 +148,7 @@ const getCompanyReviews = async (req, res, next) => {
       reviewerName,
       reviewerLocation,
       reviewerRole,
+      reviewerUserType: reviewer?.role || "",
       date: new Date(review.createdAt).toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
@@ -153,7 +209,7 @@ const getCompanyReviewsForRecruiter = async (req, res, next) => {
 
     // Get reviews based on query
     const reviews = await Review.find(query)
-      .populate("userId", "fullName profilePicture address currentJobTitle")
+      .populate("userId", "fullName profilePicture address currentJobTitle role")
       .sort({ createdAt: -1 });
 
     // Format reviews for response
@@ -177,6 +233,7 @@ const getCompanyReviewsForRecruiter = async (req, res, next) => {
       reviewerName,
       reviewerLocation,
       reviewerRole,
+      reviewerUserType: reviewer?.role || "",
       date: new Date(review.createdAt).toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
@@ -347,6 +404,13 @@ const submitReview = async (req, res, next) => {
     const { rating, title, description, reviewerRole } = req.body;
     const userId = req.user.id;
 
+    if (String(userId) === String(companyId)) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot review your own company profile",
+      });
+    }
+
     // Check if company exists and is a recruiter
     const company = await User.findById(companyId);
     if (!company || company.role !== "recruiter") {
@@ -420,8 +484,16 @@ const submitReview = async (req, res, next) => {
     // Get the created review with populated user data
     const savedReview = await Review.findById(newReview._id).populate(
       "userId",
-      "fullName profilePicture address currentJobTitle",
+      "fullName profilePicture address currentJobTitle role",
     );
+
+    await emitReviewNotification({
+      recipientId: companyId,
+      actor: user,
+      type: "company_review_received",
+      message: `${user.fullName || "A user"} reviewed your company profile.`,
+      targetPath: `/employer/${companyId}#company-reviews`,
+    });
 
     res.status(201).json({
       success: true,
@@ -434,6 +506,7 @@ const submitReview = async (req, res, next) => {
         reviewerName: savedReview.userId.fullName,
         reviewerLocation: savedReview.userId.address || "Unknown",
         reviewerRole: savedReview.reviewerRole,
+        reviewerUserType: savedReview.userId.role || "",
         date: new Date(savedReview.createdAt).toLocaleDateString("en-US", {
           year: "numeric",
           month: "long",
@@ -468,7 +541,7 @@ const getMyReview = async (req, res, next) => {
       companyId,
       userId,
       isDeleted: false,
-    }).populate("userId", "fullName profilePicture address currentJobTitle");
+    }).populate("userId", "fullName profilePicture address currentJobTitle role");
 
     if (!review) {
       return res.status(404).json({
@@ -487,6 +560,7 @@ const getMyReview = async (req, res, next) => {
         reviewerName: review.userId.fullName,
         reviewerLocation: review.userId.address || "Unknown",
         reviewerRole: review.reviewerRole,
+        reviewerUserType: review.userId.role || "",
         date: new Date(review.createdAt).toLocaleDateString("en-US", {
           year: "numeric",
           month: "long",
@@ -742,6 +816,15 @@ const submitProjectReview = async (req, res) => {
       "fullName profilePicture address currentJobTitle role",
     );
 
+    const projectTitle = project?.projectTitle || "your project";
+    await emitReviewNotification({
+      recipientId: candidateId,
+      actor: reviewer,
+      type: "project_review_received",
+      message: `${reviewer.fullName || "A user"} reviewed your project "${projectTitle}".`,
+      targetPath: `/candidate/${candidateId}#projects`,
+    });
+
     res.status(201).json({
       success: true,
       message: "Project review submitted successfully",
@@ -866,7 +949,7 @@ const updateReview = async (req, res, next) => {
     // Get updated review with populated user data
     const updatedReview = await Review.findById(review._id).populate(
       "userId",
-      "fullName profilePicture address currentJobTitle",
+      "fullName profilePicture address currentJobTitle role",
     );
 
     res.status(200).json({
@@ -880,6 +963,7 @@ const updateReview = async (req, res, next) => {
         reviewerName: updatedReview.userId.fullName,
         reviewerLocation: updatedReview.userId.address || "Unknown",
         reviewerRole: updatedReview.reviewerRole,
+        reviewerUserType: updatedReview.userId.role || "",
         date: new Date(updatedReview.createdAt).toLocaleDateString("en-US", {
           year: "numeric",
           month: "long",

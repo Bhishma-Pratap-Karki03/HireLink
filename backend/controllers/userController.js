@@ -1284,7 +1284,7 @@ exports.getCandidateDashboardStats = async (req, res, next) => {
       avgQuizScoreAgg,
       applicationsTrendAgg,
       savedTrendAgg,
-      recommendationsTrendAgg,
+      adminAssessmentsTrendAgg,
       applicationStatusAgg,
       workModeAgg,
       jobTypeAgg,
@@ -1386,8 +1386,15 @@ exports.getCandidateDashboardStats = async (req, res, next) => {
         },
         { $sort: { _id: 1 } },
       ]),
-      RecommendationHistory.aggregate([
-        { $match: { candidate: candidateObjectId, createdAt: dateRangeQuery } },
+      AssessmentAttempt.aggregate([
+        {
+          $match: {
+            candidate: candidateObjectId,
+            status: "submitted",
+            assessmentSource: "admin",
+            createdAt: dateRangeQuery,
+          },
+        },
         {
           $group: {
             _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
@@ -1517,7 +1524,7 @@ exports.getCandidateDashboardStats = async (req, res, next) => {
 
     const applicationsSeriesMap = toSeriesMap(applicationsTrendAgg);
     const savedSeriesMap = toSeriesMap(savedTrendAgg);
-    const recommendationsSeriesMap = toSeriesMap(recommendationsTrendAgg);
+    const adminAssessmentsSeriesMap = toSeriesMap(adminAssessmentsTrendAgg);
 
     const recommendationItemsTotalInRange =
       recommendationItemsAgg.length > 0 ? recommendationItemsAgg[0].total || 0 : 0;
@@ -1583,7 +1590,7 @@ exports.getCandidateDashboardStats = async (req, res, next) => {
           labels,
           applications: labels.map((label) => applicationsSeriesMap[label] || 0),
           savedJobs: labels.map((label) => savedSeriesMap[label] || 0),
-          recommendationRuns: labels.map((label) => recommendationsSeriesMap[label] || 0),
+          adminAssessments: labels.map((label) => adminAssessmentsSeriesMap[label] || 0),
         },
         distributions: {
           applicationStatuses: {

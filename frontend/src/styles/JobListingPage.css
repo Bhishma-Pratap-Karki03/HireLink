@@ -275,6 +275,232 @@
   cursor: pointer;
 }
 
+.joblist-share-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 20px;
+}
+
+.joblist-share-modal {
+  width: min(620px, 100%);
+  background: #ffffff;
+  border: 1px solid #d7e3f4;
+  border-radius: 16px;
+  box-shadow: 0 24px 52px rgba(15, 35, 60, 0.2);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.joblist-share-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.joblist-share-header h3 {
+  margin: 0;
+  font-size: 22px;
+  color: #0f283c;
+}
+
+.joblist-share-header button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #c8d8ec;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #35506f;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.joblist-share-header button img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.joblist-share-job-title {
+  margin: 0;
+  color: #4d637d;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.joblist-share-link-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.joblist-share-link-row input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d7e3f4;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #25384f;
+  background: #f8fbff;
+}
+
+.joblist-share-link-row button,
+.joblist-share-send-btn {
+  border: 1px solid #0068ce;
+  border-radius: 10px;
+  background: #0068ce;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.joblist-share-link-row button:hover,
+.joblist-share-send-btn:hover {
+  background: #0057ac;
+}
+
+.joblist-share-user-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.joblist-share-user-wrap label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e3652;
+}
+
+.joblist-share-user-wrap select {
+  width: 100%;
+  border: 1px solid #d7e3f4;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #25384f;
+  background: #ffffff;
+}
+
+.joblist-share-user-combobox {
+  position: relative;
+}
+
+.joblist-share-user-input-wrap {
+  display: grid;
+  grid-template-columns: 1fr auto;
+}
+
+.joblist-share-user-input-wrap input {
+  width: 100%;
+  border: 1px solid #d7e3f4;
+  border-right: 0;
+  border-radius: 10px 0 0 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #25384f;
+  background: #ffffff;
+}
+
+.joblist-share-user-toggle {
+  width: 42px;
+  border: 1px solid #d7e3f4;
+  border-radius: 0 10px 10px 0;
+  background: #ffffff;
+  color: #425d7a;
+  cursor: pointer;
+}
+
+.joblist-share-user-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #d7e3f4;
+  border-radius: 12px;
+  box-shadow: 0 14px 32px rgba(15, 35, 60, 0.16);
+  z-index: 10;
+}
+
+.joblist-share-user-option {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #edf3fb;
+  background: #ffffff;
+  text-align: left;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.joblist-share-user-option:last-child {
+  border-bottom: 0;
+}
+
+.joblist-share-user-option span {
+  color: #1e3652;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.joblist-share-user-option small {
+  color: #607791;
+  font-size: 12px;
+}
+
+.joblist-share-user-option:hover,
+.joblist-share-user-option.active {
+  background: #f3f8ff;
+}
+
+.joblist-share-user-empty {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #607791;
+}
+
+.joblist-share-send-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.joblist-share-helper,
+.joblist-share-success,
+.joblist-share-error {
+  margin: 0;
+  font-size: 13px;
+}
+
+.joblist-share-helper {
+  color: #607791;
+}
+
+.joblist-share-success {
+  color: #17803d;
+}
+
+.joblist-share-error {
+  color: #c0392b;
+}
+
 .joblist-checklist {
   display: flex;
   flex-direction: column;
@@ -794,3 +1020,4 @@
   height: 18px;
   object-fit: contain;
 }
+

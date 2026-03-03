@@ -20,8 +20,12 @@ import RecruiterSidebar from "../../components/recruitercomponents/RecruiterSide
 import RecruiterTopBar from "../../components/recruitercomponents/RecruiterTopBar";
 import statsTotalJobsIcon from "../../images/Candidate Profile Page Images/stats-applied-icon.svg";
 import statsApplicationsIcon from "../../images/Candidate Profile Page Images/statsCandidatesIcon.png";
-import statsMessageIcon from "../../images/Candidate Profile Page Images/stats-offer-icon.svg";
+import shortlistedIcon from "../../images/Candidate Profile Page Images/shortlisted-icon.png";  
+import pendingIcon from "../../images/Employers Page Images/pending-icon.png";
+import unreadMessagesIcon from "../../images/Candidate Profile Page Images/unread-message-icon.png";
 import statsInterviewIcon from "../../images/Candidate Profile Page Images/stats-interview-icon.png";
+import rejectedIcon from "../../images/Candidate Profile Page Images/rejected-icon.png";
+import assessmentAttemptsIcon from "../../images/Candidate Profile Page Images/assessment-attempts-icon.png";
 import "../../styles/RecruiterDashboard.css";
 
 ChartJS.register(
@@ -504,7 +508,7 @@ const RecruiterDashboard = () => {
                     <p>{stats.messaging.unreadReceived}</p>
                     <small>{stats.messaging.totalReceived} total received</small>
                   </div>
-                  <img src={statsMessageIcon} alt="Unread messages" className="recruiter-dashboard-stat-icon" />
+                  <img src={unreadMessagesIcon} alt="Unread messages" className="recruiter-dashboard-stat-icon" />
                 </article>
                 <article className="recruiter-dashboard-stat-card">
                   <div className="recruiter-dashboard-stat-content">
@@ -512,15 +516,15 @@ const RecruiterDashboard = () => {
                     <p>{stats.applications.shortlisted}</p>
                     <small>Ready for interview stage</small>
                   </div>
-                  <img src={statsApplicationsIcon} alt="Shortlisted candidates" className="recruiter-dashboard-stat-icon" />
+                  <img src={shortlistedIcon} alt="Shortlisted candidates" className="recruiter-dashboard-stat-icon" />
                 </article>
                 <article className="recruiter-dashboard-stat-card">
                   <div className="recruiter-dashboard-stat-content">
-                    <h3>Rejected in Range</h3>
+                    <h3>Rejected Applications</h3>
                     <p>{stats.applications.rejected}</p>
-                    <small>Closed applications in selected range</small>
+                    <small>Applications marked rejected in selected range</small>
                   </div>
-                  <img src={statsInterviewIcon} alt="Rejected applications" className="recruiter-dashboard-stat-icon" />
+                  <img src={rejectedIcon} alt="Rejected applications" className="recruiter-dashboard-stat-icon" />
                 </article>
                 <article className="recruiter-dashboard-stat-card">
                   <div className="recruiter-dashboard-stat-content">
@@ -528,7 +532,7 @@ const RecruiterDashboard = () => {
                     <p>{stats.assessments.attempts}</p>
                     <small>{stats.assessments.total} assessments created</small>
                   </div>
-                  <img src={statsTotalJobsIcon} alt="Assessment attempts" className="recruiter-dashboard-stat-icon" />
+                  <img src={assessmentAttemptsIcon} alt="Assessment attempts" className="recruiter-dashboard-stat-icon" />
                 </article>
                 <article className="recruiter-dashboard-stat-card">
                   <div className="recruiter-dashboard-stat-content">
@@ -536,7 +540,7 @@ const RecruiterDashboard = () => {
                     <p>{stats.connections.pending}</p>
                     <small>{stats.connections.accepted} accepted connections</small>
                   </div>
-                  <img src={statsMessageIcon} alt="Pending connections" className="recruiter-dashboard-stat-icon" />
+                  <img src={pendingIcon} alt="Pending connections" className="recruiter-dashboard-stat-icon" />
                 </article>
               </div>
 
