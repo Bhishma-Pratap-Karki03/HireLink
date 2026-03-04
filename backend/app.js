@@ -21,6 +21,7 @@ const recruiterAssessmentRoutes = require("./routes/recruiterAssessmentRoutes");
 const connectionRequestRoutes = require("./routes/connectionRequestRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
+const contactRoutes = require("./routes/contactRoutes");
 
 // CORS configuration
 const allowedOrigins = process.env.CLIENT_URL
@@ -68,6 +69,7 @@ app.use("/api/recruiter-assessments", recruiterAssessmentRoutes);
 app.use("/api/connections", connectionRequestRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/recommendations", recommendationRoutes);
+app.use("/api/contact", contactRoutes);
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({

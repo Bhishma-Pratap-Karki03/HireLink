@@ -39,12 +39,14 @@ interface NotificationItem {
     | "application_status_updated"
     | "project_review_received"
     | "company_review_received"
-    | "message_received";
+    | "message_received"
+    | "contact_message_received";
   isRead: boolean;
   message: string;
   createdAt: string;
   updatedAt: string;
   targetPath: string;
+  contactMessageId?: string;
   unreadMessageCount?: number;
   actor?: {
     id: string;
@@ -72,6 +74,15 @@ interface MessageConversationItem {
   } | null;
   updatedAt: string;
   unreadCount?: number;
+}
+
+interface AdminContactNotificationItem {
+  _id: string;
+  name: string;
+  email: string;
+  subject: string;
+  isRead?: boolean;
+  createdAt: string;
 }
 
 const NOTIFICATION_TOAST_STORAGE_PREFIX = "connectionNotificationToasts:";
@@ -114,6 +125,7 @@ const getNotificationTime = (item: NotificationItem) => {
 };
 
 const Navbar = ({ userType = "candidate" }: NavbarProps) => {
+  const ADMIN_VIEWED_CONTACT_STORAGE_KEY = "adminViewedContactNotificationIds";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() =>
     typeof window !== "undefined" ? Boolean(localStorage.getItem("authToken")) : false
@@ -130,10 +142,13 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
   const [messageNotificationItems, setMessageNotificationItems] = useState<
     NotificationItem[]
   >([]);
+  const [adminContactNotificationItems, setAdminContactNotificationItems] =
+    useState<NotificationItem[]>([]);
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [notificationError, setNotificationError] = useState("");
   const [connectionUnreadCount, setConnectionUnreadCount] = useState(0);
   const [messageUnreadCount, setMessageUnreadCount] = useState(0);
+  const [adminContactUnreadCount, setAdminContactUnreadCount] = useState(0);
   const [notificationToasts, setNotificationToasts] = useState<NotificationItem[]>([]);
   const [dismissingToastIds, setDismissingToastIds] = useState<string[]>([]);
   const [profileImage, setProfileImage] = useState<string>(defaultAvatar);
@@ -141,13 +156,32 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
   const mobileUserDropdownRef = useRef<HTMLDivElement | null>(null);
   const notificationRef = useRef<HTMLDivElement | null>(null);
   const toastTimersRef = useRef<Record<string, number>>({});
+  const knownAdminContactIdsRef = useRef<Set<string>>(new Set());
+  const viewedAdminContactIdsRef = useRef<Set<string>>(new Set());
+  const hasLoadedAdminContactsRef = useRef(false);
   const navigate = useNavigate();
   const notificationItems = useMemo(() => {
-    return [...connectionNotificationItems, ...messageNotificationItems]
+    return [
+      ...connectionNotificationItems,
+      ...messageNotificationItems,
+      ...adminContactNotificationItems,
+    ]
       .sort((a, b) => getNotificationTime(b) - getNotificationTime(a))
       .slice(0, 5);
-  }, [connectionNotificationItems, messageNotificationItems]);
-  const unreadNotificationCount = connectionUnreadCount + messageUnreadCount;
+  }, [
+    connectionNotificationItems,
+    messageNotificationItems,
+    adminContactNotificationItems,
+  ]);
+  const unreadNotificationCount =
+    connectionUnreadCount + messageUnreadCount + adminContactUnreadCount;
+
+  const isAdminContactViewed = (item: NotificationItem) => {
+    if (item.type !== "contact_message_received" || !item.contactMessageId) {
+      return false;
+    }
+    return viewedAdminContactIdsRef.current.has(item.contactMessageId);
+  };
 
   // Fetch user data from backend
   const fetchUserData = async () => {
@@ -412,18 +446,126 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
     }
   };
 
+  const fetchAdminContactNotifications = async (silent = false) => {
+    const token = localStorage.getItem("authToken");
+    if (!token || !isAdminUser) {
+      setAdminContactNotificationItems([]);
+      setAdminContactUnreadCount(0);
+      return;
+    }
+
+    try {
+      if (!silent) {
+        setNotificationLoading(true);
+        setNotificationError("");
+      }
+      const response = await fetch(
+        "http://localhost:5000/api/contact/admin/messages?status=all",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to load contact notifications");
+      }
+
+      const incoming = (data?.messages || []) as AdminContactNotificationItem[];
+      const mapped: NotificationItem[] = incoming.slice(0, 5).map((item) => ({
+        id: `contact:${item._id}`,
+        contactMessageId: item._id,
+        type: "contact_message_received",
+        isRead: Boolean(item.isRead),
+        message: `${item.name} sent a contact message.`,
+        createdAt: item.createdAt,
+        updatedAt: item.createdAt,
+        targetPath: "/admin/contact-messages",
+      }));
+
+      const currentIds = new Set(mapped.map((item) => item.id));
+      if (hasLoadedAdminContactsRef.current) {
+        const newItems = mapped.filter(
+          (item) => !knownAdminContactIdsRef.current.has(item.id) && !item.isRead,
+        );
+        if (newItems.length > 0) {
+          setNotificationToasts((prev) => {
+            const next = [
+              ...newItems,
+              ...prev.filter(
+                (oldItem) => !newItems.some((newItem) => newItem.id === oldItem.id),
+              ),
+            ];
+            return next.slice(0, 3);
+          });
+        }
+      }
+
+      knownAdminContactIdsRef.current = currentIds;
+      hasLoadedAdminContactsRef.current = true;
+
+      setAdminContactNotificationItems(mapped);
+      setAdminContactUnreadCount(
+        incoming.filter(
+          (item) =>
+            !Boolean(item.isRead) &&
+            !viewedAdminContactIdsRef.current.has(item._id),
+        ).length,
+      );
+    } catch (error: any) {
+      if (!silent) {
+        setNotificationError(
+          error?.message || "Failed to load contact notifications",
+        );
+      }
+    } finally {
+      if (!silent) {
+        setNotificationLoading(false);
+      }
+    }
+  };
+
   const toggleNotificationMenu = () => {
     setIsNotificationOpen((prev) => {
       const next = !prev;
       if (next) {
-        fetchNotifications();
-        fetchMessageNotifications();
+        if (isAdminUser) {
+          fetchAdminContactNotifications();
+        } else {
+          fetchNotifications();
+          fetchMessageNotifications();
+        }
       }
       return next;
     });
   };
 
   const handleNotificationClick = async (item: NotificationItem) => {
+    if (item.type === "contact_message_received") {
+      if (
+        item.contactMessageId &&
+        !item.isRead &&
+        !viewedAdminContactIdsRef.current.has(item.contactMessageId)
+      ) {
+        viewedAdminContactIdsRef.current.add(item.contactMessageId);
+        try {
+          localStorage.setItem(
+            ADMIN_VIEWED_CONTACT_STORAGE_KEY,
+            JSON.stringify(Array.from(viewedAdminContactIdsRef.current)),
+          );
+        } catch {
+          // no-op
+        }
+        setAdminContactUnreadCount((prev) => Math.max(prev - 1, 0));
+      }
+      dismissToast(item.id);
+      setIsNotificationOpen(false);
+      navigate("/admin/contact-messages");
+      return;
+    }
+
     if (item.type === "message_received") {
       setMessageNotificationItems((prev) =>
         prev.map((entry) =>
@@ -651,6 +793,32 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
   }, [userData?.role, userData?.id, isAdminUser]);
 
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem(ADMIN_VIEWED_CONTACT_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          viewedAdminContactIdsRef.current = new Set(
+            parsed.filter((value) => typeof value === "string"),
+          );
+        }
+      }
+    } catch {
+      // no-op
+    }
+
+    const token = localStorage.getItem("authToken") || "";
+    if (!token || !isAdminUser) return;
+
+    fetchAdminContactNotifications(true);
+    const intervalId = window.setInterval(() => {
+      fetchAdminContactNotifications(true);
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [isAdminUser]);
+
+  useEffect(() => {
     const onDeleted = (event: Event) => {
       const custom = event as CustomEvent<{
         notificationId?: string;
@@ -731,8 +899,10 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
     setIsUserMenuOpen(false);
     setConnectionNotificationItems([]);
     setMessageNotificationItems([]);
+    setAdminContactNotificationItems([]);
     setConnectionUnreadCount(0);
     setMessageUnreadCount(0);
+    setAdminContactUnreadCount(0);
     setIsNotificationOpen(false);
     setNotificationToasts([]);
 
@@ -859,7 +1029,11 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
                       {notificationItems.map((item) => (
                         <li
                           key={item.id}
-                          className={`notification-item ${item.isRead ? "read" : "unread"}`}
+                          className={`notification-item ${
+                            item.isRead || isAdminContactViewed(item)
+                              ? "read"
+                              : "unread"
+                          }`}
                           onClick={() => handleNotificationClick(item)}
                           role="button"
                           tabIndex={0}
@@ -887,6 +1061,8 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
                                   className={`notification-status-badge ${
                                     item.type === "message_received"
                                       ? "status-message-pill"
+                                      : item.type === "contact_message_received"
+                                        ? "status-review"
                                       : item.type === "application_status_updated"
                                         ? "status-application"
                                       : item.type === "project_review_received" ||
@@ -899,6 +1075,8 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
                                 >
                                   {item.type === "message_received"
                                     ? "Message"
+                                    : item.type === "contact_message_received"
+                                      ? "Contact"
                                     : item.type === "application_status_updated"
                                       ? "Application"
                                     : item.type === "project_review_received" ||
@@ -1270,6 +1448,8 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
                   className={`notification-status-badge ${
                     item.type === "application_status_updated"
                       ? "status-application"
+                      : item.type === "contact_message_received"
+                        ? "status-review"
                       : item.type === "project_review_received" ||
                           item.type === "company_review_received"
                         ? "status-review"
@@ -1280,6 +1460,8 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
                 >
                   {item.type === "application_status_updated"
                     ? "Application"
+                    : item.type === "contact_message_received"
+                      ? "Contact"
                     : item.type === "project_review_received" ||
                         item.type === "company_review_received"
                       ? "Review"

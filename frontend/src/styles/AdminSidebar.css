@@ -102,6 +102,10 @@
   font-family: "Montserrat", sans-serif;
 }
 
+.admin-nav-item span {
+  white-space: nowrap;
+}
+
 .admin-nav-item:hover {
   background-color: #f0f8ff;
 }

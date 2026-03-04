@@ -23,6 +23,7 @@ import AdminDashboard from "./pages/adminpages/AdminDashboard";
 import NotFoundPage from "./pages/NotFoundPage";
 import HomePage from "./pages/HomePage";
 import AboutUsPage from "./pages/AboutUsPage";
+import ContactUsPage from "./pages/ContactUsPage";
 import UnderConstructionPage from "./pages/UnderConstructionPage";
 import EmployersPage from "./pages/EmployersPage";
 import EmployerDetailsPage from "./pages/EmployerDetailsPage";
@@ -52,6 +53,7 @@ import RecruiterSettingsPage from "./pages/recruiterpages/RecruiterSettingsPage"
 import AdminSettingsPage from "./pages/adminpages/AdminSettingsPage";
 import AdminManageUsersPage from "./pages/adminpages/AdminManageUsersPage";
 import AdminManageJobsPage from "./pages/adminpages/AdminManageJobsPage";
+import AdminContactMessagesPage from "./pages/adminpages/AdminContactMessagesPage";
 import "./App.css";
 
 // Protected Route Component
@@ -138,6 +140,7 @@ function App() {
         <Route path="/" element={<RootRedirect />} />
         <Route path="/home" element={<HomePage />} />
         <Route path="/about-us" element={<AboutUsPage />} />
+        <Route path="/contact-us" element={<ContactUsPage />} />
         <Route
           path="/under-construction/:slug"
           element={<UnderConstructionPage />}
@@ -292,16 +295,10 @@ function App() {
           }
         />
         <Route
-          path="/admin/messages"
+          path="/admin/contact-messages"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <div style={{ padding: "20px" }}>
-                <h1>Messages</h1>
-                <p>Messages page coming soon</p>
-                <p>
-                  This page will show all system messages and notifications.
-                </p>
-              </div>
+              <AdminContactMessagesPage />
             </ProtectedRoute>
           }
         />
