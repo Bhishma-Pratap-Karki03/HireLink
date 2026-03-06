@@ -136,7 +136,7 @@
   font-size: 16px;
   font-weight: 600;
   color: #333333;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .certification-form-label::after {
@@ -153,7 +153,7 @@
   border-radius: 8px;
   font-size: 16px;
   color: #333333;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   transition: all 0.2s;
 }
 
@@ -187,7 +187,7 @@
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .certification-checkbox {
@@ -212,14 +212,14 @@
 .certification-form-error {
   font-size: 14px;
   color: #ff1e0d;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   margin-top: 4px;
 }
 
 .certification-field-help {
   font-size: 14px;
   color: #8c8c8c;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   margin: 8px 0 0 0;
   line-height: 1.4;
 }
@@ -259,7 +259,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .certification-btn:disabled {
@@ -332,7 +332,7 @@
 
 /* Ensure fonts match the system */
 .certification-form-input {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Oxygen, Ubuntu, sans-serif;
 }
 
@@ -354,3 +354,4 @@
 .certification-modal-content::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+

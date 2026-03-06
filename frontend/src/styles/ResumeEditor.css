@@ -201,7 +201,7 @@
   font-size: 16px;
   color: #333333;
   font-weight: 500;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   max-width: 250px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -212,7 +212,7 @@
 .resume-file-size {
   font-size: 14px;
   color: #8c8c8c;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .resume-remove-button {
@@ -243,7 +243,7 @@
   font-size: 14px;
   color: #ff1e0d;
   font-weight: 500;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 /* Error Message */
@@ -261,7 +261,7 @@
   font-size: 14px;
   color: #ff1e0d;
   font-weight: 500;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 /* Info Text */
@@ -277,7 +277,7 @@
   font-size: 14px;
   color: #656565;
   line-height: 1.6;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 /* Action Buttons */
@@ -302,7 +302,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .resume-btn:disabled {
@@ -414,7 +414,7 @@
 .resume-file-name,
 .resume-file-size,
 .resume-info-text p {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Oxygen, Ubuntu, sans-serif;
 }
 
@@ -484,3 +484,4 @@
 .resume-file-row {
   margin-bottom: 8px;
 }
+

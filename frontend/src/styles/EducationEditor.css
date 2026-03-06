@@ -132,7 +132,7 @@
   font-size: 16px;
   font-weight: 600;
   color: #333333;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .education-form-label::after {
@@ -149,7 +149,7 @@
   border-radius: 8px;
   font-size: 16px;
   color: #333333;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   transition: all 0.2s;
 }
 
@@ -185,7 +185,7 @@ select.education-form-input {
 .education-form-error {
   font-size: 14px;
   color: #ff1e0d;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   margin-top: 4px;
 }
 
@@ -257,7 +257,7 @@ select.education-form-input {
   font-size: 16px;
   color: #333333;
   font-weight: 500;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 /* Description Editor */
@@ -291,7 +291,7 @@ select.education-form-input {
   min-height: 200px;
   max-height: 300px;
   overflow-y: auto;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   font-size: 16px;
   line-height: 1.6;
 }
@@ -312,7 +312,7 @@ select.education-form-input {
 .education-field-help {
   font-size: 14px;
   color: #8c8c8c;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   margin: 8px 0 0 0;
   line-height: 1.4;
 }
@@ -352,7 +352,7 @@ select.education-form-input {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .education-btn:disabled {
@@ -442,7 +442,7 @@ select.education-form-input {
 /* Ensure fonts match the system */
 .education-form-input,
 .education-toggle-text {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Oxygen, Ubuntu, sans-serif;
 }
 
@@ -483,3 +483,4 @@ select.education-form-input {
 .education-quill-editor .ql-container::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+

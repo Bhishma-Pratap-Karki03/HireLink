@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   padding: 30px 20px;
 }
 
@@ -471,3 +471,4 @@
     font-size: 22px;
   }
 }
+

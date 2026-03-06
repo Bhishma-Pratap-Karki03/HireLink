@@ -3,6 +3,8 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../styles/VerificationPage.css";
+import loginAvatar1 from "../images/Login Page Images/avatar-1.jpg";
+import testimonialStar from "../images/Public Page/I1_1436_1_3469.svg";
 
 // Define TypeScript interfaces for API responses
 interface VerificationResponse {
@@ -404,34 +406,103 @@ const VerificationPage = () => {
   return (
     <>
       <Navbar />
+      <main className="verification-page-wrap">
+        <section className="verification-left-panel">
+          <div className="verification-left-circle-1" />
+          <div className="verification-left-circle-2" />
+          <div className="verification-dot-grid" />
 
-      <section id="section-verification">
-        <div className="verification-card">
-          <div className="verification-content">
+          <div className="verification-left-top">
+            <div className="verification-left-badge">
+              <span className="verification-badge-pulse" />
+              {isVerificationType ? "Email Verification" : "Reset Verification"}
+            </div>
+            <h1>
+              {isVerificationType ? "Verify Your" : "Enter Your"}
+              <br />
+              <span>{isVerificationType ? "Email Code" : "Reset Code"}</span>
+            </h1>
+            <p>
+              Enter the 6-digit code we sent to your email and continue
+              securely.
+            </p>
+          </div>
+
+          <div className="verification-steps">
+            <div className="verification-step">
+              <div className="verification-step-num">01</div>
+              <div className="verification-step-body">
+                <strong>Check your inbox</strong>
+                <span>Find the latest code from HireLink.</span>
+              </div>
+            </div>
+            <div className="verification-step-connector" />
+            <div className="verification-step">
+              <div className="verification-step-num">02</div>
+              <div className="verification-step-body">
+                <strong>Enter 6 digits</strong>
+                <span>Only numbers are accepted in each box.</span>
+              </div>
+            </div>
+            <div className="verification-step-connector" />
+            <div className="verification-step">
+              <div className="verification-step-num">03</div>
+              <div className="verification-step-body">
+                <strong>Continue safely</strong>
+                <span>
+                  {isVerificationType
+                    ? "Activate your account and login."
+                    : "Set a new password in next step."}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="verification-left-bottom">
+            <div className="verification-lb-photo">
+              <img src={loginAvatar1} alt="User" />
+            </div>
+            <div className="verification-lb-text">
+              <div className="verification-lb-stars">
+                <img src={testimonialStar} alt="star" />
+                <img src={testimonialStar} alt="star" />
+                <img src={testimonialStar} alt="star" />
+                <img src={testimonialStar} alt="star" />
+                <img src={testimonialStar} alt="star" />
+              </div>
+              <p>
+                &quot;The verification step is quick and secure. I got the code
+                instantly.&quot;
+              </p>
+              <strong>HireLink User</strong>
+            </div>
+          </div>
+        </section>
+
+        <section className="verification-right-panel">
+          <div className="verification-form-box">
             <header className="verification-header">
-              <h1 className="title">
+              <div className="verification-kicker">
+                {isVerificationType ? "Verify Email" : "Account Recovery"}
+              </div>
+              <h1 className="verification-title">
                 {isVerificationType
                   ? "Enter Verification Code"
                   : "Enter Reset Code"}
               </h1>
-              <div className="separator">
-                <div className="line-gray"></div>
-                <div className="line-blue"></div>
-              </div>
+              <p className="verification-instruction-text">
+                {userEmail ? (
+                  <>
+                    Please enter 6-digit code sent to{" "}
+                    <strong>{userEmail}</strong>
+                  </>
+                ) : (
+                  "Please enter 6-digit code sent to your email address."
+                )}
+              </p>
             </header>
 
-            <p className="instruction-text">
-              {userEmail ? (
-                <>
-                  Please enter 6-digit code sent to{" "}
-                  <strong style={{ color: "#0068ce" }}>{userEmail}</strong>
-                </>
-              ) : (
-                "Please enter 6-digit code sent to your email address."
-              )}
-            </p>
-
-            <div className="code-inputs">
+            <div className="verification-code-inputs">
               {verificationCode.map((digit, index) => (
                 <input
                   key={index}
@@ -442,7 +513,7 @@ const VerificationPage = () => {
                   inputMode="numeric"
                   pattern="[0-9]*"
                   maxLength={1}
-                  className="input-box"
+                  className="verification-input-box"
                   value={digit}
                   onChange={(e) => handleInputChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
@@ -453,75 +524,93 @@ const VerificationPage = () => {
             </div>
 
             {statusMessage && (
-              <div className={`status-message ${statusType}`}>
+              <p
+                className={`status-message ${
+                  statusType === "success" ? "status-success" : "status-error"
+                }`}
+              >
                 {statusMessage}
-              </div>
+              </p>
             )}
 
             <button
-              className={`verify-button ${
-                !isCodeComplete || isLoading ? "disabled" : ""
-              }`}
+              className="verification-verify-button"
               onClick={handleVerify}
               disabled={!isCodeComplete || isLoading}
             >
               {isLoading
                 ? "Verifying..."
                 : isVerificationType
-                ? "Verify Account"
-                : "Verify Code"}
+                  ? "Verify Account"
+                  : "Verify Code"}
             </button>
 
-            {/* Timer display below verify button */}
             {timer > 0 && (
-              <div
-                style={{
-                  color: "#666",
-                  fontSize: "14px",
-                  marginTop: "12px",
-                  textAlign: "center",
-                }}
-              >
+              <div className="verification-timer">
                 Code expires in:{" "}
-                <strong style={{ color: "#0068ce" }}>
+                <strong className="verification-timer-value">
                   {formatTime(timer)}
                 </strong>
               </div>
             )}
 
-            <div className="footer-links">
+            <div className="verification-footer-links">
               {canResend && (
                 <button
-                  className={`link-action ${isResending ? "disabled" : ""}`}
+                  className={`verification-link-action ${
+                    isResending ? "disabled" : ""
+                  }`}
                   onClick={handleResendCode}
                   disabled={isResending}
                 >
                   {isResending
                     ? "Sending..."
                     : isVerificationType
-                    ? "Resend Verification Code"
-                    : "Resend Reset Code"}
+                      ? "Resend Verification Code"
+                      : "Resend Reset Code"}
                 </button>
               )}
 
               {isVerificationType ? (
                 <>
-                  <Link to="/register" className="link-action">
+                  <Link to="/register" className="verification-link-action">
                     Back to Register Page
                   </Link>
-                  <Link to="/login" className="link-action">
+                  <Link to="/login" className="verification-link-action">
                     Back to Login Page
                   </Link>
                 </>
               ) : (
-                <Link to="/forgot-password" className="link-action">
+                <Link to="/forgot-password" className="verification-link-action">
                   Back to Forgot Password
                 </Link>
               )}
             </div>
+
+            <div className="verification-trust-row">
+              <div className="verification-trust-item">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                SSL Secured
+              </div>
+              <div className="verification-trust-item">
+                <svg viewBox="0 0 24 24">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                Instant Delivery
+              </div>
+              <div className="verification-trust-item">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v4l3 3" />
+                </svg>
+                24h Support
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
       <Footer />
     </>

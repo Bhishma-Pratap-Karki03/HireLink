@@ -130,7 +130,7 @@
   font-size: 16px;
   font-weight: 600;
   color: #333333;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .skill-form-label::after {
@@ -147,7 +147,7 @@
   border-radius: 8px;
   font-size: 16px;
   color: #333333;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   transition: all 0.2s;
 }
 
@@ -183,14 +183,14 @@ select.skill-form-input {
 .skill-form-error {
   font-size: 14px;
   color: #ff1e0d;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   margin-top: 4px;
 }
 
 .skill-field-help {
   font-size: 14px;
   color: #8c8c8c;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   margin: 8px 0 0 0;
   line-height: 1.4;
 }
@@ -209,7 +209,7 @@ select.skill-form-input {
   font-weight: 600;
   color: #333333;
   margin: 0 0 12px 0;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .skill-guide-list {
@@ -222,7 +222,7 @@ select.skill-form-input {
   color: #656565;
   margin-bottom: 8px;
   line-height: 1.5;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .skill-guide-list li:last-child {
@@ -268,7 +268,7 @@ select.skill-form-input {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .skill-btn:disabled {
@@ -341,7 +341,7 @@ select.skill-form-input {
 
 /* Ensure fonts match the system */
 .skill-form-input {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Oxygen, Ubuntu, sans-serif;
 }
 
@@ -363,3 +363,4 @@ select.skill-form-input {
 .skill-modal-content::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+

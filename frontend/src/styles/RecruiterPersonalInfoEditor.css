@@ -133,7 +133,7 @@
   font-size: 16px;
   font-weight: 600;
   color: #333333;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .recruiter-personal-info-readonly-field {
@@ -151,7 +151,7 @@
   border-radius: 8px;
   font-size: 16px;
   color: #333333;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   transition: all 0.2s;
 }
 
@@ -180,7 +180,7 @@
   padding: 6px 12px;
   border-radius: 6px;
   font-weight: 500;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   border: 1px solid #d0e6ff;
 }
 
@@ -193,7 +193,7 @@
   border-radius: 8px;
   font-size: 16px;
   color: #333333;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   resize: vertical;
   min-height: 100px;
   transition: all 0.2s;
@@ -209,7 +209,7 @@
 .recruiter-personal-info-field-help {
   font-size: 14px;
   color: #8c8c8c;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   margin: 4px 0 0 0;
   line-height: 1.4;
 }
@@ -217,7 +217,7 @@
 .recruiter-personal-info-error {
   font-size: 14px;
   color: #ff1e0d;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   margin: 4px 0 0 0;
 }
 
@@ -243,7 +243,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .recruiter-personal-info-btn:disabled {
@@ -332,7 +332,7 @@
 /* Ensure fonts match the system */
 .recruiter-personal-info-input,
 .recruiter-personal-info-textarea {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Oxygen, Ubuntu, sans-serif;
 }
 
@@ -354,3 +354,4 @@
 .recruiter-personal-info-modal-content::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+

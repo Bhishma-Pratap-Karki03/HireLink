@@ -1,5 +1,5 @@
 body {
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   margin: 0;
   padding: 0;
   background-color: #eff3f7;
@@ -1151,7 +1151,7 @@ a {
   color: #ff1e0d;
   background-color: #ffebee;
   transition: all 0.2s;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .candidate-delete-btn:hover {
@@ -1258,7 +1258,7 @@ a {
   color: #ff1e0d;
   background-color: #ffebee;
   transition: all 0.2s;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .candidate-delete-btn-small:hover {
@@ -1381,7 +1381,7 @@ a {
   color: #ff1e0d;
   background-color: #ffebee;
   transition: all 0.2s;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   font-weight: 500;
   min-width: 70px;
   text-align: center;
@@ -1509,7 +1509,7 @@ a {
   color: #ff1e0d;
   background-color: #ffebee;
   transition: all 0.2s;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .candidate-delete-btn-small:hover {
@@ -1543,7 +1543,7 @@ a {
   transition: all 0.2s;
   text-decoration: none;
   background-color: transparent;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .candidate-show-credential-btn:hover {
@@ -1677,7 +1677,7 @@ a {
   transition: all 0.2s;
   text-decoration: none;
   background-color: transparent;
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
 }
 
 .candidate-show-project-btn:hover {
@@ -2033,3 +2033,4 @@ a {
     max-height: 260px;
   }
 }
+
