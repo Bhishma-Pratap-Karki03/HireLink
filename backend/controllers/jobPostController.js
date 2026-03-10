@@ -4,11 +4,31 @@ const User = require("../models/userModel");
 const AppliedJob = require("../models/appliedJobModel");
 
 const ADMIN_EMAIL = "hirelinknp@gmail.com";
+const MAX_INTERVIEW_STAGES = 6;
 
 const isAdmin = (user) =>
   user &&
   (String(user.role || "").toLowerCase() === "admin" ||
     String(user.email || "").toLowerCase() === ADMIN_EMAIL);
+
+const normalizeInterviewStages = (interviewStages) => {
+  if (!Array.isArray(interviewStages)) {
+    return [];
+  }
+
+  return interviewStages
+    .slice(0, MAX_INTERVIEW_STAGES)
+    .map((stage) => {
+      if (!stage || typeof stage !== "object") {
+        return null;
+      }
+      return {
+        name: String(stage.name || "").trim(),
+        salary: String(stage.salary || "").trim(),
+      };
+    })
+    .filter((stage) => stage && stage.name);
+};
 
 const listJobPosts = async (req, res) => {
   try {
@@ -557,6 +577,19 @@ const updateJobPost = async (req, res) => {
     const updates = { ...req.body };
     delete updates.recruiterId;
 
+    if (updates.interviewStages !== undefined) {
+      if (
+        Array.isArray(updates.interviewStages) &&
+        updates.interviewStages.length > MAX_INTERVIEW_STAGES
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: `Maximum ${MAX_INTERVIEW_STAGES} interview stages are allowed`,
+        });
+      }
+      updates.interviewStages = normalizeInterviewStages(updates.interviewStages);
+    }
+
     const updated = await JobPost.findByIdAndUpdate(id, updates, {
       new: true,
     });
@@ -709,6 +742,16 @@ const createJobPost = async (req, res) => {
       });
     }
 
+    if (
+      Array.isArray(interviewStages) &&
+      interviewStages.length > MAX_INTERVIEW_STAGES
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: `Maximum ${MAX_INTERVIEW_STAGES} interview stages are allowed`,
+      });
+    }
+
     const openingsNumber = Number(openings);
     if (Number.isNaN(openingsNumber) || openingsNumber < 1) {
       return res.status(400).json({
@@ -747,7 +790,7 @@ const createJobPost = async (req, res) => {
       salaryTo: String(salaryTo).trim(),
       currency: currency.trim(),
       benefits: Array.isArray(benefits) ? benefits : [],
-      interviewStages: Array.isArray(interviewStages) ? interviewStages : [],
+      interviewStages: normalizeInterviewStages(interviewStages),
       assessmentId: assessmentId || null,
       assessmentRequired: Boolean(assessmentRequired),
       assessmentSource: assessmentId ? "recruiter" : undefined,

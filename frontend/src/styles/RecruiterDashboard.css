@@ -13,6 +13,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .recruiter-dashboard-topbar-wrapper {
@@ -27,7 +28,9 @@
 
 .recruiter-dashboard-scrollable-content {
   flex: 1;
+  background-color: #eff3f7;
   padding-bottom: 24px;
+  overflow-x: hidden;
 }
 
 .recruiter-dashboard-content-wrapper {
@@ -352,7 +355,7 @@
 
   .recruiter-dashboard-content-wrapper {
     padding: 20px;
-    padding-top: 104px;
+    padding-top: 112px;
   }
 
   .recruiter-dashboard-header-copy h1 {
@@ -364,9 +367,38 @@
   }
 }
 
+@media (max-width: 1024px) {
+  .recruiter-dashboard-layout {
+    flex-direction: column;
+  }
+
+  .recruiter-dashboard-topbar-wrapper {
+    left: 0;
+    right: 0;
+  }
+
+  .recruiter-dashboard-scrollable-content {
+    margin-top: 84px;
+  }
+
+  .recruiter-dashboard-content-wrapper {
+    padding: 20px;
+    padding-top: 20px;
+  }
+
+  .recruiter-dashboard-header-copy h1 {
+    font-size: 30px;
+  }
+}
+
 @media (max-width: 768px) {
   .recruiter-dashboard-stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .recruiter-dashboard-content-wrapper {
+    padding: 15px;
+    gap: 14px;
   }
 
   .recruiter-dashboard-header-row {

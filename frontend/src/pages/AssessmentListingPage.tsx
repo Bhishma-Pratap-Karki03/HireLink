@@ -221,9 +221,11 @@ const AssessmentListingPage = () => {
     <div className="assessment-listing-page">
       <Navbar />
       <section className="assessment-listing-hero">
-        <div className="assessment-listing-hero-content">
-          <h1>Quiz / Assessment</h1>
-          <p>Browse and complete assessments assigned to you.</p>
+        <div className="assessment-listing-hero-inner">
+          <div className="assessment-listing-hero-text">
+            <h1>Quiz / Assessment</h1>
+            <p>Browse and complete assessments assigned to you.</p>
+          </div>
         </div>
         <div className="assessment-listing-search">
           <div className="assessment-search-pill">

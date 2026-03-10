@@ -8,7 +8,6 @@ import loginAvatar2 from "../images/Login Page Images/avatar-2.png";
 import loginAvatar3 from "../images/Login Page Images/avatar-3.png";
 import loginAvatar4 from "../images/Login Page Images/avatar-4.png";
 import searchIcon from "../images/Job List Page Images/search.svg";
-import testimonialStar from "../images/Public Page/I1_1436_1_3469.svg";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -246,27 +245,6 @@ const Login = () => {
               </div>
             </div>
           </div>
-
-          <div className="login-left-bottom">
-            <div className="login-lb-photo">
-              <img src={loginAvatar1} alt="Rashed Kabir" />
-            </div>
-            <div className="login-lb-text">
-              <div className="login-lb-name">Rashed Kabir</div>
-              <div className="login-lb-stars">
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-              </div>
-              <p>
-                "HireLink matched me with my dream job in under 2 weeks. The AI
-                recommendations were incredibly accurate!"
-              </p>
-              <strong>Rashed Kabir · Lead Designer, Google</strong>
-            </div>
-          </div>
         </section>
 
         <section className="login-right-panel">
@@ -402,3 +380,4 @@ const Login = () => {
 };
 
 export default Login;
+

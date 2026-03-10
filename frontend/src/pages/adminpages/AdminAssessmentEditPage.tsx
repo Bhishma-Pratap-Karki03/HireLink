@@ -568,19 +568,32 @@ const AdminAssessmentEditPage: React.FC = () => {
                 <p>Update assessment details and settings.</p>
               </div>
 
+              {submitSuccess && (
+                <div className="admin-assessment-toast success">
+                  <button
+                    type="button"
+                    className="admin-assessment-toast-close"
+                    onClick={() => setSubmitSuccess("")}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                  <p className="admin-assessment-toast-message">{submitSuccess}</p>
+                </div>
+              )}
+
               {loading ? (
                 <div className="admin-assessment-loading">Loading...</div>
               ) : (
                 <>
-                  {(submitSuccess || submitError) && (
+                  {submitError && (
                     <div className="admin-assessment-feedback-overlay">
-                      <div className={`admin-assessment-feedback-card ${submitSuccess ? "success" : "error"}`}>
-                        <h3>{submitSuccess ? "Success" : "Error"}</h3>
-                        <p>{submitSuccess || submitError}</p>
+                      <div className="admin-assessment-feedback-card error">
+                        <h3>Error</h3>
+                        <p>{submitError}</p>
                         <button
                           className="admin-assessment-primary"
                           onClick={() => {
-                            setSubmitSuccess("");
                             setSubmitError("");
                           }}
                         >

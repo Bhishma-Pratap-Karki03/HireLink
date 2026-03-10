@@ -179,41 +179,23 @@
   color: #333;
 }
 
+.recruiter-about-quill-editor .ql-editor .ql-align-center {
+  text-align: center;
+}
+
+.recruiter-about-quill-editor .ql-editor .ql-align-right {
+  text-align: right;
+}
+
+.recruiter-about-quill-editor .ql-editor .ql-align-justify {
+  text-align: justify;
+}
+
 .recruiter-about-quill-editor .ql-editor.ql-blank::before {
   color: #999;
   font-style: italic;
   font-size: 16px;
   left: 20px;
-}
-
-/* Quill Toolbar Button Styling */
-.recruiter-about-quill-editor .ql-toolbar button {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  border: 1px solid #e0e0e0;
-  background-color: #ffffff;
-  margin-right: 4px;
-  transition: all 0.2s;
-}
-
-.recruiter-about-quill-editor .ql-toolbar button:hover {
-  background-color: #f0f0f0;
-  border-color: #2481fb;
-}
-
-.recruiter-about-quill-editor .ql-toolbar .ql-active {
-  background-color: #2481fb;
-  border-color: #2481fb;
-  color: white;
-}
-
-.recruiter-about-quill-editor .ql-toolbar .ql-active .ql-stroke {
-  stroke: white;
-}
-
-.recruiter-about-quill-editor .ql-toolbar .ql-active .ql-fill {
-  fill: white;
 }
 
 /* Editor Tips Section */
@@ -228,7 +210,7 @@
 .recruiter-about-tips-title {
   font-size: 16px;
   font-weight: 600;
-  color: #2481fb;
+  color: #0068ce;
   margin: 0 0 12px 0;
 }
 
@@ -249,7 +231,7 @@
 
 .recruiter-about-tips-list li::before {
   content: "•";
-  color: #2481fb;
+  color: #0068ce;
   font-weight: bold;
   position: absolute;
   left: -15px;
@@ -296,12 +278,12 @@
 
 /* Save Button */
 .recruiter-about-btn-save {
-  background-color: #2481fb;
+  background-color: #0068ce;
   color: white;
 }
 
 .recruiter-about-btn-save:hover:not(:disabled) {
-  background-color: #1a6fd8;
+  background-color: #0056b3;
 }
 
 /* Saving Spinner */

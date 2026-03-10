@@ -63,7 +63,8 @@
   flex: 1;
   background-color: #eff3f7;
   padding-bottom: 20px;
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .recruiter-postjob-content-wrapper {
@@ -455,6 +456,18 @@
   cursor: pointer;
 }
 
+.recruiter-postjob-add-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.recruiter-postjob-interview-note {
+  margin: 6px 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #5f6f88;
+}
+
 .recruiter-postjob-mt-20 {
   margin-top: 20px;
 }
@@ -611,7 +624,7 @@
 .recruiter-jobpost-preview-body {
   padding: 32px;
   display: grid;
-  grid-template-columns: minmax(360px, 400px) 1fr;
+  grid-template-columns: minmax(300px, 400px) 1fr;
   gap: 32px;
   align-items: start;
 }
@@ -863,6 +876,48 @@
 
 .recruiter-jobpost-alert-desc--error {
   color: #b42318;
+}
+
+.recruiter-jobpost-toast {
+  position: fixed;
+  top: 92px;
+  right: 16px;
+  z-index: 140;
+  width: min(360px, calc(100vw - 24px));
+  background: #ffffff;
+  border: 1px solid #dfe7f1;
+  border-radius: 12px;
+  box-shadow: 0 14px 30px rgba(16, 24, 40, 0.2);
+  padding: 12px 14px 14px;
+}
+
+.recruiter-jobpost-toast-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #334155;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.recruiter-jobpost-toast-close:hover {
+  background: #e2e8f0;
+}
+
+.recruiter-jobpost-toast-message {
+  margin: 0;
+  padding-right: 22px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #0f283c;
+  font-weight: 500;
+  font-family: "Montserrat", sans-serif;
 }
 
 .recruiter-jobpost-error-text {
@@ -1195,6 +1250,11 @@
 }
 
 .recruiter-postjob-assessment-body .recruiter-postjob-grid-2-col {
+  align-items: start;
+  gap: 20px;
+}
+
+.recruiter-postjob-assessment-top-row {
   align-items: end;
 }
 
@@ -1238,6 +1298,93 @@
   margin-top: 16px;
 }
 
+.recruiter-postjob-assessment-viewedit-row {
+  width: 100%;
+}
+
+.recruiter-postjob-assessment-viewedit-row .recruiter-postjob-segment {
+  flex: 1 1 0;
+}
+
+.recruiter-postjob-assessment-linked {
+  margin-top: 4px;
+  border: 1px solid #dbe6f3;
+  border-radius: 12px;
+  background: #f8fbff;
+  padding: 14px;
+  min-height: 110px;
+}
+
+.recruiter-postjob-assessment-linked-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.recruiter-postjob-assessment-linked-head p {
+  margin: 0;
+  font-size: 13px;
+  color: #46607b;
+  font-weight: 500;
+}
+
+.recruiter-postjob-assessment-linked-badge {
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.recruiter-postjob-assessment-linked-badge.mandatory {
+  background: #e9f1ff;
+  color: #0f60c4;
+}
+
+.recruiter-postjob-assessment-linked-badge.optional {
+  background: #eaf9f4;
+  color: #0b8f66;
+}
+
+.recruiter-postjob-assessment-linked-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.recruiter-postjob-assessment-action-btn {
+  border: 1.4px solid #c6d5e8;
+  background: #ffffff !important;
+  color: #1f3b58 !important;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recruiter-postjob-assessment-action-btn:hover {
+  border-color: #95b3d8;
+  background: #f4f9ff;
+}
+
+.recruiter-postjob-assessment-action-btn--primary {
+  border-color: #0068ce !important;
+  background: #0068ce !important;
+  color: #ffffff !important;
+}
+
+.recruiter-postjob-assessment-action-btn--primary:hover {
+  border-color: #0059b0;
+  background: #0059b0;
+}
+
 .recruiter-postjob-field-note {
   margin: 6px 0 0;
   font-size: 13px;
@@ -1246,22 +1393,22 @@
 /* Responsive Design for Preview Section */
 @media (max-width: 850px) {
   .recruiter-jobpost-preview-body {
-    flex-direction: column;
-    align-items: center;
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
 
   .recruiter-jobpost-preview-context {
     width: 100%;
-    max-width: 680px;
+    max-width: 100%;
   }
 
   .recruiter-jobpost-alert-box {
-    margin-bottom: 40px;
+    margin-bottom: 12px;
   }
 
   .recruiter-jobpost-main-action-buttons {
-    justify-content: space-between;
-    gap: 20px;
+    justify-content: flex-start;
+    gap: 14px;
   }
 }
 
@@ -1275,6 +1422,16 @@
     padding: 32px;
     padding-top: 124px;
   }
+
+  .recruiter-jobpost-preview-body {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .recruiter-jobpost-job-card {
+    width: 100%;
+    max-width: 560px;
+  }
 }
 
 @media (max-width: 1024px) {
@@ -1284,6 +1441,7 @@
 
   .recruiter-postjob-topbar-wrapper {
     left: 0;
+    right: 0;
   }
 
   .recruiter-postjob-scrollable-content {
@@ -1292,6 +1450,7 @@
 
   .recruiter-postjob-content-wrapper {
     padding: 20px;
+    padding-top: 20px;
   }
 
   .recruiter-postjob-grid-3-col {
@@ -1324,6 +1483,11 @@
   .recruiter-postjob-stage-salary {
     width: 100%;
   }
+
+  .recruiter-postjob-assessment-linked-head {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1336,7 +1500,29 @@
   }
 
   .recruiter-postjob-content-wrapper {
+    padding: 15px;
+    gap: 20px;
+  }
+
+  .recruiter-jobpost-preview-header {
+    height: auto;
+    min-height: 72px;
+    padding: 14px 20px;
+  }
+
+  .recruiter-jobpost-preview-body {
     padding: 20px;
+    gap: 20px;
+  }
+
+  .recruiter-postjob-list-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .recruiter-postjob-list-action {
+    width: 100%;
+    height: 44px;
   }
 }
 
@@ -1359,5 +1545,15 @@
   .recruiter-jobpost-btn-post-job,
   .recruiter-jobpost-btn-cancel {
     width: 100%;
+  }
+
+  .recruiter-postjob-assessment-linked-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .recruiter-postjob-assessment-action-btn {
+    width: 100%;
+    text-align: center;
   }
 }

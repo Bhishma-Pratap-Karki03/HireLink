@@ -12,13 +12,40 @@
 }
 
 .recruiter-messages-main-content {
+  padding: 0;
+  gap: 0;
   overflow: hidden;
   min-height: 0;
-  height: 100vh;
   flex: 1;
   display: flex;
   flex-direction: column;
   background: #f2f6fb;
+  min-width: 0;
+}
+
+.recruiter-messages-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f2f6fb;
+  overflow-x: clip;
+}
+
+.recruiter-messages-topbar-wrapper {
+  position: fixed;
+  top: 0;
+  left: 290px;
+  right: 0;
+  z-index: 100;
+  background: #ffffff;
+  border-bottom: 1px solid #dcdcdc;
+}
+
+.recruiter-messages-scrollable-content {
+  flex: 1;
+  min-height: 0;
+  margin-top: 84px;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* Keep candidate messages top bar aligned like recruiter/profile pages */
@@ -484,6 +511,17 @@
   }
 }
 
+@media (max-width: 1024px) {
+  .recruiter-messages-layout {
+    flex-direction: column;
+  }
+
+  .recruiter-messages-topbar-wrapper {
+    left: 0;
+    right: 0;
+  }
+}
+
 @media (max-width: 992px) {
   .candidate-messages-main-content .candidate-top-bar {
     width: 100%;
@@ -495,5 +533,9 @@
   .candidate-messages-main-content .candidate-top-bar {
     width: 100%;
     margin: 0;
+  }
+
+  .recruiter-messages-scrollable-content {
+    margin-top: 70px;
   }
 }

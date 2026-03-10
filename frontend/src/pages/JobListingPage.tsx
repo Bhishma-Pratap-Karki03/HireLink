@@ -820,6 +820,16 @@ const JobListingPage = () => {
   };
 
   const openShareModal = async (job: JobCard) => {
+    const token = localStorage.getItem("authToken");
+    if (
+      !token ||
+      !userRole ||
+      (userRole !== "candidate" && userRole !== "recruiter")
+    ) {
+      navigate("/login");
+      return;
+    }
+
     const origin =
       typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
     const nextLink = `${origin}/jobs/${job.id}`;
@@ -832,12 +842,6 @@ const JobListingPage = () => {
     setSelectedShareUserId("");
     setShareUserQuery("");
     setIsShareUserDropdownOpen(false);
-
-    const token = localStorage.getItem("authToken");
-    if (!token || !userRole || (userRole !== "candidate" && userRole !== "recruiter")) {
-      setShareUsers([]);
-      return;
-    }
 
     try {
       setIsShareLoading(true);
@@ -914,10 +918,12 @@ const JobListingPage = () => {
       <section className="joblist-hero">
         <div className="joblist-hero-inner">
           <div className="joblist-hero-text">
-            <h1>There Are {totalJobs.toLocaleString()} Jobs Here For you!</h1>
-            <p>Discover your next career move, freelance gig, or internship</p>
+            <h1>Discover Opportunities That Match Your Skills</h1>
+            <p>
+              Explore verified jobs from trusted companies on HireLink and find
+              the role that fits your career goals.
+            </p>
           </div>
-          <div className="joblist-breadcrumb">Home / Jobs Listing</div>
         </div>
         <div className="joblist-hero-search">
           <div className="joblist-search-pill">

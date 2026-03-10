@@ -15,11 +15,6 @@ import minusIcon from "../images/Employers Page Images/minus.png";
 import plusIcon from "../images/Employers Page Images/expand.png";
 import featuredIcon from "../images/Employers Page Images/8_413.svg";
 import badgeBg from "../images/Employers Page Images/8_412.svg";
-import heroBgLeft from "../images/Employers Page Images/8_189.svg";
-import heroBgRight from "../images/Employers Page Images/8_197.svg";
-import heroCircle from "../images/Employers Page Images/8_205.svg";
-import heroIcon1 from "../images/Employers Page Images/8_208.svg";
-import heroIcon2 from "../images/Employers Page Images/8_209.svg";
 import connectIcon from "../images/Employers Page Images/connect-icon.png";
 import pendingIcon from "../images/Employers Page Images/pending-icon.png";
 import friendIcon from "../images/Employers Page Images/friend-icon.png";
@@ -71,6 +66,7 @@ const EmployersPage = () => {
   const [page, setPage] = useState(1);
   const perPage = 20;
   const [quickSearch, setQuickSearch] = useState("");
+  const [quickSearchInput, setQuickSearchInput] = useState("");
 
   const [searchCompanyName, setSearchCompanyName] = useState("");
   const [searchLocation, setSearchLocation] = useState("");
@@ -310,6 +306,7 @@ const EmployersPage = () => {
 
   const clearFilters = () => {
     setQuickSearch("");
+    setQuickSearchInput("");
     setSearchCompanyName("");
     setSearchLocation("");
     setSearchTeamFrom("");
@@ -321,6 +318,11 @@ const EmployersPage = () => {
       teamTo: "",
     });
     setSortBy("");
+    setPage(1);
+  };
+
+  const applyQuickSearch = () => {
+    setQuickSearch(quickSearchInput.trim());
     setPage(1);
   };
 
@@ -464,54 +466,39 @@ const EmployersPage = () => {
 
       {/* Hero Section */}
       <section className="employerspublic-hero">
-        <div className="employerspublic-hero-wrapper">
-          <div className="employerspublic-hero-bg-elements">
-            <img
-              src={heroBgLeft}
-              className="employerspublic-bg-left"
-              alt="Background decoration left"
-            />
-            <img
-              src={heroBgRight}
-              className="employerspublic-bg-right"
-              alt="Background decoration right"
-            />
-            <img
-              src={heroCircle}
-              className="employerspublic-bg-circle"
-              alt="Background circle"
-            />
-            <img
-              src={heroIcon1}
-              className="employerspublic-bg-icon-1"
-              alt="Background icon 1"
-            />
-            <img
-              src={heroIcon2}
-              className="employerspublic-bg-icon-2"
-              alt="Background icon 2"
-            />
-          </div>
-
-          <div className="employerspublic-hero-content">
-            <h1>Company</h1>
-            <p>Find you desire company and get your dream job</p>
+        <div className="employerspublic-hero-inner">
+          <div className="employerspublic-hero-text">
+            <h1>Find Employers Hiring Right Now</h1>
+            <p>
+              Explore verified companies, compare opportunities, and connect
+              with teams that match your career goals.
+            </p>
           </div>
         </div>
-      </section>
-
-      <section className="employerspublic-top-search">
-        <div className="employerspublic-top-search-inner">
-          <img src={searchIcon} alt="Search" />
-          <input
-            type="text"
-            placeholder="Search by company name or location"
-            value={quickSearch}
-            onChange={(e) => {
-              setQuickSearch(e.target.value);
-              setPage(1);
-            }}
-          />
+        <div className="employerspublic-hero-search">
+          <div className="employerspublic-search-pill">
+            <div className="employerspublic-search-field">
+              <img src={searchIcon} alt="Search" />
+              <input
+                type="text"
+                placeholder="Search by company name or location"
+                value={quickSearchInput}
+                onChange={(e) => setQuickSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    applyQuickSearch();
+                  }
+                }}
+              />
+            </div>
+            <button
+              type="button"
+              className="employerspublic-search-btn"
+              onClick={applyQuickSearch}
+            >
+              Search
+            </button>
+          </div>
         </div>
       </section>
 

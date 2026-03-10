@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { useNavigate } from "react-router-dom";
@@ -60,6 +60,14 @@ const AdminAssessmentCreatePage: React.FC = () => {
     codeSubmission: "file",
     codeEvaluation: "",
   });
+
+  useEffect(() => {
+    if (!submitSuccess) return;
+    const timer = window.setTimeout(() => {
+      setSubmitSuccess("");
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [submitSuccess]);
 
   const resetForm = () => {
     setForm({
@@ -357,7 +365,9 @@ const AdminAssessmentCreatePage: React.FC = () => {
       setSubmitSuccess(data?.message || "Assessment created successfully.");
       setSubmitError("");
       resetForm();
-      navigate("/admin/assessments");
+      setTimeout(() => {
+        navigate("/admin/assessments");
+      }, 900);
     } catch (err: any) {
       setSubmitError(err?.message || "Failed to create assessment");
       setSubmitSuccess("");
@@ -385,15 +395,28 @@ const AdminAssessmentCreatePage: React.FC = () => {
                 <p>Create and publish assessments for job applications.</p>
               </div>
 
-              {(submitSuccess || submitError) && (
+              {submitSuccess && (
+                <div className="admin-assessment-toast success">
+                  <button
+                    type="button"
+                    className="admin-assessment-toast-close"
+                    onClick={() => setSubmitSuccess("")}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                  <p className="admin-assessment-toast-message">{submitSuccess}</p>
+                </div>
+              )}
+
+              {submitError && (
                 <div className="admin-assessment-feedback-overlay">
-                  <div className={`admin-assessment-feedback-card ${submitSuccess ? "success" : "error"}`}>
-                    <h3>{submitSuccess ? "Success" : "Error"}</h3>
-                    <p>{submitSuccess || submitError}</p>
+                  <div className="admin-assessment-feedback-card error">
+                    <h3>Error</h3>
+                    <p>{submitError}</p>
                     <button
                       className="admin-assessment-primary"
                       onClick={() => {
-                        setSubmitSuccess("");
                         setSubmitError("");
                       }}
                     >
@@ -922,3 +945,4 @@ const AdminAssessmentCreatePage: React.FC = () => {
 };
 
 export default AdminAssessmentCreatePage;
+

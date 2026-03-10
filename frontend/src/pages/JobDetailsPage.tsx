@@ -24,7 +24,6 @@ import stageIcon3 from "../images/Job List Page Images/interview-stage-3.png";
 import stageIcon4 from "../images/Job List Page Images/interview-stage-4.png";
 import stageIcon5 from "../images/Job List Page Images/interview-stage-5.png";
 import stageIcon6 from "../images/Job List Page Images/interview-stage-6.png";
-import stageIcon7 from "../images/Job List Page Images/interview-stage-7.png";
 
 // Sidebar icons (placeholders in Job List Page Images)
 import employeeTypeIcon from "../images/Job List Page Images/employee-type.svg";
@@ -375,7 +374,6 @@ const JobDetailsPage = () => {
     stageIcon4,
     stageIcon5,
     stageIcon6,
-    stageIcon7,
   ];
 
   const displayValue = (value?: string) => {
@@ -396,6 +394,12 @@ const JobDetailsPage = () => {
   const formatDifficulty = (value?: string) => {
     if (!value) return "Beginner";
     return value.charAt(0).toUpperCase() + value.slice(1);
+  };
+
+  const formatRichTextForDisplay = (content?: string) => {
+    if (!content) return "";
+    const hasHtmlTag = /<\/?[a-z][\s\S]*>/i.test(content);
+    return hasHtmlTag ? content : content.replace(/\n/g, "<br />");
   };
 
   const openApplyModal = async () => {
@@ -606,11 +610,11 @@ const JobDetailsPage = () => {
                 <section className="job-details-section">
                   <h2>About Company</h2>
                   <div
-                    className="job-details-richtext"
+                    className="job-details-richtext job-details-company-about-richtext"
                     dangerouslySetInnerHTML={{
                       __html:
                         job.companyAbout && job.companyAbout.trim() !== ""
-                          ? job.companyAbout
+                          ? formatRichTextForDisplay(job.companyAbout)
                           : "Company description is not available yet.",
                     }}
                   />
@@ -621,7 +625,9 @@ const JobDetailsPage = () => {
                   <div
                     className="job-details-richtext"
                     dangerouslySetInnerHTML={{
-                      __html: job.description || "No job overview provided.",
+                      __html: formatRichTextForDisplay(
+                        job.description || "No job overview provided.",
+                      ),
                     }}
                   />
                 </section>

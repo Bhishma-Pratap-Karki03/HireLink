@@ -72,11 +72,16 @@
   border: 1px solid #d7e0ef;
   outline: none;
   background: #ffffff;
+  font-family: "Montserrat", sans-serif;
   font-size: 14px;
   color: #2c3a4b;
   width: 100%;
   border-radius: 10px;
   padding: 10px 36px 10px 12px;
+}
+
+.joblist-search-field input::placeholder {
+  font-family: "Montserrat", sans-serif;
 }
 
 .joblist-search-btn {
@@ -154,6 +159,7 @@
   border: none;
   outline: none;
   width: 100%;
+  font-family: "Montserrat", sans-serif;
   font-size: 14px;
   color: #87929b;
 }
@@ -163,8 +169,13 @@
   outline: none;
   width: 100%;
   background: transparent;
+  font-family: "Montserrat", sans-serif;
   font-size: 14px;
   color: #87929b;
+}
+
+.joblist-input-row input::placeholder {
+  font-family: "Montserrat", sans-serif;
 }
 
 .joblist-currency-dropdown {
@@ -177,6 +188,7 @@
   background: #ffffff;
   border-radius: 10px;
   padding: 8px 10px 8px 12px;
+  font-family: "Montserrat", sans-serif;
   font-size: 13px;
   color: #1e2937;
   font-weight: 600;
@@ -296,6 +308,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  font-family: "Montserrat", sans-serif;
 }
 
 .joblist-share-header {
@@ -323,6 +336,7 @@
   justify-content: center;
   padding: 0;
   cursor: pointer;
+  font-family: "Montserrat", sans-serif;
 }
 
 .joblist-share-header button img {
@@ -350,9 +364,14 @@
   border: 1px solid #d7e3f4;
   border-radius: 10px;
   padding: 10px 12px;
+  font-family: "Montserrat", sans-serif;
   font-size: 13px;
   color: #25384f;
   background: #f8fbff;
+}
+
+.joblist-share-link-row input::placeholder {
+  font-family: "Montserrat", sans-serif;
 }
 
 .joblist-share-link-row button,
@@ -361,6 +380,7 @@
   border-radius: 10px;
   background: #0068ce;
   color: #ffffff;
+  font-family: "Montserrat", sans-serif;
   font-size: 13px;
   font-weight: 600;
   padding: 10px 14px;
@@ -379,6 +399,7 @@
 }
 
 .joblist-share-user-wrap label {
+  font-family: "Montserrat", sans-serif;
   font-size: 13px;
   font-weight: 600;
   color: #1e3652;
@@ -389,6 +410,7 @@
   border: 1px solid #d7e3f4;
   border-radius: 10px;
   padding: 10px 12px;
+  font-family: "Montserrat", sans-serif;
   font-size: 13px;
   color: #25384f;
   background: #ffffff;
@@ -409,9 +431,14 @@
   border-right: 0;
   border-radius: 10px 0 0 10px;
   padding: 10px 12px;
+  font-family: "Montserrat", sans-serif;
   font-size: 13px;
   color: #25384f;
   background: #ffffff;
+}
+
+.joblist-share-user-input-wrap input::placeholder {
+  font-family: "Montserrat", sans-serif;
 }
 
 .joblist-share-user-toggle {
@@ -421,6 +448,7 @@
   background: #ffffff;
   color: #425d7a;
   cursor: pointer;
+  font-family: "Montserrat", sans-serif;
 }
 
 .joblist-share-user-list {
@@ -448,6 +476,7 @@
   flex-direction: column;
   gap: 2px;
   cursor: pointer;
+  font-family: "Montserrat", sans-serif;
 }
 
 .joblist-share-user-option:last-child {
@@ -473,6 +502,7 @@
 .joblist-share-user-empty {
   margin: 0;
   padding: 10px 12px;
+  font-family: "Montserrat", sans-serif;
   font-size: 12px;
   color: #607791;
 }
@@ -486,6 +516,7 @@
 .joblist-share-success,
 .joblist-share-error {
   margin: 0;
+  font-family: "Montserrat", sans-serif;
   font-size: 13px;
 }
 
@@ -599,10 +630,16 @@
   background: #ffffff;
   border-radius: 10px;
   padding: 8px 12px;
+  font-family: "Montserrat", sans-serif;
   font-size: 13px;
   color: #1e2937;
   font-weight: 600;
   cursor: pointer;
+}
+
+.joblist-search-field select option,
+.joblist-input-row select option {
+  font-family: "Montserrat", sans-serif;
 }
 
 .joblist-sort-trigger {

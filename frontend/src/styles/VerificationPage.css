@@ -58,8 +58,8 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #1b74cc;
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 999px;
   padding: 6px 14px;
   color: #ffffff;
@@ -129,8 +129,8 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #1b74cc;
+  border: 1px solid rgba(255, 255, 255, 0.24);
   color: #ffffff;
   font-size: 13px;
   font-weight: 800;
@@ -157,13 +157,13 @@
 .verification-step-connector {
   width: 1px;
   height: 28px;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.26);
   margin: 8px 0 8px 19px;
 }
 
 .verification-left-bottom {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #1b74cc;
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 16px;
   padding: 18px 20px;
   display: flex;
@@ -177,7 +177,7 @@
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
-  border: 2px solid rgba(255, 255, 255, 0.28);
+  border: 2px solid rgba(255, 255, 255, 0.4);
 }
 
 .verification-lb-photo img {
@@ -202,13 +202,13 @@
 .verification-lb-text p {
   margin: 0 0 6px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.9);
   line-height: 1.6;
 }
 
 .verification-lb-text strong {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.54);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .verification-right-panel {

@@ -708,6 +708,12 @@ const RecruiterProfilePage: React.FC = () => {
     return `http://localhost:5000${finalUrl}?t=${Date.now()}`;
   };
 
+  const formatRichTextForDisplay = (content: string) => {
+    if (!content) return "";
+    const hasHtmlTag = /<\/?[a-z][\s\S]*>/i.test(content);
+    return hasHtmlTag ? content : content.replace(/\n/g, "<br />");
+  };
+
   // Helper function to safely render HTML content
   const renderAboutContent = (content: string) => {
     if (!content) {
@@ -722,7 +728,7 @@ const RecruiterProfilePage: React.FC = () => {
     return (
       <div
         className="recruiter-profile-about-content"
-        dangerouslySetInnerHTML={{ __html: content }}
+        dangerouslySetInnerHTML={{ __html: formatRichTextForDisplay(content) }}
       />
     );
   };

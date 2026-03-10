@@ -16,7 +16,6 @@ import deco1123 from "../images/Public Page/1_1123.svg";
 import deco1127 from "../images/Public Page/1_1127.svg";
 import deco1133 from "../images/Public Page/1_1133.svg";
 import deco1135 from "../images/Public Page/1_1135.svg";
-import brandGoogle from "../images/Public Page/I1_1145_1_3394.svg";
 
 
 
@@ -92,6 +91,8 @@ const HomePage = () => {
   const [featuredCompanies, setFeaturedCompanies] = useState<CompanySummary[]>(
     [],
   );
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [companiesError, setCompaniesError] = useState("");
   const [totalCompanyVacancies, setTotalCompanyVacancies] = useState(0);
   const [appliedJobs, setAppliedJobs] = useState<Record<string, boolean>>({});
   const [savedJobs, setSavedJobs] = useState<Record<string, boolean>>({});
@@ -124,14 +125,6 @@ const HomePage = () => {
     "candidates" | "recruiters"
   >("candidates");
   const shareUserDropdownRef = useRef<HTMLDivElement | null>(null);
-  const fallbackCompanies: CompanySummary[] = [
-    { name: "Company A", vacancies: 12 },
-    { name: "Company B", vacancies: 10 },
-    { name: "Company C", vacancies: 8 },
-    { name: "Company D", vacancies: 6 },
-    { name: "Company E", vacancies: 4 },
-  ];
-
   const userDataStr = localStorage.getItem("userData");
   let userRole: string | null = null;
   if (userDataStr) {
@@ -177,6 +170,8 @@ const HomePage = () => {
   useEffect(() => {
     const loadFeaturedCompanies = async () => {
       try {
+        setCompaniesLoading(true);
+        setCompaniesError("");
         const response = await fetch(
           "http://localhost:5000/api/jobs/companies-summary?limit=7",
         );
@@ -196,6 +191,9 @@ const HomePage = () => {
       } catch {
         setFeaturedCompanies([]);
         setTotalCompanyVacancies(0);
+        setCompaniesError("No data found currently.");
+      } finally {
+        setCompaniesLoading(false);
       }
     };
 
@@ -215,7 +213,7 @@ const HomePage = () => {
           throw new Error(data?.message || "Failed to load jobs");
         }
 
-        const mappedJobs = (data.jobs || []).map((job: any) => ({
+      const mappedJobs = (data.jobs || []).map((job: any) => ({
           id: job.id || job._id,
           companyName: job.companyName || job.department || "Company",
           jobTitle: job.jobTitle || "Untitled Role",
@@ -227,8 +225,8 @@ const HomePage = () => {
         }));
 
         setJobs(mappedJobs);
-      } catch (err: any) {
-        setJobsError(err?.message || "Failed to load jobs");
+      } catch {
+        setJobsError("No data found currently.");
       } finally {
         setJobsLoading(false);
       }
@@ -344,7 +342,7 @@ const HomePage = () => {
   };
 
   const resolveLogo = (logo?: string) => {
-    if (!logo) return brandGoogle;
+    if (!logo) return "";
     if (logo.startsWith("http")) return logo;
     return `http://localhost:5000${logo.startsWith("/") ? "" : "/"}${logo}`;
   };
@@ -357,12 +355,8 @@ const HomePage = () => {
     return "Remote";
   };
 
-  const displayedCompanies =
-    featuredCompanies.length > 0 ? featuredCompanies : fallbackCompanies;
-  const displayedTotalVacancies =
-    totalCompanyVacancies > 0
-      ? totalCompanyVacancies
-      : fallbackCompanies.reduce((sum, item) => sum + item.vacancies, 0);
+  const displayedCompanies = featuredCompanies;
+  const displayedTotalVacancies = totalCompanyVacancies > 0 ? totalCompanyVacancies : 0;
 
   const candidatePlans: PricingPlan[] = [
     {
@@ -737,36 +731,48 @@ const HomePage = () => {
             </p>
           </div>
 
-          <div className="categories-grid">
-            {displayedCompanies.map((company, index) => (
-              <div className="category-card" key={`${company.name}-${index}`}>
-                <div className="cat-icon">
-                  <img
-                    src={company.logo ? resolveLogo(company.logo) : brandGoogle}
-                    alt={company.name}
-                  />
-                </div>
-                <h3>{company.name}</h3>
-                <span className="vacancy">
-                  {company.vacancies} Available Vacancy
-                </span>
-              </div>
-            ))}
+          {companiesError && !companiesLoading && (
+            <div className="home-empty-state">{companiesError}</div>
+          )}
+          {companiesLoading && (
+            <div className="home-jobs-loading">Loading companies...</div>
+          )}
 
-            <div className="category-card cta-card">
-              <div className="cta-content">
-                <h3>{displayedTotalVacancies.toLocaleString()} +</h3>
-                <p>jobs are waiting for you</p>
-                <button
-                  className="explore-btn"
-                  onClick={() => navigate("/employers")}
-                >
-                  Explore more
-                </button>
+          {!companiesLoading && !companiesError && displayedCompanies.length > 0 && (
+            <div className="categories-grid">
+              {displayedCompanies.map((company, index) => (
+                <div className="category-card" key={`${company.name}-${index}`}>
+                  <div className="cat-icon">
+                    {company.logo ? (
+                      <img src={resolveLogo(company.logo)} alt={company.name} />
+                    ) : (
+                      <span className="cat-icon-fallback">
+                        {(company.name || "C").trim().charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <h3>{company.name}</h3>
+                  <span className="vacancy">
+                    {company.vacancies} Available Vacancy
+                  </span>
+                </div>
+              ))}
+
+              <div className="category-card cta-card">
+                <div className="cta-content">
+                  <h3>{displayedTotalVacancies.toLocaleString()} +</h3>
+                  <p>jobs are waiting for you</p>
+                  <button
+                    className="explore-btn"
+                    onClick={() => navigate("/employers")}
+                  >
+                    Explore more
+                  </button>
+                </div>
               </div>
             </div>
+          )}
           </div>
-        </div>
       </section>
 
       <section id="jobs">
@@ -783,16 +789,26 @@ const HomePage = () => {
           {jobsError && <div className="home-jobs-error">{jobsError}</div>}
           {jobsLoading && <div className="home-jobs-loading">Loading jobs...</div>}
 
-          {!jobsLoading && !jobsError && (
+          {!jobsLoading && !jobsError && jobs.length === 0 && (
+            <div className="home-empty-state">No data found currently.</div>
+          )}
+
+          {!jobsLoading && !jobsError && jobs.length > 0 && (
             <div className="home-jobs-grid">
               {jobs.map((job) => (
                 <article key={job.id} className="joblist-card-item">
                   <div className="joblist-card-top">
-                    <img
-                      src={resolveLogo(job.companyLogo)}
-                      alt={job.companyName}
-                      className="joblist-company-logo"
-                    />
+                    {job.companyLogo ? (
+                      <img
+                        src={resolveLogo(job.companyLogo)}
+                        alt={job.companyName}
+                        className="joblist-company-logo"
+                      />
+                    ) : (
+                      <div className="joblist-company-logo joblist-company-logo-fallback">
+                        {(job.companyName || "C").trim().charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     <div className="joblist-card-actions">
                       {userRole === "candidate" && (
                         <button

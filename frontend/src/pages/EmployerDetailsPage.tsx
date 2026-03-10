@@ -673,7 +673,7 @@ const EmployerDetailsPage = () => {
   };
 
   const handleExploreMore = () => {
-    navigate("/employers");
+    navigate("/jobs");
   };
 
   const handleImageError = (
@@ -686,6 +686,12 @@ const EmployerDetailsPage = () => {
     if (!logo) return defaultLogo;
     if (logo.startsWith("http")) return logo;
     return `http://localhost:5000${logo.startsWith("/") ? "" : "/"}${logo}`;
+  };
+
+  const formatRichTextForDisplay = (content?: string) => {
+    if (!content) return "";
+    const hasHtmlTag = /<\/?[a-z][\s\S]*>/i.test(content);
+    return hasHtmlTag ? content : content.replace(/\n/g, "<br />");
   };
 
   const resolveProfileImage = (profilePicture?: string) => {
@@ -1230,7 +1236,9 @@ const EmployerDetailsPage = () => {
                     <div className="employer-details-overview-text">
                       {company.about ? (
                         <div
-                          dangerouslySetInnerHTML={{ __html: company.about }}
+                          dangerouslySetInnerHTML={{
+                            __html: formatRichTextForDisplay(company.about),
+                          }}
                         />
                       ) : (
                         <p>No company description available.</p>

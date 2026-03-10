@@ -967,6 +967,19 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
     setIsMobileUserDropdownOpen(false);
   };
 
+  const handleMobileNotificationHistoryClick = () => {
+    if (isAdminUser) {
+      navigate("/admin/contact-messages");
+    } else if (isRecruiter) {
+      navigate("/recruiter/notifications");
+    } else {
+      navigate("/candidate/notifications");
+    }
+    closeMobileMenu();
+    setIsUserMenuOpen(false);
+    setIsMobileUserDropdownOpen(false);
+  };
+
   // Determine if user is recruiter
   const isRecruiter = userData?.role === "recruiter";
   const isCandidate = userData?.role === "candidate";
@@ -1198,14 +1211,14 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
         )}
         {showNotificationIcon && (
           <li>
-            <a
-              href="#"
+            <button
+              type="button"
               className="mobile-action-icon"
-              onClick={closeMobileMenu}
+              onClick={handleMobileNotificationHistoryClick}
             >
               <img src={notificationIcon} alt="Notifications" />
               Notifications{unreadNotificationCount > 0 ? ` (${unreadNotificationCount})` : ""}
-            </a>
+            </button>
           </li>
         )}
         <li>

@@ -928,14 +928,18 @@
 }
 
 .recruiter-profile-about-content p {
-  margin-bottom: 15px;
+  margin: 0 0 15px;
   line-height: 1.6;
+}
+
+.recruiter-profile-about-content p:last-child {
+  margin-bottom: 0;
 }
 
 .recruiter-profile-about-content ul,
 .recruiter-profile-about-content ol {
-  margin-left: 20px;
-  margin-bottom: 15px;
+  margin: 0 0 15px 20px;
+  padding: 0;
 }
 
 .recruiter-profile-about-content li {
@@ -968,6 +972,18 @@
   margin-right: 0;
   color: #666;
   font-style: italic;
+}
+
+.recruiter-profile-about-content .ql-align-center {
+  text-align: center;
+}
+
+.recruiter-profile-about-content .ql-align-right {
+  text-align: right;
+}
+
+.recruiter-profile-about-content .ql-align-justify {
+  text-align: justify;
 }
 
 /* Ensure the text wraps properly */

@@ -141,10 +141,15 @@
   font-size: 16px;
   color: #1e2937;
   width: 100%;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 500;
+  background: transparent;
 }
 
 .home-page .search-input-group input::placeholder {
   color: #87929b;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 500;
 }
 
 .home-page .divider {
@@ -338,6 +343,33 @@
   width: 85px;
   height: 85px;
   margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-page .cat-icon-fallback {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #e9f1fc;
+  color: #0068ce;
+  font-size: 24px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-page .home-empty-state {
+  border: 1px dashed #bfd1e8;
+  border-radius: 12px;
+  padding: 22px 16px;
+  text-align: center;
+  color: #5f7696;
+  font-size: 15px;
+  font-weight: 500;
+  background: #f7fbff;
 }
 
 .home-page .category-card h3 {
@@ -442,6 +474,17 @@
   width: 92px;
   height: 34px;
   object-fit: contain;
+}
+
+.home-page .joblist-company-logo-fallback {
+  border-radius: 8px;
+  background: #e9f1fc;
+  color: #0068ce;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .home-page .joblist-card-actions {
@@ -911,6 +954,10 @@
 .home-page .price-card.featured .period-sm,
 .home-page .price-card.featured .features li {
   color: #fff;
+}
+
+.home-page .price-card.featured .features li img {
+  filter: brightness(0) invert(1);
 }
 
 .home-page .price-amount {

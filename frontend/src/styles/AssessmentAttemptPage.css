@@ -16,6 +16,48 @@
   margin: 0 auto;
 }
 
+.assessment-submit-toast {
+  position: fixed;
+  top: 92px;
+  right: 16px;
+  z-index: 140;
+  width: min(360px, calc(100vw - 24px));
+  background: #ffffff;
+  border: 1px solid #dfe7f1;
+  border-radius: 12px;
+  box-shadow: 0 14px 30px rgba(16, 24, 40, 0.2);
+  padding: 12px 14px 14px;
+}
+
+.assessment-submit-toast-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #334155;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.assessment-submit-toast-close:hover {
+  background: #e2e8f0;
+}
+
+.assessment-submit-toast-message {
+  margin: 0;
+  padding-right: 22px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #0f283c;
+  font-weight: 500;
+  font-family: "Montserrat", sans-serif;
+}
+
 .assessment-attempt-card {
   background: #ffffff;
   border-radius: 18px;

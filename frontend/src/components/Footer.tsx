@@ -102,22 +102,22 @@ const Footer = () => {
             Copyright {String.fromCharCode(169)}{currentYear} <a href="#">HireLink</a>. All Rights Reserved
           </p>
           <div className="social-links">
-            <a href="#" className="social-icon" aria-label="Facebook">
+            <Link to="/under-construction/desktop" className="social-icon" aria-label="Facebook">
               <img src={socialBg1} alt="" className="social-bg" />
               <img src={socialFg1} alt="Facebook icon" className="social-fg" />
-            </a>
-            <a href="#" className="social-icon" aria-label="Twitter">
+            </Link>
+            <Link to="/under-construction/desktop" className="social-icon" aria-label="Twitter">
               <img src={socialBg2} alt="" className="social-bg" />
               <img src={socialFg2} alt="Twitter icon" className="social-fg" />
-            </a>
-            <a href="#" className="social-icon" aria-label="Instagram">
+            </Link>
+            <Link to="/under-construction/desktop" className="social-icon" aria-label="Instagram">
               <img src={socialBg3} alt="" className="social-bg" />
               <img src={socialFg3} alt="Instagram icon" className="social-fg" />
-            </a>
-            <a href="#" className="social-icon" aria-label="TikTok">
+            </Link>
+            <Link to="/under-construction/desktop" className="social-icon" aria-label="TikTok">
               <img src={socialBg4} alt="" className="social-bg" />
               <img src={socialFg4} alt="TikTok icon" className="social-fg" />
-            </a>
+            </Link>
           </div>
         </div>
       </div>

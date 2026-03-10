@@ -2,6 +2,7 @@
   display: flex;
   min-height: 100vh;
   background: #f2f6fb;
+  overflow-x: clip;
 }
 
 .recruiter-joblist-main {
@@ -9,10 +10,29 @@
   display: flex;
   flex-direction: column;
   background: #f2f6fb;
+  min-width: 0;
+}
+
+.recruiter-joblist-topbar-wrapper {
+  position: fixed;
+  top: 0;
+  left: 290px;
+  right: 0;
+  z-index: 100;
+  background: #ffffff;
+  border-bottom: 1px solid #dcdcdc;
+}
+
+.recruiter-joblist-scrollable-content {
+  flex: 1;
+  background: #f2f6fb;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .recruiter-joblist-content {
   padding: 32px;
+  padding-top: 124px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -278,9 +298,37 @@
   transform: translateX(20px);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
   .recruiter-joblist-content {
     padding: 24px;
+    padding-top: 116px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .recruiter-joblist-layout {
+    flex-direction: column;
+  }
+
+  .recruiter-joblist-topbar-wrapper {
+    left: 0;
+    right: 0;
+  }
+
+  .recruiter-joblist-scrollable-content {
+    margin-top: 84px;
+  }
+
+  .recruiter-joblist-content {
+    padding: 20px;
+    padding-top: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .recruiter-joblist-content {
+    padding: 15px;
+    gap: 18px;
   }
 
   .recruiter-joblist-grid {
@@ -295,5 +343,15 @@
 
   .recruiter-joblist-page-info {
     margin-left: 0;
+  }
+
+  .recruiter-joblist-page-controls {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .recruiter-joblist-card-header {
+    flex-wrap: wrap;
   }
 }

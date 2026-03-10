@@ -13,7 +13,6 @@ import registerAvatar2 from "../images/Login Page Images/avatar-2.png";
 import registerAvatar3 from "../images/Login Page Images/avatar-3.png";
 import registerAvatar4 from "../images/Login Page Images/avatar-4.png";
 import searchIcon from "../images/Job List Page Images/search.svg";
-import testimonialStar from "../images/Public Page/I1_1436_1_3469.svg";
 
 const Register = () => {
   const [userType, setUserType] = useState<"candidate" | "recruiter">(
@@ -340,27 +339,6 @@ const Register = () => {
               </div>
             </div>
           </div>
-
-          <div className="register-left-bottom">
-            <div className="register-lb-photo">
-              <img src={registerAvatar1} alt="Rashed Kabir" />
-            </div>
-            <div className="register-lb-text">
-              <div className="register-lb-name">Rashed Kabir</div>
-              <div className="register-lb-stars">
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-              </div>
-              <p>
-                "HireLink matched me with my dream job in under 2 weeks. The AI
-                recommendations were incredibly accurate!"
-              </p>
-              <strong>Rashed Kabir · Lead Designer, Google</strong>
-            </div>
-          </div>
         </section>
 
         <section className="register-right-panel">
@@ -554,3 +532,4 @@ const Register = () => {
 };
 
 export default Register;
+

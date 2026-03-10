@@ -267,16 +267,19 @@ const RecruiterFriendRequestsPage = () => {
     <div className="recruiter-friend-layout">
       <RecruiterSidebar />
       <main className="recruiter-friend-main">
-        <RecruiterTopBar
-          showSearch
-          searchPlaceholder={
-            activeTab === "requests"
-              ? "Search requests by user name..."
-              : "Search connected users by name..."
-          }
-          onSearch={setTopSearch}
-        />
-        <section className="recruiter-friend-content">
+        <div className="recruiter-friend-topbar-wrapper">
+          <RecruiterTopBar
+            showSearch
+            searchPlaceholder={
+              activeTab === "requests"
+                ? "Search requests by user name..."
+                : "Search connected users by name..."
+            }
+            onSearch={setTopSearch}
+          />
+        </div>
+        <div className="recruiter-friend-scrollable-content">
+          <section className="recruiter-friend-content">
           <header className="recruiter-friend-header">
             <h1>Friend Requests</h1>
             <p>Accept, remove, or keep pending requests as you prefer.</p>
@@ -492,9 +495,10 @@ const RecruiterFriendRequestsPage = () => {
               </div>
             </div>
           )}
-        </section>
-              <PortalFooter />
-</main>
+          </section>
+          <PortalFooter />
+        </div>
+      </main>
     </div>
   );
 };

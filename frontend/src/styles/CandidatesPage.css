@@ -1,89 +1,98 @@
 .candidates-page {
   background: #ffffff;
   min-height: 100vh;
+  font-family: "Montserrat", sans-serif;
 }
 
 .candidates-hero {
-  position: relative;
-  overflow: hidden;
-  padding: 80px 12%;
-  background: #fff7f1;
-}
-
-.candidates-hero-bg {
-  display: none;
-}
-
-.candidates-hero-bg.left {
-  left: 0;
-}
-
-.candidates-hero-bg.right {
-  right: 0;
-}
-
-.candidates-hero-circle {
-  display: none;
-}
-
-.candidates-hero-icon {
-  display: none;
-}
-
-.candidates-hero-icon.icon-1 {
-  left: 10%;
-  top: 50%;
-}
-
-.candidates-hero-icon.icon-2 {
-  right: 12%;
-  top: 30%;
+  background: #fff7ef;
+  padding: 32px 20px 20px;
 }
 
 .candidates-hero-inner {
-  position: relative;
-  z-index: 1;
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.candidates-hero-text {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.candidates-hero-text h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f283c;
+  font-family: "Montserrat", sans-serif;
+}
+
+.candidates-hero-text p {
+  margin: 0;
+  color: #6c86c2;
+  font-size: 14px;
+  font-family: "Montserrat", sans-serif;
+}
+
+.candidates-hero-search {
+  max-width: 1440px;
+  margin: 20px auto 0;
+}
+
+.candidates-search-pill {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 14px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+  gap: 10px;
+  box-shadow: 0 10px 30px rgba(15, 40, 60, 0.08);
+  flex-wrap: wrap;
 }
 
-.candidates-hero-content {
-  text-align: left;
-}
-
-.candidates-hero-content h1 {
-  margin: 0;
-  font-size: 32px;
-  color: #0f283c;
-}
-
-.candidates-hero-content p {
-  margin: 10px 0 0;
-  color: #6b7280;
-  font-size: 15px;
-}
-
-.candidates-search {
-  margin: -32px 8% 24px;
-  background: #ffffff;
-  padding: 14px 18px;
-  border-radius: 16px;
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
-  position: relative;
-  z-index: 2;
-}
-
-.candidates-search input {
-  width: 100%;
-  border: 1px solid #d7dfea;
+.candidates-search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f7f9fc;
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 12px 14px;
+  flex: 1 1 180px;
+}
+
+.candidates-search-field img {
+  width: 16px;
+  height: 16px;
+}
+
+.candidates-search-field input {
+  width: 100%;
+  border: 1px solid #d7e0ef;
+  outline: none;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 10px 36px 10px 12px;
   font-size: 14px;
-  color: #1f2937;
+  color: #2c3a4b;
+  font-family: "Montserrat", sans-serif;
+}
+
+.candidates-search-field input::placeholder {
+  font-family: "Montserrat", sans-serif;
+}
+
+.candidates-search-btn {
+  background: #7c5cff;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 14px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: "Montserrat", sans-serif;
+  cursor: pointer;
 }
 
 .candidates-body {
@@ -120,6 +129,11 @@
   padding: 8px 12px;
   font-size: 13px;
   color: #1f2937;
+  font-family: "Montserrat", sans-serif;
+}
+
+.candidates-filter-card input::placeholder {
+  font-family: "Montserrat", sans-serif;
 }
 
 .candidates-grid {
@@ -454,11 +468,7 @@
 
 @media (max-width: 1100px) {
   .candidates-hero {
-    padding: 70px 8%;
-  }
-
-  .candidates-search {
-    margin: -28px 8% 20px;
+    padding: 28px 16px 18px;
   }
 
   .candidates-body {
@@ -478,11 +488,11 @@
 
 @media (max-width: 768px) {
   .candidates-hero {
-    padding: 60px 6%;
+    padding: 24px 12px 16px;
   }
 
-  .candidates-search {
-    margin: -24px 6% 20px;
+  .candidates-search-pill {
+    padding: 12px;
   }
 
   .candidates-body {
@@ -506,5 +516,27 @@
 
   .candidates-page-info {
     align-self: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .candidates-search-pill {
+    gap: 8px;
+  }
+
+  .candidates-search-field {
+    flex: 1 1 100%;
+  }
+
+  .candidates-search-btn {
+    width: 100%;
+  }
+
+  .candidates-hero-text h1 {
+    font-size: 24px;
+  }
+
+  .candidates-hero-text p {
+    font-size: 13px;
   }
 }

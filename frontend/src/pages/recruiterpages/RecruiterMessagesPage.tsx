@@ -19,16 +19,20 @@ const RecruiterMessagesPage = () => {
   };
 
   return (
-    <div className="recruiter-friend-layout">
+    <div className="recruiter-messages-layout">
       <RecruiterSidebar />
       <main className="recruiter-messages-main-content">
-        <RecruiterTopBar />
-        <MessagePanel
-          selectedUserIdFromQuery={selectedUserId}
-          onSelectUser={handleSelectUser}
-        />
-              <PortalFooter />
-</main>
+        <div className="recruiter-messages-topbar-wrapper">
+          <RecruiterTopBar />
+        </div>
+        <div className="recruiter-messages-scrollable-content">
+          <MessagePanel
+            selectedUserIdFromQuery={selectedUserId}
+            onSelectUser={handleSelectUser}
+          />
+          <PortalFooter />
+        </div>
+      </main>
     </div>
   );
 };

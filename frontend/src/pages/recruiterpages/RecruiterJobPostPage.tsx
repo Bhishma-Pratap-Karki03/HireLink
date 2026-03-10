@@ -26,8 +26,6 @@ import addStageIcon from "../../images/Recruiter Job Post Page Images/addIcon.sv
 
 // New preview section images
 import companyLogo from "../../images/Recruiter Job Post Page Images/companyLogo.png";
-import bookmarkFgIcon from "../../images/Recruiter Job Post Page Images/bookmarkIcon.svg";
-import shareFgIcon from "../../images/Recruiter Job Post Page Images/shareFg.svg";
 import locationIcon from "../../images/Recruiter Job Post Page Images/location.svg";
 import timeIcon from "../../images/Recruiter Job Post Page Images/timeIcon.svg";
 import successIcon from "../../images/Recruiter Job Post Page Images/successIcon.svg";
@@ -64,6 +62,7 @@ type AssessmentForm = {
 
 
 const RecruiterJobPostPage: React.FC = () => {
+  const MAX_INTERVIEW_STAGES = 6;
   const navigate = useNavigate();
   const { id: jobIdParam } = useParams();
   const isEditMode = Boolean(jobIdParam);
@@ -97,6 +96,7 @@ const RecruiterJobPostPage: React.FC = () => {
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState("");
+  const [submitToast, setSubmitToast] = useState("");
   const [hasPosted, setHasPosted] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
   const [assessmentEnabled, setAssessmentEnabled] = useState(false);
@@ -235,6 +235,14 @@ const RecruiterJobPostPage: React.FC = () => {
   const isFormComplete = missingFields.length === 0;
   const shouldShowSuccess = hasPosted || submitSuccess !== "";
 
+  useEffect(() => {
+    if (!submitToast) return;
+    const timer = window.setTimeout(() => {
+      setSubmitToast("");
+    }, 2200);
+    return () => window.clearTimeout(timer);
+  }, [submitToast]);
+
   const loadAssessmentById = async (
     assessmentId: string,
     mode: "view" | "edit" = "view",
@@ -311,7 +319,9 @@ const RecruiterJobPostPage: React.FC = () => {
         );
         setInterviewStages(
           Array.isArray(job.interviewStages) && job.interviewStages.length > 0
-            ? job.interviewStages.map((stage: any) => stage.name || "")
+            ? job.interviewStages
+                .slice(0, MAX_INTERVIEW_STAGES)
+                .map((stage: any) => stage.name || "")
             : [""]
         );
         setAssessmentEnabled(Boolean(job.assessmentId));
@@ -462,7 +472,9 @@ const RecruiterJobPostPage: React.FC = () => {
   };
 
   const addStage = () => {
-    setInterviewStages((prev) => [...prev, ""]);
+    setInterviewStages((prev) =>
+      prev.length >= MAX_INTERVIEW_STAGES ? prev : [...prev, ""]
+    );
     setHasPosted(false);
   };
 
@@ -660,6 +672,7 @@ const RecruiterJobPostPage: React.FC = () => {
           interviewStages: interviewStages
             .map((stage) => stage.trim())
             .filter((stage) => stage)
+            .slice(0, MAX_INTERVIEW_STAGES)
             .map((stage) => ({ name: stage })),
           assessmentId: assessmentEnabled ? selectedAssessmentId : null,
           assessmentRequired: assessmentEnabled ? assessmentRequired : false,
@@ -674,15 +687,16 @@ const RecruiterJobPostPage: React.FC = () => {
       setSubmitSuccess(
         isEditMode ? "Job updated successfully!" : "Job posted successfully!"
       );
+      setSubmitToast(
+        isEditMode ? "Job updated successfully!" : "Job posted successfully!"
+      );
       setHasPosted(true);
-      if (isEditMode) {
-        setTimeout(() => {
-          navigate("/recruiter/job-postings");
-        }, 800);
-      } else {
-        resetForm();
+      setTimeout(() => {
+        if (!isEditMode) {
+          resetForm();
+        }
         navigate("/recruiter/job-postings");
-      }
+      }, 900);
     } catch (error: any) {
       setSubmitError(error.message || "Failed to post job");
       setSubmitSuccess("");
@@ -912,6 +926,9 @@ const RecruiterJobPostPage: React.FC = () => {
       setAssessmentSubmitSuccess(
         isUpdate ? "Assessment updated successfully." : "Assessment created successfully.",
       );
+      setSubmitToast(
+        isUpdate ? "Assessment updated successfully." : "Assessment created successfully.",
+      );
       setAssessmentMode("view");
     } catch (err: any) {
       setAssessmentSubmitError(err?.message || "Failed to save assessment");
@@ -973,6 +990,19 @@ const RecruiterJobPostPage: React.FC = () => {
           {/* Scrollable Content */}
           <div className="recruiter-postjob-scrollable-content">
             <div className="recruiter-postjob-content-wrapper">
+              {submitToast && (
+                <div className="recruiter-jobpost-toast">
+                  <button
+                    type="button"
+                    className="recruiter-jobpost-toast-close"
+                    onClick={() => setSubmitToast("")}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                  <p className="recruiter-jobpost-toast-message">{submitToast}</p>
+                </div>
+              )}
               {/* Page Title */}
                 <div className="recruiter-postjob-page-title-area">
                   <h1>{isEditMode ? "Edit Job Posting" : "Post a New Job"}</h1>
@@ -1500,6 +1530,9 @@ const RecruiterJobPostPage: React.FC = () => {
                 <div className="recruiter-postjob-card-body">
                   <div className="recruiter-postjob-form-group">
                     <label>Interview Stage</label>
+                    <p className="recruiter-postjob-interview-note">
+                      Maximum 6 interview stages are allowed.
+                    </p>
                     <div className="recruiter-postjob-dynamic-list">
                       {interviewStages.map((stage, index) => (
                         <div
@@ -1537,9 +1570,14 @@ const RecruiterJobPostPage: React.FC = () => {
                         type="button"
                         className="recruiter-postjob-add-btn recruiter-postjob-mt-20"
                         onClick={addStage}
+                        disabled={interviewStages.length >= MAX_INTERVIEW_STAGES}
                       >
                         <img src={addStageIcon} alt="Plus" />
-                        <span>Add Stages</span>
+                        <span>
+                          {interviewStages.length >= MAX_INTERVIEW_STAGES
+                            ? "Maximum 6 stages reached"
+                            : "Add Stages"}
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -1552,86 +1590,93 @@ const RecruiterJobPostPage: React.FC = () => {
                   <h3>Assessment / Quiz</h3>
                 </div>
                 <div className="recruiter-postjob-card-body recruiter-postjob-assessment-body">
-                  <div className="recruiter-postjob-form-group">
-                    <label>Attach Assessment to This Job</label>
-                    <div className="recruiter-postjob-toggle-row">
-                      <input
-                        type="checkbox"
-                        checked={assessmentEnabled}
-                        onChange={(e) => {
-                          setAssessmentEnabled(e.target.checked);
-                          setAssessmentMode("none");
-                          if (!e.target.checked) {
-                            setSelectedAssessmentId("");
-                            setAssessmentRequired(false);
+                  <div className="recruiter-postjob-grid-2-col recruiter-postjob-assessment-top-row">
+                    <div className="recruiter-postjob-form-group">
+                      <label>Attach Assessment to This Job</label>
+                      <div className="recruiter-postjob-toggle-row">
+                        <input
+                          type="checkbox"
+                          checked={assessmentEnabled}
+                          onChange={(e) => {
+                            setAssessmentEnabled(e.target.checked);
                             setAssessmentMode("none");
-                          }
-                        }}
-                      />
-                      <span>
-                        Attach an assessment to this job (optional or
-                        mandatory).
-                      </span>
+                            if (!e.target.checked) {
+                              setSelectedAssessmentId("");
+                              setAssessmentRequired(false);
+                              setAssessmentMode("none");
+                            }
+                          }}
+                        />
+                        <span>
+                          Attach an assessment to this job (optional or
+                          mandatory).
+                        </span>
+                      </div>
                     </div>
+
+                    {assessmentEnabled && (
+                      <div className="recruiter-postjob-form-group">
+                        <label>Assessment Requirement</label>
+                        <div className="recruiter-postjob-segmented-control">
+                          <button
+                            className={`recruiter-postjob-segment ${assessmentRequired ? "active" : ""}`}
+                            onClick={() => setAssessmentRequired(true)}
+                          >
+                            Mandatory
+                          </button>
+                          <button
+                            className={`recruiter-postjob-segment ${!assessmentRequired ? "active" : ""}`}
+                            onClick={() => setAssessmentRequired(false)}
+                          >
+                            Optional
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {assessmentEnabled && (
                     <>
-                      <div className="recruiter-postjob-grid-2-col">
-                        <div className="recruiter-postjob-form-group">
-                          <label>Assessment Requirement</label>
-                          <div className="recruiter-postjob-segmented-control">
-                            <button
-                              className={`recruiter-postjob-segment ${assessmentRequired ? "active" : ""}`}
-                              onClick={() => setAssessmentRequired(true)}
-                            >
-                              Mandatory
-                            </button>
-                            <button
-                              className={`recruiter-postjob-segment ${!assessmentRequired ? "active" : ""}`}
-                              onClick={() => setAssessmentRequired(false)}
-                            >
-                              Optional
-                            </button>
-                          </div>
-                        </div>
-                        <div className="recruiter-postjob-form-group">
-                          <label>Assessment</label>
-                          {!selectedAssessmentId ? (
+                      <div className="recruiter-postjob-form-group">
+                        <label>Assessment</label>
+                        {!selectedAssessmentId ? (
+                          <button
+                            type="button"
+                            className="recruiter-postjob-add-btn"
+                            onClick={() => {
+                              resetAssessmentForm();
+                              setAssessmentMode("create");
+                            }}
+                          >
+                            <img src={addRequirementIcon} alt="Plus" />
+                            <span>Create Assessment</span>
+                          </button>
+                        ) : (
+                          <div className="recruiter-postjob-segmented-control recruiter-postjob-assessment-viewedit-row">
                             <button
                               type="button"
-                              className="recruiter-postjob-add-btn"
-                              onClick={() => {
-                                resetAssessmentForm();
-                                setAssessmentMode("create");
-                              }}
+                              className={`recruiter-postjob-segment ${
+                                assessmentMode === "view" ? "active" : ""
+                              }`}
+                              onClick={() =>
+                                loadAssessmentById(selectedAssessmentId, "view")
+                              }
                             >
-                              <img src={addRequirementIcon} alt="Plus" />
-                              <span>Create Assessment</span>
+                              View Assessment
                             </button>
-                          ) : (
-                            <div className="recruiter-postjob-assessment-actions">
-                              <button
-                                type="button"
-                                className="recruiter-postjob-add-btn"
-                                onClick={() =>
-                                  loadAssessmentById(selectedAssessmentId, "view")
-                                }
-                              >
-                                <span>View Assessment</span>
-                              </button>
-                              <button
-                                type="button"
-                                className="recruiter-postjob-add-btn"
-                                onClick={() =>
-                                  loadAssessmentById(selectedAssessmentId, "edit")
-                                }
-                              >
-                                <span>Edit Assessment</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                            <button
+                              type="button"
+                              className={`recruiter-postjob-segment ${
+                                assessmentMode === "edit" ? "active" : ""
+                              }`}
+                              onClick={() =>
+                                loadAssessmentById(selectedAssessmentId, "edit")
+                              }
+                            >
+                              Edit Assessment
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {assessmentMode !== "none" && (
@@ -1684,7 +1729,7 @@ const RecruiterJobPostPage: React.FC = () => {
                                   { value: "quiz", label: "Quiz (MCQ)" },
                                   {
                                     value: "writing",
-                                    label: "Writing Assignment",
+                                    label: "Writing",
                                   },
                                   { value: "task", label: "Task-Based" },
                                 ].map((item) => (
@@ -2216,14 +2261,6 @@ const RecruiterJobPostPage: React.FC = () => {
                             alt={companyName}
                             className="joblist-company-logo"
                           />
-                          <div className="joblist-card-actions">
-                            <button className="joblist-icon-btn">
-                              <img src={bookmarkFgIcon} alt="Bookmark" />
-                            </button>
-                            <button className="joblist-icon-btn">
-                              <img src={shareFgIcon} alt="Share" />
-                            </button>
-                          </div>
                         </div>
                         <div className="joblist-card-company">{companyName}</div>
                         <div className="joblist-card-meta">

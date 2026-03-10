@@ -3,11 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../styles/CandidatesPage.css";
-import heroBgLeft from "../images/Employers Page Images/8_189.svg";
-import heroBgRight from "../images/Employers Page Images/8_197.svg";
-import heroCircle from "../images/Employers Page Images/8_205.svg";
-import heroIcon1 from "../images/Employers Page Images/8_208.svg";
-import heroIcon2 from "../images/Employers Page Images/8_209.svg";
+import searchIcon from "../images/Employers Page Images/8_285.svg";
 import defaultAvatar from "../images/Register Page Images/Default Profile.webp";
 import connectIcon from "../images/Employers Page Images/connect-icon.png";
 import pendingIcon from "../images/Employers Page Images/pending-icon.png";
@@ -85,6 +81,7 @@ const CandidatesPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [skillFilter, setSkillFilter] = useState("");
   const [minExperience, setMinExperience] = useState("");
@@ -351,30 +348,49 @@ const CandidatesPage = () => {
     [totalPages],
   );
 
+  const applySearch = () => {
+    setSearch(searchInput.trim());
+    setCurrentPage(1);
+  };
+
   return (
     <div className="candidates-page">
       <Navbar />
       <section className="candidates-hero">
-        <img src={heroBgLeft} alt="" className="candidates-hero-bg left" />
-        <img src={heroBgRight} alt="" className="candidates-hero-bg right" />
-        <img src={heroCircle} alt="" className="candidates-hero-circle" />
-        <img src={heroIcon1} alt="" className="candidates-hero-icon icon-1" />
-        <img src={heroIcon2} alt="" className="candidates-hero-icon icon-2" />
         <div className="candidates-hero-inner">
-          <div className="candidates-hero-content">
-            <h1>Browse Candidates</h1>
-            <p>Find skilled candidates and explore their profiles.</p>
+          <div className="candidates-hero-text">
+            <h1>Find Skilled Candidates for Your Team</h1>
+            <p>
+              Discover verified profiles, review key skills, and connect with
+              candidates who match your hiring needs.
+            </p>
           </div>
         </div>
-      </section>
-
-      <section className="candidates-search">
-        <input
-          type="text"
-          placeholder="Search by name, title, or skill"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div className="candidates-hero-search">
+          <div className="candidates-search-pill">
+            <div className="candidates-search-field">
+              <img src={searchIcon} alt="Search" />
+              <input
+                type="text"
+                placeholder="Search by name, title, or skill"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    applySearch();
+                  }
+                }}
+              />
+            </div>
+            <button
+              type="button"
+              className="candidates-search-btn"
+              onClick={applySearch}
+            >
+              Search
+            </button>
+          </div>
+        </div>
       </section>
 
       <section className="candidates-body">

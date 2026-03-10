@@ -5,7 +5,7 @@ const generateToken = (userId) => {
     { id: userId },
     process.env.JWT_SECRET ||
       "HireLink_Development_Secret_2024_Change_In_Production",
-    { expiresIn: "360000s" }
+    { expiresIn: "2h" }
   );
 };
 

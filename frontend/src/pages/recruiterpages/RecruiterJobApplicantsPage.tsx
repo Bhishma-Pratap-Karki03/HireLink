@@ -285,12 +285,15 @@ const RecruiterJobApplicantsPage = () => {
     <div className="recruiter-applicants-layout">
       <RecruiterSidebar />
       <main className="recruiter-applicants-main">
-        <RecruiterTopBar
-          showSearch
-          searchPlaceholder="Search applicants by name or email..."
-          onSearch={setSearchQuery}
-        />
-        <div className="recruiter-applicants-content">
+        <div className="recruiter-applicants-topbar-wrapper">
+          <RecruiterTopBar
+            showSearch
+            searchPlaceholder="Search applicants by name or email..."
+            onSearch={setSearchQuery}
+          />
+        </div>
+        <div className="recruiter-applicants-scrollable-content">
+          <div className="recruiter-applicants-content">
           <div className="recruiter-applicants-header">
             <div>
               <h1>Applicants</h1>
@@ -444,8 +447,9 @@ const RecruiterJobApplicantsPage = () => {
             navigate(`/recruiter/job-postings/${id}/applicants/${applicationId}/assessment`)
           }
         />
-              <PortalFooter />
-</main>
+        <PortalFooter />
+        </div>
+      </main>
     </div>
   );
 };

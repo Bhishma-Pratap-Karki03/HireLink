@@ -3,8 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../styles/ForgotPassword.css";
-import loginAvatar1 from "../images/Login Page Images/avatar-1.jpg";
-import testimonialStar from "../images/Public Page/I1_1436_1_3469.svg";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -131,25 +129,6 @@ const ForgotPassword = () => {
             </div>
           </div>
 
-          <div className="forgot-password-left-bottom">
-            <div className="forgot-password-lb-photo">
-              <img src={loginAvatar1} alt="Sumin Paras" />
-            </div>
-            <div className="forgot-password-lb-text">
-              <div className="forgot-password-lb-stars">
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-              </div>
-              <p>
-                &quot;Got back into my account in under 2 minutes. The reset
-                process is seamless and super fast!&quot;
-              </p>
-              <strong>Sumin Paras - Product Manager, Alpine F1</strong>
-            </div>
-          </div>
         </section>
 
         <section className="forgot-password-right-panel">

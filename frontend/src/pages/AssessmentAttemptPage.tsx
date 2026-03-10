@@ -64,6 +64,7 @@ const AssessmentAttemptPage = () => {
   const [remainingMs, setRemainingMs] = useState(0);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [submitToast, setSubmitToast] = useState("");
   const [attemptSource, setAttemptSource] = useState<"admin" | "recruiter">(
     "admin",
   );
@@ -316,7 +317,8 @@ const AssessmentAttemptPage = () => {
             }
           : prev,
       );
-      setMessage("Assessment submitted successfully.");
+      setMessage("");
+      setSubmitToast("Assessment submitted successfully.");
       setTimeout(() => {
         navigate(backTarget);
       }, 1200);
@@ -340,6 +342,14 @@ const AssessmentAttemptPage = () => {
       }
     };
   }, [attempt?.status]);
+
+  useEffect(() => {
+    if (!submitToast) return;
+    const timer = window.setTimeout(() => {
+      setSubmitToast("");
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [submitToast]);
 
   const formatTime = (ms: number) => {
     const totalSeconds = Math.max(Math.floor(ms / 1000), 0);
@@ -418,6 +428,19 @@ const AssessmentAttemptPage = () => {
       <Navbar />
       <section className="assessment-attempt-content">
         <div className="assessment-attempt-container">
+          {submitToast && (
+            <div className="assessment-submit-toast">
+              <button
+                type="button"
+                className="assessment-submit-toast-close"
+                onClick={() => setSubmitToast("")}
+                aria-label="Close"
+              >
+                ×
+              </button>
+              <p className="assessment-submit-toast-message">{submitToast}</p>
+            </div>
+          )}
           {loading && <div className="assessment-state">Loading...</div>}
           {error && !loading && (
             <div className="assessment-state assessment-error">{error}</div>
