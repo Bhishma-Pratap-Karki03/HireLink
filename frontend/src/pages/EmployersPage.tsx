@@ -141,9 +141,9 @@ const EmployersPage = () => {
       } else {
         throw new Error(data.message || "Failed to fetch companies");
       }
-    } catch (err: any) {
-      console.error("Error fetching companies:", err);
-      setError(err.message || "Failed to load companies. Please try again.");
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+      setError("No data found currently.");
 
       // Set empty array on error
       setCompanies([]);
@@ -448,11 +448,6 @@ const EmployersPage = () => {
   const selectedSortLabel =
     sortOptions.find((option) => option.value === sortBy)?.label || "Select";
 
-  // Handle retry if there's an error
-  const handleRetry = () => {
-    fetchCompanies();
-  };
-
   // Handle image error - fallback to default logo
   const handleImageError = (
     e: React.SyntheticEvent<HTMLImageElement, Event>
@@ -690,15 +685,7 @@ const EmployersPage = () => {
 
             {/* Error State */}
             {error && !loading && (
-              <div className="employerspublic-error">
-                <p>{error}</p>
-                <button
-                  onClick={handleRetry}
-                  className="employerspublic-btn-retry"
-                >
-                  Retry
-                </button>
-              </div>
+              <div className="public-empty-state">{error}</div>
             )}
 
             {/* Companies Grid */}
@@ -869,8 +856,8 @@ const EmployersPage = () => {
                       );
                     })
                   ) : (
-                    <div className="employerspublic-no-data">
-                      <p>No companies found in the database.</p>
+                    <div className="public-empty-state">
+                      No data found currently.
                     </div>
                   )}
                 </div>

@@ -4,6 +4,7 @@ const User = require("../models/userModel");
 const ConnectionRequest = require("../models/connectionRequestModel");
 const { getIO } = require("../socket");
 
+// Chat controller for one-to-one candidate/recruiter messaging.
 const ALLOWED_ROLES = new Set(["candidate", "recruiter"]);
 
 const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
@@ -287,3 +288,5 @@ exports.sendMessage = async (req, res, next) => {
     next(error);
   }
 };
+
+

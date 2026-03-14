@@ -4,6 +4,7 @@ const Notification = require("../models/notificationModel");
 const User = require("../models/userModel");
 const { getIO } = require("../socket");
 
+// Controller for sending/accepting/declining connections between candidates and recruiters.
 const ALLOWED_ROLES = new Set(["candidate", "recruiter"]);
 const FEED_NOTIFICATION_TYPES = [
   "connection_request_received",
@@ -784,6 +785,8 @@ exports.deleteConnectionNotification = async (req, res, next) => {
     next(error);
   }
 };
+
+
 
 
 

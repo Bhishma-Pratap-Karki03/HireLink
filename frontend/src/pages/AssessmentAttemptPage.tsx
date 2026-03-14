@@ -151,8 +151,8 @@ const AssessmentAttemptPage = () => {
 
       const endTime = new Date(attemptData.endTime).getTime();
       setRemainingMs(Math.max(endTime - Date.now(), 0));
-    } catch (err: any) {
-      setError(err?.message || "Failed to load attempt");
+    } catch {
+      setError("No data found currently.");
     } finally {
       setLoading(false);
     }

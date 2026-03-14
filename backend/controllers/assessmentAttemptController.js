@@ -6,6 +6,7 @@ const ConnectionRequest = require("../models/connectionRequestModel");
 const fs = require("fs");
 const path = require("path");
 
+// Convert "60 min"/"90" style values into a clean minute number.
 const parseMinutes = (value) => {
   if (!value) return 60;
   const match = String(value).match(/(\d+)/);
@@ -14,6 +15,7 @@ const parseMinutes = (value) => {
   return Number.isNaN(minutes) || minutes <= 0 ? 60 : minutes;
 };
 
+// Load assessment document from the correct source (admin or recruiter).
 const getAssessmentBySource = async (attempt) => {
   if (!attempt) return null;
   if (attempt.assessmentSource === "recruiter") {
@@ -22,6 +24,7 @@ const getAssessmentBySource = async (attempt) => {
   return AdminAssessment.findById(attempt.assessment).lean();
 };
 
+// If attempt time is over, submit it automatically and calculate quiz score.
 const autoSubmitIfExpired = async (attempt, assessment) => {
   if (!attempt || attempt.status !== "in_progress") return attempt;
   const now = new Date();
@@ -44,6 +47,7 @@ const autoSubmitIfExpired = async (attempt, assessment) => {
   return attempt;
 };
 
+// Keep response format same for history/showcase APIs.
 const formatSubmissionSummary = (attempt, assessment) => {
   const quizTotal =
     assessment?.type === "quiz" && Array.isArray(assessment.quizQuestions)
@@ -64,6 +68,7 @@ const formatSubmissionSummary = (attempt, assessment) => {
   };
 };
 
+// Decide whether a viewer can see a candidate's submission showcase.
 const canViewCandidateSubmissions = async (viewerId, candidateId) => {
   if (!viewerId || !candidateId) return false;
   if (String(viewerId) === String(candidateId)) return true;
@@ -96,6 +101,7 @@ const canViewCandidateSubmissions = async (viewerId, candidateId) => {
   return Boolean(link);
 };
 
+// Safely parse array payload values that may arrive as JSON string.
 const parseArrayField = (value) => {
   if (Array.isArray(value)) return value;
   if (typeof value !== "string") return [];
@@ -107,6 +113,7 @@ const parseArrayField = (value) => {
   }
 };
 
+// Normalize answers so DB always stores predictable keys.
 const normalizeAnswerPayload = (raw = {}) => ({
   quizAnswers: parseArrayField(raw.quizAnswers)
     .map((item) => Number(item))
@@ -118,6 +125,7 @@ const normalizeAnswerPayload = (raw = {}) => ({
   codeLink: typeof raw.codeLink === "string" ? raw.codeLink : "",
 });
 
+// Remove previous uploaded file if we replaced it with a new one.
 const removeUploadedFileIfExists = (url) => {
   if (!url || typeof url !== "string" || !url.startsWith("/uploads/")) return;
   const relativePath = url.replace(/^\/uploads\//, "");
@@ -131,6 +139,7 @@ const removeUploadedFileIfExists = (url) => {
   }
 };
 
+// Convert uploaded code file metadata into the shape stored in answers.
 const mapUploadedCodeFile = (file) => {
   if (!file?.filename) return null;
   return {
@@ -141,6 +150,7 @@ const mapUploadedCodeFile = (file) => {
   };
 };
 
+// Candidate-facing list of active admin assessments with attempt progress.
 const listAvailableAssessments = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -238,6 +248,7 @@ const listAvailableAssessments = async (req, res) => {
   }
 };
 
+// Start a new attempt or return current in-progress attempt.
 const startAttempt = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -318,6 +329,7 @@ const startAttempt = async (req, res) => {
   }
 };
 
+// Get one attempt with its assessment details.
 const getAttempt = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -348,6 +360,7 @@ const getAttempt = async (req, res) => {
   }
 };
 
+// Save draft answers while attempt is still in progress.
 const saveAnswers = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -402,6 +415,7 @@ const saveAnswers = async (req, res) => {
   }
 };
 
+// Final submit endpoint for an assessment attempt.
 const submitAttempt = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -483,6 +497,7 @@ const submitAttempt = async (req, res) => {
   }
 };
 
+// Candidate's own submitted assessment history.
 const getMySubmissionHistory = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -514,6 +529,7 @@ const getMySubmissionHistory = async (req, res) => {
   }
 };
 
+// Candidate's selected submissions shown in profile/showcase.
 const getMyShowcaseSubmissions = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -542,6 +558,7 @@ const getMyShowcaseSubmissions = async (req, res) => {
   }
 };
 
+// Update which submissions are visible in candidate showcase.
 const updateMyShowcaseSubmissions = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -578,6 +595,7 @@ const updateMyShowcaseSubmissions = async (req, res) => {
   }
 };
 
+// View another candidate's showcase submissions (with visibility checks).
 const getCandidateShowcaseSubmissions = async (req, res) => {
   try {
     const viewerId = req.user.id;
@@ -649,6 +667,7 @@ const getCandidateShowcaseSubmissions = async (req, res) => {
   }
 };
 
+// View a specific submission detail of another candidate (permission based).
 const getCandidateSubmissionDetail = async (req, res) => {
   try {
     const viewerId = req.user.id;

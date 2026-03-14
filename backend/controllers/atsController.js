@@ -3,6 +3,7 @@ const path = require("path"); // Used to build correct file paths
 const JobPost = require("../models/jobPostModel"); // Job post model
 const AppliedJob = require("../models/appliedJobModel"); // Application model
 const AtsReport = require("../models/atsReportModel"); // ATS report model
+const AtsRun = require("../models/atsRunModel");
 const User = require("../models/userModel"); // User model
 const {
   parseResumeText,
@@ -132,9 +133,12 @@ const computeScore = ({
 
 // Scan all applications for a specific job
 exports.scanJobApplications = async (req, res) => {
+  let run = null;
   try {
     const userId = req.user.id;
     const { jobId } = req.params;
+    const mode = String(req.body?.mode || req.query?.mode || "all").toLowerCase();
+    const normalizedMode = mode === "new" ? "new" : "all";
 
     // Ensure only recruiter can scan
     const recruiter = await User.findById(userId).lean();
@@ -162,20 +166,45 @@ exports.scanJobApplications = async (req, res) => {
       });
     }
 
-    // Fetch all applications for this job
-    const applications = await AppliedJob.find({ job: jobId }).lean();
+    const applicationFilter =
+      normalizedMode === "new"
+        ? {
+            job: jobId,
+            $or: [{ atsScore: null }, { atsReport: null }],
+          }
+        : { job: jobId };
+
+    // Fetch all or only new applications for this job
+    const applications = await AppliedJob.find(applicationFilter).lean();
     if (!applications.length) {
       return res.status(200).json({
         success: true,
-        message: "No applications to scan",
+        message:
+          normalizedMode === "new"
+            ? "No new applications to scan"
+            : "No applications to scan",
+        mode: normalizedMode,
         reports: [],
       });
     }
+
+    run = await AtsRun.create({
+      job: jobId,
+      recruiter: userId,
+      mode: normalizedMode,
+      status: "running",
+      totalApplications: applications.length,
+    });
 
     const requiredSkills = job.requiredSkills || [];
     const minExperience = parseMinExperience(job.experience);
     const minEducationRank = parseRequiredEducationRank(job.education);
     const reports = [];
+
+    let processed = 0;
+    let successful = 0;
+    let failed = 0;
+    let skipped = 0;
 
     // Loop through each application
     for (const application of applications) {
@@ -187,106 +216,199 @@ exports.scanJobApplications = async (req, res) => {
       );
 
       if (!fs.existsSync(resumePath)) {
+        skipped += 1;
         continue; // Skip if resume file not found
       }
 
-      let report = await AtsReport.findOne({ application: application._id });
+      try {
+        processed += 1;
+        let report = await AtsReport.findOne({ application: application._id });
 
-      // Parse resume content
-      const resumeText = normalize(await parseResumeText(resumePath));
-      const extractedSkills = extractSkills(resumeText).map((skill) =>
-        canonicalizeSkill(skill),
-      );
-      const experienceYears = extractExperienceYears(resumeText);
-      const education = extractEducationLevel(resumeText);
-      const emails = extractEmails(resumeText);
-      const phones = extractPhones(resumeText);
+        // Parse resume content
+        const resumeText = normalize(await parseResumeText(resumePath));
+        const extractedSkills = extractSkills(resumeText).map((skill) =>
+          canonicalizeSkill(skill),
+        );
+        const experienceYears = extractExperienceYears(resumeText);
+        const education = extractEducationLevel(resumeText);
+        const emails = extractEmails(resumeText);
+        const phones = extractPhones(resumeText);
 
-      // Create report if not exists
-      if (!report) {
-        report = await AtsReport.create({
-          job: jobId,
-          application: application._id,
-          candidate: application.candidate,
-          extracted: {
+        // Create report if not exists
+        if (!report) {
+          report = await AtsReport.create({
+            job: jobId,
+            application: application._id,
+            candidate: application.candidate,
+            extracted: {
+              skills: extractedSkills,
+              emails,
+              phones,
+              experienceYears,
+              educationLevel: education.label || "",
+              educationRank: education.rank || 0,
+            },
+            matchedSkills: [],
+            missingSkills: [],
+            experienceMatch: false,
+            educationMatch: false,
+            skillsScore: 0,
+            experienceScore: 0,
+            educationScore: 0,
+            score: 0,
+          });
+        } else {
+          // Update extracted data if report already exists
+          report.extracted = {
             skills: extractedSkills,
             emails,
             phones,
             experienceYears,
             educationLevel: education.label || "",
             educationRank: education.rank || 0,
-          },
-          matchedSkills: [],
-          missingSkills: [],
-          experienceMatch: false,
-          educationMatch: false,
-          skillsScore: 0,
-          experienceScore: 0,
-          educationScore: 0,
-          score: 0,
+          };
+        }
+
+        // Compute ATS score
+        const {
+          totalScore,
+          matchedSkills,
+          missingSkills,
+          skillsScore,
+          experienceScore,
+          educationScore,
+          experienceMatch,
+          educationMatch,
+        } = computeScore({
+          requiredSkills,
+          extractedSkills: report.extracted?.skills || [],
+          experienceYears: report.extracted?.experienceYears || 0,
+          minExperience,
+          educationRank: report.extracted?.educationRank || 0,
+          minEducationRank,
         });
-      } else {
-        // Update extracted data if report already exists
-        report.extracted = {
-          skills: extractedSkills,
-          emails,
-          phones,
-          experienceYears,
-          educationLevel: education.label || "",
-          educationRank: education.rank || 0,
-        };
+
+        // Save scoring results
+        report.matchedSkills = matchedSkills;
+        report.missingSkills = missingSkills;
+        report.skillsScore = skillsScore;
+        report.experienceScore = experienceScore;
+        report.educationScore = educationScore;
+        report.experienceMatch = experienceMatch;
+        report.educationMatch = educationMatch;
+        report.score = totalScore;
+
+        await report.save();
+
+        // Update application with ATS score reference
+        await AppliedJob.findByIdAndUpdate(application._id, {
+          atsScore: totalScore,
+          atsReport: report._id,
+        });
+
+        reports.push(report);
+        successful += 1;
+      } catch (scanItemError) {
+        failed += 1;
       }
+    }
 
-      // Compute ATS score
-      const {
-        totalScore,
-        matchedSkills,
-        missingSkills,
-        skillsScore,
-        experienceScore,
-        educationScore,
-        experienceMatch,
-        educationMatch,
-      } = computeScore({
-        requiredSkills,
-        extractedSkills: report.extracted?.skills || [],
-        experienceYears: report.extracted?.experienceYears || 0,
-        minExperience,
-        educationRank: report.extracted?.educationRank || 0,
-        minEducationRank,
-      });
-
-      // Save scoring results
-      report.matchedSkills = matchedSkills;
-      report.missingSkills = missingSkills;
-      report.skillsScore = skillsScore;
-      report.experienceScore = experienceScore;
-      report.educationScore = educationScore;
-      report.experienceMatch = experienceMatch;
-      report.educationMatch = educationMatch;
-      report.score = totalScore;
-
-      await report.save();
-
-      // Update application with ATS score reference
-      await AppliedJob.findByIdAndUpdate(application._id, {
-        atsScore: totalScore,
-        atsReport: report._id,
-      });
-
-      reports.push(report);
+    if (run) {
+      run.status = "completed";
+      run.processed = processed;
+      run.successful = successful;
+      run.failed = failed;
+      run.skipped = skipped;
+      await run.save();
     }
 
     return res.status(200).json({
       success: true,
-      message: "ATS scan completed",
+      message: `ATS scan completed (${normalizedMode})`,
+      mode: normalizedMode,
+      run: run
+        ? {
+            id: run._id,
+            status: run.status,
+            totalApplications: run.totalApplications,
+            processed: run.processed,
+            successful: run.successful,
+            failed: run.failed,
+            skipped: run.skipped,
+            createdAt: run.createdAt,
+            updatedAt: run.updatedAt,
+          }
+        : null,
       reports,
     });
   } catch (error) {
+    if (run) {
+      run.status = "failed";
+      run.errorMessage = error.message || "ATS run failed";
+      await run.save();
+    }
     console.error("ATS scan error:", error);
     return res.status(500).json({
       success: false,
       message: "Server error scanning applications",
+      error: error.message,
+    });
+  }
+};
+
+exports.getAtsRunHistoryByJob = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { jobId } = req.params;
+
+    const recruiter = await User.findById(userId).lean();
+    if (!recruiter || recruiter.role !== "recruiter") {
+      return res.status(403).json({
+        success: false,
+        message: "Only recruiters can access ATS run history",
+      });
+    }
+
+    const job = await JobPost.findById(jobId).lean();
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: "Job not found",
+      });
+    }
+
+    if (job.recruiterId.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have permission to view this job",
+      });
+    }
+
+    const runs = await AtsRun.find({ job: jobId })
+      .sort({ createdAt: -1 })
+      .limit(30)
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      runs: runs.map((run) => ({
+        id: run._id,
+        mode: run.mode,
+        status: run.status,
+        totalApplications: run.totalApplications,
+        processed: run.processed,
+        successful: run.successful,
+        failed: run.failed,
+        skipped: run.skipped,
+        createdAt: run.createdAt,
+        updatedAt: run.updatedAt,
+      })),
+    });
+  } catch (error) {
+    console.error("ATS history error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error fetching ATS run history",
       error: error.message,
     });
   }

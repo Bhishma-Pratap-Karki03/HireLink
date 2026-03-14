@@ -1,4 +1,5 @@
 const ContactMessage = require("../models/contactMessageModel");
+// Handles public Contact Us submissions and admin-side message actions.
 
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
@@ -183,3 +184,5 @@ module.exports = {
   markContactMessageAsRead,
   deleteContactMessageForAdmin,
 };
+
+

@@ -98,8 +98,9 @@ const AssessmentListingPage = () => {
           type: item.type === "code" ? "task" : item.type,
         })),
       );
-    } catch (err: any) {
-      setError(err?.message || "Failed to load assessments");
+    } catch {
+      setError("No data found currently.");
+      setAssessments([]);
     } finally {
       setLoading(false);
     }

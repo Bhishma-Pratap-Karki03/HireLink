@@ -309,8 +309,8 @@ const CandidateDetailsPage = () => {
           throw new Error(data?.message || "Failed to load candidate profile");
         }
         setProfile(data.user);
-      } catch (err: any) {
-        setError(err?.message || "Failed to load candidate profile");
+      } catch {
+        setError("No data found currently.");
       } finally {
         setLoading(false);
       }

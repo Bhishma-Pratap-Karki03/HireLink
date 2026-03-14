@@ -3,11 +3,13 @@ const AssessmentAttempt = require("../models/assessmentAttemptModel");
 const User = require("../models/userModel");
 const ADMIN_EMAIL = "hirelinknp@gmail.com";
 
+// Small helper to confirm whether the requester is the system admin user.
 const isAdminUser = (user) =>
   user &&
   (String(user.role || "").toLowerCase() === "admin" ||
     String(user.email || "").toLowerCase() === ADMIN_EMAIL);
 
+// Create a new admin assessment (quiz/writing/code).
 const createAssessment = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -103,6 +105,7 @@ const createAssessment = async (req, res) => {
   }
 };
 
+// Get all admin assessments (optionally filtered by status) with attempt stats.
 const listAssessments = async (req, res) => {
   try {
     const { status } = req.query;
@@ -174,6 +177,7 @@ const listAssessments = async (req, res) => {
   }
 };
 
+// Fetch one assessment by id for preview/edit.
 const getAssessmentById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -200,6 +204,7 @@ const getAssessmentById = async (req, res) => {
   }
 };
 
+// Update an existing admin assessment.
 const updateAssessment = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -269,6 +274,7 @@ const updateAssessment = async (req, res) => {
   }
 };
 
+// Delete an admin assessment by id.
 const deleteAssessment = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -307,6 +313,7 @@ const deleteAssessment = async (req, res) => {
   }
 };
 
+// List submitted attempts for admin-created assessments.
 const listAssessmentAttempts = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("role email").lean();
@@ -370,6 +377,7 @@ const listAssessmentAttempts = async (req, res) => {
   }
 };
 
+// Show detailed review data for one attempt (answers, score, correctness).
 const getAssessmentAttemptDetail = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("role email").lean();
@@ -483,6 +491,7 @@ const getAssessmentAttemptDetail = async (req, res) => {
   }
 };
 
+// Allow admin to dismiss an attempt record from review history.
 const dismissAssessmentAttempt = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("role email").lean();

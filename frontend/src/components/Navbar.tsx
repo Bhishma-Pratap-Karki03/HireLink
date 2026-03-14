@@ -123,6 +123,7 @@ const getNotificationTime = (item: NotificationItem) => {
   const fallback = new Date(item.createdAt).getTime();
   return Number.isNaN(fallback) ? 0 : fallback;
 };
+const NOTIFICATION_DROPDOWN_LIMIT = 20;
 
 const Navbar = ({ userType = "candidate" }: NavbarProps) => {
   const ADMIN_VIEWED_CONTACT_STORAGE_KEY = "adminViewedContactNotificationIds";
@@ -167,7 +168,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
       ...adminContactNotificationItems,
     ]
       .sort((a, b) => getNotificationTime(b) - getNotificationTime(a))
-      .slice(0, 5);
+      .slice(0, NOTIFICATION_DROPDOWN_LIMIT);
   }, [
     connectionNotificationItems,
     messageNotificationItems,
@@ -338,7 +339,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
         setNotificationError("");
       }
       const response = await fetch(
-        "http://localhost:5000/api/connections/notifications?limit=5",
+        `http://localhost:5000/api/connections/notifications?limit=${NOTIFICATION_DROPDOWN_LIMIT}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -429,7 +430,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
           };
         })
         .sort((a, b) => getNotificationTime(b) - getNotificationTime(a))
-        .slice(0, 5);
+        .slice(0, NOTIFICATION_DROPDOWN_LIMIT);
 
       setMessageNotificationItems(mapped);
       setMessageUnreadCount(totalUnread);
@@ -474,7 +475,9 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
       }
 
       const incoming = (data?.messages || []) as AdminContactNotificationItem[];
-      const mapped: NotificationItem[] = incoming.slice(0, 5).map((item) => ({
+      const mapped: NotificationItem[] = incoming
+        .slice(0, NOTIFICATION_DROPDOWN_LIMIT)
+        .map((item) => ({
         id: `contact:${item._id}`,
         contactMessageId: item._id,
         type: "contact_message_received",
@@ -714,7 +717,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
       if (!incoming) return;
       setConnectionNotificationItems((prev) => {
         const merged = [incoming, ...prev.filter((item) => item.id !== incoming.id)];
-        return merged.slice(0, 5);
+        return merged.slice(0, NOTIFICATION_DROPDOWN_LIMIT);
       });
       setConnectionUnreadCount(
         typeof payload?.unreadCount === "number"
@@ -767,7 +770,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
         };
 
         const merged = [updatedItem, ...prev.filter((item) => item.id !== updatedItem.id)];
-        return merged.slice(0, 5);
+        return merged.slice(0, NOTIFICATION_DROPDOWN_LIMIT);
       });
       setMessageUnreadCount((prev) => prev + 1);
     };
@@ -980,6 +983,79 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
     setIsMobileUserDropdownOpen(false);
   };
 
+  const handleNotificationHistoryClick = () => {
+    setIsNotificationOpen(false);
+    if (isAdminUser) {
+      navigate("/admin/contact-messages");
+    } else if (isRecruiter) {
+      navigate("/recruiter/notifications");
+    } else {
+      navigate("/candidate/notifications");
+    }
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+
+    try {
+      if (isAdminUser) {
+        const unreadContacts = adminContactNotificationItems.filter(
+          (item) =>
+            item.contactMessageId &&
+            !item.isRead &&
+            !viewedAdminContactIdsRef.current.has(item.contactMessageId),
+        );
+        await Promise.all(
+          unreadContacts.map((item) =>
+            fetch(
+              `http://localhost:5000/api/contact/admin/messages/${item.contactMessageId}/read`,
+              {
+                method: "PATCH",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+              },
+            ),
+          ),
+        );
+        setAdminContactNotificationItems((prev) =>
+          prev.map((item) => ({ ...item, isRead: true })),
+        );
+        setAdminContactUnreadCount(0);
+      } else {
+        const unreadConnectionIds = connectionNotificationItems
+          .filter((item) => !item.isRead)
+          .map((item) => item.id);
+
+        await Promise.all(
+          unreadConnectionIds.map((notificationId) =>
+            fetch("http://localhost:5000/api/connections/notifications/read", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ notificationId }),
+            }),
+          ),
+        );
+
+        setConnectionNotificationItems((prev) =>
+          prev.map((item) => ({ ...item, isRead: true })),
+        );
+        setConnectionUnreadCount(0);
+        setMessageNotificationItems((prev) =>
+          prev.map((item) => ({ ...item, isRead: true, unreadMessageCount: 0 })),
+        );
+        setMessageUnreadCount(0);
+      }
+    } catch {
+      // best-effort
+    }
+  };
+
   // Determine if user is recruiter
   const isRecruiter = userData?.role === "recruiter";
   const isCandidate = userData?.role === "candidate";
@@ -1019,7 +1095,17 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
             </button>
             {isNotificationOpen && (
               <div className="notification-dropdown">
-                <div className="notification-dropdown-header">Recent Notifications</div>
+                <div className="notification-dropdown-header">
+                  <span>Recent Notifications</span>
+                  <button
+                    type="button"
+                    className="notification-mark-read-btn"
+                    onClick={handleMarkAllNotificationsRead}
+                    disabled={unreadNotificationCount === 0}
+                  >
+                    Mark all as read
+                  </button>
+                </div>
                 {notificationLoading && (
                   <div className="notification-dropdown-state">Loading...</div>
                 )}
@@ -1112,6 +1198,15 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
                       ))}
                     </ul>
                   )}
+                <div className="notification-dropdown-footer">
+                  <button
+                    type="button"
+                    className="notification-view-more-btn"
+                    onClick={handleNotificationHistoryClick}
+                  >
+                    View More Notifications
+                  </button>
+                </div>
               </div>
             )}
           </div>

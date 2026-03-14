@@ -19,6 +19,7 @@ type AdminContactNotification = {
   createdAt: string;
   isRead?: boolean;
 };
+const NOTIFICATION_DROPDOWN_LIMIT = 20;
 
 const AdminTopBar: React.FC<AdminTopBarProps> = ({
   onSearch: _onSearch = () => {},
@@ -67,7 +68,7 @@ const AdminTopBar: React.FC<AdminTopBarProps> = ({
         throw new Error(data?.message || "Failed to load notifications");
       }
       const incoming = (data?.messages || []) as AdminContactNotification[];
-      const topNotifications = incoming.slice(0, 5);
+      const topNotifications = incoming.slice(0, NOTIFICATION_DROPDOWN_LIMIT);
 
       // Detect newly received contact messages (skip toast on first load).
       const currentIds = new Set(topNotifications.map((item) => item._id));
@@ -213,6 +214,42 @@ const AdminTopBar: React.FC<AdminTopBarProps> = ({
     navigate("/admin/contact-messages");
   };
 
+  const handleMarkAllNotificationsRead = async () => {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+
+    const unreadItems = notificationItems.filter(
+      (item) => !item.isRead && !viewedMessageIdsRef.current.has(item._id),
+    );
+
+    try {
+      await Promise.all(
+        unreadItems.map((item) =>
+          fetch(
+            `http://localhost:5000/api/contact/admin/messages/${item._id}/read`,
+            {
+              method: "PATCH",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            },
+          ),
+        ),
+      );
+    } catch {
+      // best-effort
+    }
+
+    setNotificationItems((prev) => prev.map((item) => ({ ...item, isRead: true })));
+    setUnreadCount(0);
+  };
+
+  const handleViewMoreNotifications = () => {
+    setIsNotificationOpen(false);
+    navigate("/admin/contact-messages");
+  };
+
   return (
     <>
     <header className="admin-top-bar">
@@ -235,7 +272,15 @@ const AdminTopBar: React.FC<AdminTopBarProps> = ({
           {isNotificationOpen && (
             <div className="admin-top-notification-dropdown">
               <div className="admin-top-notification-header">
-                Recent Notifications
+                <span>Recent Notifications</span>
+                <button
+                  type="button"
+                  className="admin-top-notification-mark-read-btn"
+                  onClick={handleMarkAllNotificationsRead}
+                  disabled={unreadCount === 0}
+                >
+                  Mark all as read
+                </button>
               </div>
               {loading && (
                 <div className="admin-top-notification-state">Loading...</div>
@@ -285,6 +330,15 @@ const AdminTopBar: React.FC<AdminTopBarProps> = ({
                   ))}
                 </ul>
               )}
+              <div className="admin-top-notification-footer">
+                <button
+                  type="button"
+                  className="admin-top-notification-view-more-btn"
+                  onClick={handleViewMoreNotifications}
+                >
+                  View More Notifications
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -112,8 +112,9 @@ const CandidatesPage = () => {
           throw new Error(data?.message || "Failed to load candidates");
         }
         setCandidates(data.candidates || []);
-      } catch (err: any) {
-        setError(err?.message || "Failed to load candidates");
+      } catch {
+        setError("No data found currently.");
+        setCandidates([]);
       } finally {
         setLoading(false);
       }
@@ -429,10 +430,10 @@ const CandidatesPage = () => {
           <div className="candidates-grid">
             {loading && <div className="candidates-state">Loading...</div>}
             {error && !loading && (
-              <div className="candidates-state error">{error}</div>
+              <div className="public-empty-state">{error}</div>
             )}
             {!loading && !error && filteredCandidates.length === 0 && (
-              <div className="candidates-state">No candidates found.</div>
+              <div className="public-empty-state">No data found currently.</div>
             )}
 
             {paginatedCandidates.map((candidate) => {

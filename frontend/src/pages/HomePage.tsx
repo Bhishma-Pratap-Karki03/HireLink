@@ -35,11 +35,6 @@ import candidateC from "../images/Public Page/I1_1399_1_3536.svg";
 import stepMainImage from "../images/Public Page/abc46da86de8d4960be05461c8c6828035ee2295.png";
 import stepFloatImage from "../images/Public Page/ac01f05469ba2dfecedcce7f92baba3a733e0dab.png";
 
-import testimonialProfile from "../images/Public Page/I1_1436_1_3463.svg";
-import testimonialQuote from "../images/Public Page/9689df8a36e8caab95b1c040886bfd30cb55779e.png";
-import testimonialBg1 from "../images/Public Page/I1_1436_1_3461.svg";
-import testimonialBg2 from "../images/Public Page/I1_1436_1_3462.svg";
-import testimonialStar from "../images/Public Page/I1_1436_1_3469.svg";
 
 import checkIcon from "../images/Public Page/1_1463.svg";
 import closeIcon from "../images/Candidate Profile Page Images/corss icon.png";
@@ -59,6 +54,7 @@ type CompanySummary = {
   name: string;
   logo?: string;
   vacancies: number;
+  jobsCount?: number;
 };
 
 type ApplyModalJob = {
@@ -184,7 +180,8 @@ const HomePage = () => {
           (data?.companies || []).map((item: CompanySummary) => ({
             name: item.name || "Company",
             logo: item.logo || "",
-            vacancies: Number(item.vacancies) || 0,
+            vacancies: Number(item.jobsCount ?? item.vacancies) || 0,
+            jobsCount: Number(item.jobsCount) || 0,
           })),
         );
         setTotalCompanyVacancies(Number(data?.totalVacancies) || 0);
@@ -753,7 +750,7 @@ const HomePage = () => {
                   </div>
                   <h3>{company.name}</h3>
                   <span className="vacancy">
-                    {company.vacancies} Available Vacancy
+                    {company.vacancies} Vacancy
                   </span>
                 </div>
               ))}
@@ -1137,44 +1134,6 @@ const HomePage = () => {
             </div>
           </div>
         </div>
-      </section>
-
-      <section id="testimonial">
-        <div className="container testimonial-content">
-          <div className="testimonial-heading">
-            <div className="client-label">CLIENTS</div>
-            <h2 className="section-title">Testimonial</h2>
-          </div>
-
-          <div className="testimonial-copy">
-            <img src={testimonialQuote} alt="quote" className="quote-icon" />
-            <p>
-              HireLink helped us speed up hiring with clearer job workflows,
-              better candidate matching, and structured assessments. We were
-              able to shortlist quality applicants faster and collaborate
-              smoothly throughout the process.
-            </p>
-          </div>
-
-          <div className="testimonial-author">
-            <div className="author-avatar-wrap">
-              <img src={testimonialProfile} alt="Jennifer Williams" />
-            </div>
-            <div className="author-meta">
-              <h3>Jennifer Williams</h3>
-              <p>Corporate Founder</p>
-              <div className="stars">
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-              </div>
-            </div>
-          </div>
-        </div>
-        <img src={testimonialBg1} className="bg-vector-1" />
-        <img src={testimonialBg2} className="bg-vector-2" />
       </section>
 
       <section id="pricing">

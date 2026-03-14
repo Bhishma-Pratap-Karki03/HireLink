@@ -27,6 +27,10 @@ const Login = () => {
   const location = useLocation();
 
   useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
     const token = localStorage.getItem("authToken");
     const userDataStr = localStorage.getItem("userData");
 

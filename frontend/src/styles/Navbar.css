@@ -401,6 +401,27 @@
   border-bottom: 1px solid #eef2f7;
   font-family: "Montserrat", sans-serif;
   letter-spacing: 0.1px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notification-mark-read-btn {
+  border: 1px solid #d5e3f5;
+  background: #ffffff;
+  color: #0f5fc9;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: "Montserrat", sans-serif;
+}
+
+.notification-mark-read-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .notification-dropdown-state {
@@ -418,6 +439,24 @@
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.notification-dropdown-footer {
+  padding: 10px 14px 14px;
+  border-top: 1px solid #eef2f7;
+}
+
+.notification-view-more-btn {
+  width: 100%;
+  border: 1px solid #cfe0f5;
+  background: #f8fbff;
+  color: #0f5fc9;
+  border-radius: 10px;
+  height: 38px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: "Montserrat", sans-serif;
 }
 
 .notification-item {

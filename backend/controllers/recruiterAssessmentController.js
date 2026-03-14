@@ -1,3 +1,4 @@
+// Recruiter-only assessment CRUD controller.
 const RecruiterAssessment = require("../models/recruiterAssessmentModel");
 const User = require("../models/userModel");
 
@@ -213,3 +214,5 @@ module.exports = {
   getRecruiterAssessmentById,
   updateRecruiterAssessment,
 };
+
+

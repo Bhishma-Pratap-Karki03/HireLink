@@ -288,9 +288,7 @@ const EmployerDetailsPage = () => {
       }
     } catch (err: any) {
       console.error("Error fetching company details:", err);
-      setError(
-        err.message || "Failed to load company details. Please try again.",
-      );
+      setError("No data found currently.");
       setCompany(null);
     } finally {
       setLoading(false);
@@ -322,8 +320,8 @@ const EmployerDetailsPage = () => {
       }));
 
       setJobs(mappedJobs);
-    } catch (err: any) {
-      setJobsError(err?.message || "Failed to load openings");
+    } catch {
+      setJobsError("No data found currently.");
       setJobs([]);
     } finally {
       setJobsLoading(false);

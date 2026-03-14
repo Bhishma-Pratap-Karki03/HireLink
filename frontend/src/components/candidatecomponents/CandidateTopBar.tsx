@@ -53,6 +53,7 @@ interface MessageConversationItem {
   updatedAt: string;
   unreadCount?: number;
 }
+const NOTIFICATION_DROPDOWN_LIMIT = 20;
 
 const resolveAvatar = (value?: string) => {
   if (!value) return defaultAvatar;
@@ -105,7 +106,7 @@ const CandidateTopBar: React.FC<CandidateTopBarProps> = ({
   const notificationItems = useMemo(() => {
     return [...connectionNotificationItems, ...messageNotificationItems]
       .sort((a, b) => getNotificationTime(b) - getNotificationTime(a))
-      .slice(0, 5);
+      .slice(0, NOTIFICATION_DROPDOWN_LIMIT);
   }, [connectionNotificationItems, messageNotificationItems]);
 
   const unreadNotificationCount = connectionUnreadCount + messageUnreadCount;
@@ -150,7 +151,7 @@ const CandidateTopBar: React.FC<CandidateTopBarProps> = ({
         setNotificationError("");
       }
       const response = await fetch(
-        "http://localhost:5000/api/connections/notifications?limit=5",
+        `http://localhost:5000/api/connections/notifications?limit=${NOTIFICATION_DROPDOWN_LIMIT}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -240,7 +241,7 @@ const CandidateTopBar: React.FC<CandidateTopBarProps> = ({
           };
         })
         .sort((a, b) => getNotificationTime(b) - getNotificationTime(a))
-        .slice(0, 5);
+        .slice(0, NOTIFICATION_DROPDOWN_LIMIT);
 
       setMessageNotificationItems(mapped);
       setMessageUnreadCount(totalUnread);
@@ -376,7 +377,7 @@ const CandidateTopBar: React.FC<CandidateTopBarProps> = ({
       if (!incoming) return;
       setConnectionNotificationItems((prev) => {
         const merged = [incoming, ...prev.filter((item) => item.id !== incoming.id)];
-        return merged.slice(0, 5);
+        return merged.slice(0, NOTIFICATION_DROPDOWN_LIMIT);
       });
       setConnectionUnreadCount((prev) =>
         typeof payload?.unreadCount === "number"
@@ -417,7 +418,7 @@ const CandidateTopBar: React.FC<CandidateTopBarProps> = ({
           },
         };
         const merged = [updatedItem, ...prev.filter((item) => item.id !== updatedItem.id)];
-        return merged.slice(0, 5);
+        return merged.slice(0, NOTIFICATION_DROPDOWN_LIMIT);
       });
       setMessageUnreadCount((prev) => prev + 1);
     };
@@ -444,6 +445,46 @@ const CandidateTopBar: React.FC<CandidateTopBarProps> = ({
       activeSocket?.off("message:new", handleMessageNotification);
     };
   }, [userId, userRole]);
+
+  const handleMarkAllNotificationsRead = async () => {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+
+    const unreadConnectionIds = connectionNotificationItems
+      .filter((item) => !item.isRead)
+      .map((item) => item.id);
+
+    try {
+      await Promise.all(
+        unreadConnectionIds.map((notificationId) =>
+          fetch("http://localhost:5000/api/connections/notifications/read", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ notificationId }),
+          }),
+        ),
+      );
+    } catch {
+      // best-effort
+    }
+
+    setConnectionNotificationItems((prev) =>
+      prev.map((item) => ({ ...item, isRead: true })),
+    );
+    setMessageNotificationItems((prev) =>
+      prev.map((item) => ({ ...item, isRead: true, unreadMessageCount: 0 })),
+    );
+    setConnectionUnreadCount(0);
+    setMessageUnreadCount(0);
+  };
+
+  const handleViewMoreNotifications = () => {
+    setIsNotificationOpen(false);
+    navigate("/candidate/notifications");
+  };
 
   return (
     <>
@@ -495,7 +536,15 @@ const CandidateTopBar: React.FC<CandidateTopBarProps> = ({
           {isNotificationOpen && (
             <div className="candidate-top-notification-dropdown">
               <div className="candidate-top-notification-header">
-                Recent Notifications
+                <span>Recent Notifications</span>
+                <button
+                  type="button"
+                  className="candidate-top-notification-mark-read-btn"
+                  onClick={handleMarkAllNotificationsRead}
+                  disabled={unreadNotificationCount === 0}
+                >
+                  Mark all as read
+                </button>
               </div>
               {notificationLoading && (
                 <div className="candidate-top-notification-state">Loading...</div>
@@ -563,6 +612,15 @@ const CandidateTopBar: React.FC<CandidateTopBarProps> = ({
                     ))}
                   </ul>
                 )}
+              <div className="candidate-top-notification-footer">
+                <button
+                  type="button"
+                  className="candidate-top-notification-view-more-btn"
+                  onClick={handleViewMoreNotifications}
+                >
+                  View More Notifications
+                </button>
+              </div>
             </div>
           )}
         </div>

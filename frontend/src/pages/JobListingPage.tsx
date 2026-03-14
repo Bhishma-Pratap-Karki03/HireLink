@@ -16,7 +16,7 @@ import levelIcon from "../images/Job List Page Images/level.svg";
 import workModeIcon from "../images/Job List Page Images/work-mode.svg";
 import educationIcon from "../images/Job List Page Images/education.svg";
 import experienceIcon from "../images/Job List Page Images/experience.svg";
-import skillIcon from "../images/Job List Page Images/skills.svg";
+import skillIcon from "../images/Job List Page Images/Skills.svg";
 import promoIllustration from "../images/Job List Page Images/promo-illustration.svg";
 import bookmarkIcon from "../images/Recruiter Job Post Page Images/bookmarkIcon.svg";
 import savedBookmarkIcon from "../images/Recruiter Job Post Page Images/bookmarkFilled.svg";
@@ -628,8 +628,18 @@ const JobListingPage = () => {
           });
           setJobLevelCounts(counts);
         }
-      } catch (err: any) {
-        setError(err?.message || "Something went wrong");
+      } catch {
+        setError("No data found currently.");
+        setJobCards([]);
+        setTotalJobs(0);
+        setWorkModeCounts({ remote: 0, "on-site": 0, hybrid: 0 });
+        setJobTypeCounts({
+          "Full Time": 0,
+          "Part Time": 0,
+          Contract: 0,
+          Internship: 0,
+        });
+        setJobLevelCounts({ Junior: 0, Mid: 0, Senior: 0, Lead: 0 });
       } finally {
         setLoading(false);
       }
@@ -1561,9 +1571,9 @@ const JobListingPage = () => {
               </div>
             </div>
 
-            {error && <div className="joblist-error">{error}</div>}
+            {error && <div className="public-empty-state">{error}</div>}
             {!error && !loading && jobCards.length === 0 && (
-              <div className="joblist-empty">No jobs found.</div>
+              <div className="public-empty-state">No data found currently.</div>
             )}
             <div className="joblist-grid">
               {jobCards.map((job) => (

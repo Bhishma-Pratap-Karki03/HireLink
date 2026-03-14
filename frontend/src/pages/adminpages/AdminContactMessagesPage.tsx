@@ -6,6 +6,9 @@ import prevIcon from "../../images/Employers Page Images/Prev Icon.svg";
 import nextIcon from "../../images/Employers Page Images/Next Icon.svg";
 import trashIcon from "../../images/Candidate Profile Page Images/trash.png";
 import eyeIcon from "../../images/Candidate Profile Page Images/eye-icon.svg";
+import statsTotalUserIcon from "../../images/Admin Profile Page Images/messagetotal.jpg";
+import unreadMessageIcon from "../../images/Candidate Profile Page Images/unread-message-icon.png";
+import readmessageIcon from "../../images/Admin Profile Page Images/ReadMessage.png";
 
 type ContactMessageItem = {
   _id: string;
@@ -144,7 +147,10 @@ const AdminContactMessagesPage = () => {
     return { total, unread, read };
   }, [messages]);
 
-  const totalPages = Math.max(1, Math.ceil(messages.length / MESSAGES_PER_PAGE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(messages.length / MESSAGES_PER_PAGE),
+  );
   const paginatedMessages = messages.slice(
     (currentPage - 1) * MESSAGES_PER_PAGE,
     currentPage * MESSAGES_PER_PAGE,
@@ -190,16 +196,25 @@ const AdminContactMessagesPage = () => {
 
             <div className="admin-contact-stats">
               <article className="admin-contact-stat-card">
-                <h3>{stats.total}</h3>
-                <span>Total Messages</span>
+                <div>
+                  <h3>{stats.total}</h3>
+                  <span>Total Messages</span>
+                </div>
+                <img src={statsTotalUserIcon} alt="Total messages" />
               </article>
               <article className="admin-contact-stat-card">
-                <h3>{stats.unread}</h3>
-                <span>Unread</span>
+                <div>
+                  <h3>{stats.unread}</h3>
+                  <span>Unread</span>
+                </div>
+                <img src={unreadMessageIcon} alt="Unread messages" />
               </article>
               <article className="admin-contact-stat-card">
-                <h3>{stats.read}</h3>
-                <span>Read</span>
+                <div>
+                  <h3>{stats.read}</h3>
+                  <span>Read</span>
+                </div>
+                <img src={readmessageIcon} alt="Read messages" />
               </article>
             </div>
 
@@ -240,7 +255,9 @@ const AdminContactMessagesPage = () => {
                 <div className="admin-contact-state error">{error}</div>
               )}
               {!loading && !error && messages.length === 0 && (
-                <div className="admin-contact-state">No contact messages found.</div>
+                <div className="admin-contact-state">
+                  No contact messages found.
+                </div>
               )}
 
               {!loading &&
@@ -303,22 +320,27 @@ const AdminContactMessagesPage = () => {
                   <div className="admin-contact-page-controls">
                     <button
                       className="admin-contact-page-nav"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(1, prev - 1))
+                      }
                       disabled={currentPage === 1}
                     >
                       <img src={prevIcon} alt="Previous" />
                     </button>
                     <div className="admin-contact-page-numbers">
-                      {Array.from({ length: Math.min(totalPages, 7) }, (_, index) => {
-                        let pageNum = index + 1;
-                        if (totalPages > 7 && currentPage > 4) {
-                          pageNum = Math.min(
-                            totalPages - 6 + index,
-                            currentPage - 3 + index,
-                          );
-                        }
-                        return pageNum;
-                      }).map((pageNum) => (
+                      {Array.from(
+                        { length: Math.min(totalPages, 7) },
+                        (_, index) => {
+                          let pageNum = index + 1;
+                          if (totalPages > 7 && currentPage > 4) {
+                            pageNum = Math.min(
+                              totalPages - 6 + index,
+                              currentPage - 3 + index,
+                            );
+                          }
+                          return pageNum;
+                        },
+                      ).map((pageNum) => (
                         <button
                           key={pageNum}
                           className={`admin-contact-page-num ${

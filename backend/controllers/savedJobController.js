@@ -1,3 +1,4 @@
+// Handles save/unsave and listing of saved jobs for candidates.
 const SavedJob = require("../models/savedJobModel");
 const JobPost = require("../models/jobPostModel");
 
@@ -91,3 +92,5 @@ exports.listSaved = async (req, res) => {
     });
   }
 };
+
+

@@ -58,8 +58,8 @@ const AssessmentPreviewPage = () => {
           codeSubmission: item.codeSubmission || "file",
           codeEvaluation: item.codeEvaluation || "",
         });
-      } catch (err: any) {
-        setError(err?.message || "Failed to load assessment");
+      } catch {
+        setError("No data found currently.");
       } finally {
         setLoading(false);
       }

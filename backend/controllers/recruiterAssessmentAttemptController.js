@@ -1,3 +1,4 @@
+// Handles candidate attempts for recruiter-created assessments.
 const RecruiterAssessment = require("../models/recruiterAssessmentModel");
 const AssessmentAttempt = require("../models/assessmentAttemptModel");
 const fs = require("fs");
@@ -365,3 +366,5 @@ module.exports = {
   submitRecruiterAttempt,
   getRecruiterAssessmentMeta,
 };
+
+

@@ -158,8 +158,8 @@ const JobDetailsPage = () => {
         throw new Error(data?.message || "Failed to load job details");
       }
       setJob(data.job);
-    } catch (err: any) {
-      setError(err?.message || "Failed to load job details");
+    } catch {
+      setError("No data found currently.");
       setJob(null);
     } finally {
       setLoading(false);

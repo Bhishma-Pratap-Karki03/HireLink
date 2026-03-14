@@ -1,6 +1,7 @@
-﻿const Assessment = require("../models/assessmentModel");
+const Assessment = require("../models/assessmentModel");
 const User = require("../models/userModel");
 
+// Shared assessment controller for admin/recruiter CRUD endpoints.
 const createAssessment = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -137,6 +138,7 @@ const createAssessment = async (req, res) => {
   }
 };
 
+// List assessments with optional query filters.
 const listAssessments = async (req, res) => {
   try {
     const { status, createdBy, mine, visibleToRecruiters } = req.query;
@@ -169,6 +171,7 @@ const listAssessments = async (req, res) => {
   }
 };
 
+// Get one assessment detail by id.
 const getAssessmentById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -195,6 +198,7 @@ const getAssessmentById = async (req, res) => {
   }
 };
 
+// Update assessment content and settings.
 const updateAssessment = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -274,6 +278,7 @@ const updateAssessment = async (req, res) => {
   }
 };
 
+// Delete assessment by id.
 const deleteAssessment = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -329,3 +334,9 @@ module.exports = {
   updateAssessment,
   deleteAssessment,
 };
+
+
+
+
+
+

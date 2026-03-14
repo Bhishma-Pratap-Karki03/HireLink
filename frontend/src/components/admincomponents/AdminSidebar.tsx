@@ -7,7 +7,7 @@ import logoImg from "../../images/Register Page Images/Logo.png";
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
 import dashboardIcon from "../../images/Candidate Profile Page Images/261_1905.svg";
 import profileIcon from "../../images/Admin Profile Page Images/4_93.svg";
-import usersIcon from "../../images/Admin Profile Page Images/4_103.svg";
+import manageUser from "../../images/Admin Profile Page Images/Manage-user.png";
 import settingsIcon from "../../images/Recruiter Profile Page Images/6_335.svg";
 import assessmentsIcon from "../../images/Admin Profile Page Images/Quiz.svg";
 import jobsIcon from "../../images/Recruiter Profile Page Images/6_312.svg";
@@ -143,7 +143,7 @@ const AdminSidebar: React.FC = () => {
       id: "manage-users",
       path: "/admin/manage-users",
       label: "Manage Users",
-      icon: usersIcon,
+      icon: manageUser,
     },
     {
       id: "jobs",

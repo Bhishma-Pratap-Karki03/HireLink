@@ -37,6 +37,51 @@
   gap: 24px;
 }
 
+.recruiter-applicants-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.recruiter-applicants-summary-card {
+  background: #ffffff;
+  border: 1px solid #dde7f6;
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.recruiter-applicants-summary-card span {
+  display: block;
+  color: #66758f;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.recruiter-applicants-summary-card strong {
+  color: #0f283c;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.recruiter-applicants-summary-card small {
+  display: block;
+  margin-top: 6px;
+  color: #7b8aa5;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.recruiter-applicants-summary-card img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .recruiter-applicants-header {
   display: flex;
   align-items: center;
@@ -100,6 +145,24 @@
   font-weight: 600;
   cursor: pointer;
   font-size: 13px;
+}
+
+.recruiter-applicants-ats-btn:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.recruiter-applicants-ats-btn.secondary {
+  background: #ffffff;
+  color: #2563eb;
+  border: 1px solid #c7d6f8;
+}
+
+.recruiter-applicants-ats-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .recruiter-applicants-state {
@@ -215,6 +278,32 @@
   min-width: 0;
 }
 
+.recruiter-applicant-user-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recruiter-applicant-user small {
+  margin-top: 6px;
+  color: #7d8aa3;
+  font-size: 12px;
+  display: block;
+}
+
+.recruiter-applicant-new-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #e9f8ef;
+  color: #0f9d58;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
 .recruiter-applicant-left {
   display: flex;
   align-items: center;
@@ -228,8 +317,8 @@
   align-items: flex-start;
   gap: 8px;
   justify-self: center;
-  width: 220px;
-  transform: translateX(-28px);
+  width: 190px;
+  transform: none;
 }
 
 .recruiter-applicant-status-inline > span {
@@ -244,6 +333,8 @@
   align-items: center;
   gap: 8px;
   justify-self: end;
+  position: relative;
+  z-index: 3;
 }
 
 .recruiter-applicant-icon-btn {
@@ -538,6 +629,10 @@
 @media (max-width: 768px) {
   .recruiter-applicants-content {
     padding: 15px;
+  }
+
+  .recruiter-applicants-summary-grid {
+    grid-template-columns: 1fr;
   }
 
   .recruiter-applicants-scrollable-content {

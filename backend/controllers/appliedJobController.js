@@ -1,5 +1,6 @@
 const path = require("path"); // Node utility to build safe file paths (works on Windows/Linux)
 const fs = require("fs"); // Node file system module to read/write/move/copy/delete resume files
+// This controller handles candidate applications, recruiter review flow, and assessment details.
 
 const AppliedJob = require("../models/appliedJobModel"); // Mongo model: stores a candidate's job application
 const JobPost = require("../models/jobPostModel"); // Mongo model: stores job post details (title, recruiterId, assessmentId, etc.)
@@ -393,6 +394,7 @@ exports.getApplicationsByJob = async (req, res) => {
       return {
         id: app._id,
         candidate: app.candidate,
+        atsScore: typeof app.atsScore === "number" ? app.atsScore : null,
         resumeUrl: app.resumeUrl,
         resumeFileName: app.resumeFileName,
         resumeFileSize: app.resumeFileSize,

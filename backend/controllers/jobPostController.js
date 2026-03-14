@@ -3,6 +3,7 @@ const JobPost = require("../models/jobPostModel");
 const User = require("../models/userModel");
 const AppliedJob = require("../models/appliedJobModel");
 
+// Handles recruiter/admin job post create, edit, list, and status actions.
 const ADMIN_EMAIL = "hirelinknp@gmail.com";
 const MAX_INTERVIEW_STAGES = 6;
 
@@ -956,3 +957,5 @@ module.exports = {
   listJobPostsForAdmin,
   updateJobStatusByAdmin,
 };
+
+
