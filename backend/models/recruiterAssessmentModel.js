@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 
+// Reusable question format for quiz-type assessments.
 const quizQuestionSchema = new mongoose.Schema(
   {
     question: { type: String, required: true, trim: true },
@@ -9,8 +10,10 @@ const quizQuestionSchema = new mongoose.Schema(
   { _id: false },
 );
 
+// Stores recruiter-created assessments.
 const recruiterAssessmentSchema = new mongoose.Schema(
   {
+    // Basic assessment info.
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true },
     type: {
@@ -23,12 +26,15 @@ const recruiterAssessmentSchema = new mongoose.Schema(
       enum: ["beginner", "intermediate", "advanced"],
       required: true,
     },
+    // Attempt and visibility settings.
     timeLimit: { type: String, default: "" },
     maxAttempts: { type: Number, required: true, min: 1 },
     status: { type: String, enum: ["active", "inactive"], required: true },
     deadline: { type: Date },
     skillTags: [{ type: String, trim: true }],
+    // Quiz content.
     quizQuestions: [quizQuestionSchema],
+    // Writing assessment fields.
     writingTask: { type: String, default: "" },
     writingInstructions: { type: String, default: "" },
     writingFormat: {
@@ -36,6 +42,7 @@ const recruiterAssessmentSchema = new mongoose.Schema(
       enum: ["text", "file", "link"],
       default: "text",
     },
+    // Coding assessment fields.
     codeProblem: { type: String, default: "" },
     codeLanguages: [{ type: String, trim: true }],
     codeSubmission: { type: String, enum: ["file", "repo", "link"], default: "file" },
@@ -49,4 +56,5 @@ const recruiterAssessmentSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+// RecruiterAssessment collection.
 module.exports = mongoose.model("RecruiterAssessment", recruiterAssessmentSchema);

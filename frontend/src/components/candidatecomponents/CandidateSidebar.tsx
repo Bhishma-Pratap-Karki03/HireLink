@@ -16,6 +16,7 @@ import friendRequestsIcon from "../../images/Recruiter Profile Page Images/frien
 import appliedStatusIcon from "../../images/Job List Page Images/applied-status-icon.png";
 import notificationIcon from "../../images/Recruiter Profile Page Images/notification-icon.png";
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
+import menuIcon from "../../images/Register Page Images/menu.png";
 
 interface UserData {
   id: string;
@@ -38,6 +39,7 @@ const CandidateSidebar: React.FC = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [profileImage, setProfileImage] = useState<string>(defaultAvatar);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -131,6 +133,10 @@ const CandidateSidebar: React.FC = () => {
       window.removeEventListener("profileUpdated", handleProfileUpdate);
     };
   }, [navigate]);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
 
   // Get navigation items based on user role
   const getNavItems = (): NavItem[] => {
@@ -286,9 +292,70 @@ const CandidateSidebar: React.FC = () => {
     navigate("/home");
   };
 
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  const handleNavItemClick = () => {
+    if (window.innerWidth <= 1024) {
+      closeMobileMenu();
+    }
+  };
+
   if (isLoading) {
     return (
-      <aside className="sidebar">
+      <>
+        <button
+          type="button"
+          className="sidebar-mobile-menu-btn"
+          aria-label="Open menu"
+          onClick={() => setIsMobileMenuOpen(true)}
+        >
+          <img src={menuIcon} alt="Menu" className="sidebar-mobile-menu-icon" />
+        </button>
+        {isMobileMenuOpen && (
+          <button
+            type="button"
+            className="sidebar-mobile-backdrop"
+            aria-label="Close menu"
+            onClick={closeMobileMenu}
+          />
+        )}
+        <aside className={`sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
+          <div className="sidebar-header">
+            <Link
+              to="#"
+              onClick={handleLogoClick}
+              style={{ display: "inline-block", textDecoration: "none" }}
+            >
+              <img src={logoImg} alt="HireLink Logo" className="logo" />
+            </Link>
+          </div>
+          <div className="loading-sidebar">
+            <p>Loading...</p>
+          </div>
+        </aside>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="sidebar-mobile-menu-btn"
+        aria-label="Open menu"
+        onClick={() => setIsMobileMenuOpen(true)}
+      >
+        <img src={menuIcon} alt="Menu" className="sidebar-mobile-menu-icon" />
+      </button>
+      {isMobileMenuOpen && (
+        <button
+          type="button"
+          className="sidebar-mobile-backdrop"
+          aria-label="Close menu"
+          onClick={closeMobileMenu}
+        />
+      )}
+      <aside className={`sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
         <div className="sidebar-header">
           <Link
             to="#"
@@ -298,70 +365,52 @@ const CandidateSidebar: React.FC = () => {
             <img src={logoImg} alt="HireLink Logo" className="logo" />
           </Link>
         </div>
-        <div className="loading-sidebar">
-          <p>Loading...</p>
+
+        <div className="user-summary">
+          <div className="avatar-container">
+            <img
+              src={profileImage}
+              alt={`${userName}'s profile`}
+              className="user-avatar"
+              onError={(e) => {
+                e.currentTarget.src = defaultAvatar;
+              }}
+            />
+          </div>
+          <h3 className="user-name">{userName}</h3>
+          {userData?.currentJobTitle && (
+            <p className="user-job-title">{userData.currentJobTitle}</p>
+          )}
         </div>
+        <nav className="sidebar-nav">
+          {navItems.map((item) => {
+            const isSmartJobs =
+              item.id === "job-alerts" &&
+              location.pathname.startsWith("/candidate/job-alerts");
+            const isActive = isSmartJobs || location.pathname === item.path;
+
+            return (
+              <Link
+                key={item.id}
+                to={item.path}
+                className={`nav-item ${isActive ? "active" : ""}`}
+                onClick={handleNavItemClick}
+              >
+                <img
+                  src={item.icon}
+                  alt={item.label}
+                  className="nav-icon"
+                  onError={(e) => {
+                    e.currentTarget.src = messagesIcon;
+                  }}
+                />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </aside>
-    );
-  }
-
-  return (
-    <aside className="sidebar">
-      <div className="sidebar-header">
-        <Link
-          to="#"
-          onClick={handleLogoClick}
-          style={{ display: "inline-block", textDecoration: "none" }}
-        >
-          <img src={logoImg} alt="HireLink Logo" className="logo" />
-        </Link>
-      </div>
-
-      <div className="user-summary">
-        <div className="avatar-container">
-          <img
-            src={profileImage}
-            alt={`${userName}'s profile`}
-            className="user-avatar"
-            onError={(e) => {
-              e.currentTarget.src = defaultAvatar;
-            }}
-          />
-        </div>
-        <h3 className="user-name">{userName}</h3>
-        {userData?.currentJobTitle && (
-          <p className="user-job-title">{userData.currentJobTitle}</p>
-        )}
-      </div>
-
-      <nav className="sidebar-nav">
-        {navItems.map((item) => {
-          const isSmartJobs =
-            item.id === "job-alerts" &&
-            location.pathname.startsWith("/candidate/job-alerts");
-          const isActive = isSmartJobs || location.pathname === item.path;
-
-          return (
-            <Link
-              key={item.id}
-              to={item.path}
-              className={`nav-item ${isActive ? "active" : ""}`}
-            >
-              <img
-                src={item.icon}
-                alt={item.label}
-                className="nav-icon"
-                onError={(e) => {
-                  e.currentTarget.src = messagesIcon;
-                }}
-              />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-    </aside>
+    </>
   );
 };
 

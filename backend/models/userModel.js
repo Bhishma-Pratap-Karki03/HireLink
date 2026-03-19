@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
+// Extra workplace/gallery images used in recruiter profile pages.
 const workspaceImageSchema = new mongoose.Schema({
   imageUrl: {
     type: String,
@@ -24,6 +25,7 @@ const workspaceImageSchema = new mongoose.Schema({
   },
 });
 
+// Candidate/recruiter work experience entries.
 const experienceSchema = new mongoose.Schema({
   jobTitle: {
     type: String,
@@ -78,6 +80,7 @@ const experienceSchema = new mongoose.Schema({
   },
 });
 
+// Keep endDate empty for current experience entries.
 experienceSchema.pre("save", function (next) {
   if (this.isCurrent) {
     this.endDate = null;
@@ -86,6 +89,7 @@ experienceSchema.pre("save", function (next) {
   next();
 });
 
+// Languages section shown in candidate profile.
 const languageSchema = new mongoose.Schema({
   languageName: {
     type: String,
@@ -108,6 +112,7 @@ const languageSchema = new mongoose.Schema({
   },
 });
 
+// Certifications section shown in candidate profile.
 const certificationSchema = new mongoose.Schema({
   certificationName: {
     type: String,
@@ -149,6 +154,7 @@ const certificationSchema = new mongoose.Schema({
   },
 });
 
+// Keep expirationDate empty when certification does not expire.
 certificationSchema.pre("save", function (next) {
   if (this.doesNotExpire) {
     this.expirationDate = null;
@@ -157,6 +163,7 @@ certificationSchema.pre("save", function (next) {
   next();
 });
 
+// Skills used for profile display and AI matching inputs.
 const skillSchema = new mongoose.Schema({
   skillName: {
     type: String,
@@ -197,6 +204,7 @@ const skillSchema = new mongoose.Schema({
   },
 });
 
+// Education entries for candidate profile.
 const educationSchema = new mongoose.Schema({
   degreeTitle: {
     type: String,
@@ -253,6 +261,7 @@ const educationSchema = new mongoose.Schema({
   },
 });
 
+// Keep endDate empty for current education entries.
 educationSchema.pre("save", function (next) {
   if (this.isCurrent) {
     this.endDate = null;
@@ -260,6 +269,8 @@ educationSchema.pre("save", function (next) {
   this.updatedAt = Date.now();
   next();
 });
+
+// Project portfolio entries visible in candidate profile/details page.
 const projectSchema = new mongoose.Schema({
   projectTitle: {
     type: String,
@@ -313,6 +324,8 @@ const projectSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+
+// Keep endDate empty when project is marked as ongoing.
 projectSchema.pre("save", function (next) {
   if (this.isOngoing) {
     this.endDate = null;
@@ -321,8 +334,10 @@ projectSchema.pre("save", function (next) {
   next();
 });
 
+// Main user schema (admin, candidate, recruiter).
 const userSchema = new mongoose.Schema(
   {
+    // Basic identity and authentication fields.
     fullName: {
       type: String,
       required: true,
@@ -358,7 +373,7 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-
+    // Recruiter/company profile fields.
     workspaceImages: [workspaceImageSchema],
 
     phone: {
@@ -385,7 +400,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-
+    // Shared profile fields.
     currentJobTitle: {
       type: String,
       default: "",
@@ -401,7 +416,7 @@ const userSchema = new mongoose.Schema(
       enum: ["public", "private"],
       default: "public",
     },
-
+    // Verification and reset code fields.
     connectionsCount: {
       type: Number,
       default: 0,
@@ -421,6 +436,7 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Resume and social links.
     resume: {
       type: String,
       default: "",
@@ -465,6 +481,7 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Candidate profile sections.
     experience: [experienceSchema],
     education: [educationSchema],
     skills: [skillSchema],
@@ -481,6 +498,7 @@ const userSchema = new mongoose.Schema(
   {
     timestamps: true,
     toJSON: {
+      // Remove sensitive/internal fields in API responses.
       transform: function (doc, ret) {
         ret.id = ret._id;
         delete ret._id;
@@ -494,6 +512,7 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// Hash password only when it is newly created or changed.
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 
@@ -506,8 +525,10 @@ userSchema.pre("save", async function (next) {
   }
 });
 
+// Compares plain password with stored hash during login.
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
+// User collection.
 module.exports = mongoose.model("User", userSchema);

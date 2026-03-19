@@ -10,7 +10,7 @@ import actionMessageIcon from "../../images/Candidate Profile Page Images/messag
 import actionEyeIcon from "../../images/Candidate Profile Page Images/eyeIcon.svg";
 import dropdownArrow from "../../images/Register Page Images/1_2307.svg";
 import statsCandidatesIcon from "../../images/Candidate Profile Page Images/statsCandidatesIcon.png";
-import unreadMessageIcon from "../../images/Candidate Profile Page Images/unread-message-icon.png";
+import unreadMessageIcon from "../../images/Candidate Profile Page Images/rejected-icon.png";
 
 type CandidateInfo = {
   id?: string;
@@ -131,9 +131,9 @@ const RecruiterJobApplicantsPage = () => {
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
   const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [openStatusDropdownId, setOpenStatusDropdownId] = useState<string | null>(
-    null,
-  );
+  const [openStatusDropdownId, setOpenStatusDropdownId] = useState<
+    string | null
+  >(null);
 
   const reportsByApplicationId = useMemo(
     () =>
@@ -173,7 +173,9 @@ const RecruiterJobApplicantsPage = () => {
       const atsData = await atsRes.json();
 
       if (!applicationsRes.ok) {
-        throw new Error(applicationsData?.message || "Failed to load applicants");
+        throw new Error(
+          applicationsData?.message || "Failed to load applicants",
+        );
       }
       if (!atsRes.ok) {
         throw new Error(atsData?.message || "Failed to load ATS ranking");
@@ -239,7 +241,10 @@ const RecruiterJobApplicantsPage = () => {
     }
   };
 
-  const handleStatusChange = async (applicationId: string, nextStatus: string) => {
+  const handleStatusChange = async (
+    applicationId: string,
+    nextStatus: string,
+  ) => {
     const token = localStorage.getItem("authToken");
     if (!token) {
       navigate("/login");
@@ -296,7 +301,8 @@ const RecruiterJobApplicantsPage = () => {
     .map((application, index) => {
       const isUnscoredApplicant =
         !reportsByApplicationId[application.id] &&
-        (application.atsScore === null || typeof application.atsScore === "undefined");
+        (application.atsScore === null ||
+          typeof application.atsScore === "undefined");
       const isNewApplicant =
         isUnscoredApplicant || isRecentlyApplied(application.appliedAt);
 
@@ -311,7 +317,9 @@ const RecruiterJobApplicantsPage = () => {
             application: application.id,
             candidate: application.candidate,
             score:
-              typeof application.atsScore === "number" ? application.atsScore : 0,
+              typeof application.atsScore === "number"
+                ? application.atsScore
+                : 0,
             matchedSkills: [],
             missingSkills: [],
             experienceMatch: false,
@@ -334,7 +342,9 @@ const RecruiterJobApplicantsPage = () => {
         application.candidate?.email ||
         ""
       ).toLowerCase();
-      return fullName.includes(normalizedQuery) || email.includes(normalizedQuery);
+      return (
+        fullName.includes(normalizedQuery) || email.includes(normalizedQuery)
+      );
     },
   );
 
@@ -427,12 +437,16 @@ const RecruiterJobApplicantsPage = () => {
             </div>
 
             {scanMessage && (
-              <div className="recruiter-applicants-state success">{scanMessage}</div>
+              <div className="recruiter-applicants-state success">
+                {scanMessage}
+              </div>
             )}
             {runError && (
               <div className="recruiter-applicants-state error">{runError}</div>
             )}
-            {loading && <div className="recruiter-applicants-state">Loading...</div>}
+            {loading && (
+              <div className="recruiter-applicants-state">Loading...</div>
+            )}
             {error && !loading && (
               <div className="recruiter-applicants-state error">{error}</div>
             )}
@@ -461,7 +475,9 @@ const RecruiterJobApplicantsPage = () => {
                     <article
                       key={application.id}
                       className={`recruiter-applicant-card ${
-                        openStatusDropdownId === application.id ? "status-open" : ""
+                        openStatusDropdownId === application.id
+                          ? "status-open"
+                          : ""
                       }`}
                     >
                       <div className="recruiter-applicant-info recruiter-ats-top-row">
@@ -481,7 +497,9 @@ const RecruiterJobApplicantsPage = () => {
                                 </span>
                               ) : null}
                             </div>
-                            <p>{report.candidate.currentJobTitle || "Candidate"}</p>
+                            <p>
+                              {report.candidate.currentJobTitle || "Candidate"}
+                            </p>
                             <span>{report.candidate.email}</span>
                             <small>
                               Applied on {formatDate(application.appliedAt)}
@@ -494,11 +512,15 @@ const RecruiterJobApplicantsPage = () => {
                             <button
                               type="button"
                               className={`recruiter-applicant-status-trigger ${
-                                openStatusDropdownId === application.id ? "open" : ""
+                                openStatusDropdownId === application.id
+                                  ? "open"
+                                  : ""
                               }`}
                               onClick={() =>
                                 setOpenStatusDropdownId((prev) =>
-                                  prev === application.id ? null : application.id,
+                                  prev === application.id
+                                    ? null
+                                    : application.id,
                                 )
                               }
                               disabled={statusUpdating === application.id}
@@ -535,7 +557,10 @@ const RecruiterJobApplicantsPage = () => {
                                     }`}
                                     onClick={() => {
                                       setOpenStatusDropdownId(null);
-                                      if (application.status === statusOption.value)
+                                      if (
+                                        application.status ===
+                                        statusOption.value
+                                      )
                                         return;
                                       handleStatusChange(
                                         application.id,
@@ -569,7 +594,10 @@ const RecruiterJobApplicantsPage = () => {
                             onClick={() => openCandidateMessage(candidateId)}
                             title="Message candidate"
                           >
-                            <img src={actionMessageIcon} alt="Message candidate" />
+                            <img
+                              src={actionMessageIcon}
+                              alt="Message candidate"
+                            />
                           </button>
                         </div>
                       </div>
@@ -578,7 +606,6 @@ const RecruiterJobApplicantsPage = () => {
                 },
               )}
             </div>
-
           </div>
 
           <RecruiterAtsDetailsOverlay

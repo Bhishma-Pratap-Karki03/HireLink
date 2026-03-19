@@ -74,6 +74,7 @@ router.post(
 );
 router.post("/", protect, adminAssessmentController.createAssessment);
 router.put("/:id", protect, adminAssessmentController.updateAssessment);
+router.patch("/:id/status", protect, adminAssessmentController.toggleAssessmentStatus);
 router.delete("/:id", protect, adminAssessmentController.deleteAssessment);
 
 module.exports = router;

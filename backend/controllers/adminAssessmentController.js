@@ -274,6 +274,55 @@ const updateAssessment = async (req, res) => {
   }
 };
 
+// Quickly toggle assessment status between active and inactive.
+const toggleAssessmentStatus = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const admin = await User.findById(userId);
+
+    if (!admin || admin.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only admins can update assessment status",
+      });
+    }
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!["active", "inactive"].includes(String(status))) {
+      return res.status(400).json({
+        success: false,
+        message: "Status must be active or inactive",
+      });
+    }
+
+    const assessment = await AdminAssessment.findById(id);
+    if (!assessment) {
+      return res.status(404).json({
+        success: false,
+        message: "Assessment not found",
+      });
+    }
+
+    assessment.status = status;
+    const savedAssessment = await assessment.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Assessment set to ${status}`,
+      assessment: savedAssessment,
+    });
+  } catch (error) {
+    console.error("Toggle admin assessment status error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error updating assessment status",
+      error: error.message,
+    });
+  }
+};
+
 // Delete an admin assessment by id.
 const deleteAssessment = async (req, res) => {
   try {
@@ -532,6 +581,7 @@ module.exports = {
   listAssessments,
   getAssessmentById,
   updateAssessment,
+  toggleAssessmentStatus,
   deleteAssessment,
   listAssessmentAttempts,
   getAssessmentAttemptDetail,

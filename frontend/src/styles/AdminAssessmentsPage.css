@@ -289,14 +289,14 @@
 .admin-assessments-table-head,
 .admin-assessments-table-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 0.8fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1.25fr 1fr 0.8fr 1.05fr 1fr;
   gap: 12px;
   align-items: center;
 }
 
 .admin-manage-table-head.admin-assessments-table-head,
 .admin-manage-row.admin-assessments-table-row {
-  grid-template-columns: 2fr 1fr 1fr 1fr 0.8fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1.25fr 1fr 0.8fr 1.05fr 1fr;
 }
 
 .admin-assessments-table-head {
@@ -311,7 +311,7 @@
   background: transparent;
   border: none;
   border-radius: 0;
-  padding: 14px 16px;
+  padding: 16px 20px;
   font-size: 14px;
   color: #233b57;
   font-weight: 400;
@@ -347,6 +347,50 @@
   color: #c0392b;
 }
 
+.admin-assessments-status-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+}
+
+.admin-assessments-toggle {
+  width: 42px;
+  height: 24px;
+  border: 1px solid #cfe0f4;
+  border-radius: 999px;
+  background: #e6edf8;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.admin-assessments-toggle-knob {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 40, 60, 0.25);
+  transition: transform 0.2s ease;
+}
+
+.admin-assessments-toggle.on {
+  background: #1b7f4f;
+  border-color: #1b7f4f;
+}
+
+.admin-assessments-toggle.on .admin-assessments-toggle-knob {
+  transform: translateX(18px);
+}
+
+.admin-assessments-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .admin-assessments-table-row .chip.quiz {
   background: #e8edff;
   color: #3f5cf4;
@@ -375,7 +419,7 @@
 
 .admin-assessments-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
 }
 
@@ -383,8 +427,8 @@
   border: none;
   background: #eef3ff;
   color: #4c6fff;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 8px;
   cursor: pointer;
   display: inline-flex;

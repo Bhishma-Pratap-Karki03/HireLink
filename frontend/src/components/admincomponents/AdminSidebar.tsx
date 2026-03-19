@@ -12,6 +12,7 @@ import settingsIcon from "../../images/Recruiter Profile Page Images/6_335.svg";
 import assessmentsIcon from "../../images/Admin Profile Page Images/Quiz.svg";
 import jobsIcon from "../../images/Recruiter Profile Page Images/6_312.svg";
 import contactUsIcon from "../../images/Recruiter Profile Page Images/contactUsIcon.png";
+import menuIcon from "../../images/Register Page Images/menu.png";
 
 interface UserData {
   id: string;
@@ -33,6 +34,7 @@ const AdminSidebar: React.FC = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [profileImage, setProfileImage] = useState<string>(defaultAvatar);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -125,6 +127,10 @@ const AdminSidebar: React.FC = () => {
     };
   }, [navigate]);
 
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
   // Admin navigation items
   const navItems: NavItem[] = [
     {
@@ -177,9 +183,70 @@ const AdminSidebar: React.FC = () => {
     navigate("/home");
   };
 
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  const handleNavItemClick = () => {
+    if (window.innerWidth <= 1024) {
+      closeMobileMenu();
+    }
+  };
+
   if (isLoading) {
     return (
-      <aside className="admin-sidebar">
+      <>
+        <button
+          type="button"
+          className="admin-sidebar-mobile-menu-btn"
+          aria-label="Open menu"
+          onClick={() => setIsMobileMenuOpen(true)}
+        >
+          <img src={menuIcon} alt="Menu" className="admin-sidebar-mobile-menu-icon" />
+        </button>
+        {isMobileMenuOpen && (
+          <button
+            type="button"
+            className="admin-sidebar-mobile-backdrop"
+            aria-label="Close menu"
+            onClick={closeMobileMenu}
+          />
+        )}
+        <aside className={`admin-sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
+          <div className="admin-sidebar-header">
+            <Link
+              to="#"
+              onClick={handleLogoClick}
+              style={{ display: "inline-block", textDecoration: "none" }}
+            >
+              <img src={logoImg} alt="HireLink Logo" className="admin-logo" />
+            </Link>
+          </div>
+          <div className="admin-loading-sidebar">
+            <p>Loading...</p>
+          </div>
+        </aside>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="admin-sidebar-mobile-menu-btn"
+        aria-label="Open menu"
+        onClick={() => setIsMobileMenuOpen(true)}
+      >
+        <img src={menuIcon} alt="Menu" className="admin-sidebar-mobile-menu-icon" />
+      </button>
+      {isMobileMenuOpen && (
+        <button
+          type="button"
+          className="admin-sidebar-mobile-backdrop"
+          aria-label="Close menu"
+          onClick={closeMobileMenu}
+        />
+      )}
+      <aside className={`admin-sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
         <div className="admin-sidebar-header">
           <Link
             to="#"
@@ -189,64 +256,47 @@ const AdminSidebar: React.FC = () => {
             <img src={logoImg} alt="HireLink Logo" className="admin-logo" />
           </Link>
         </div>
-        <div className="admin-loading-sidebar">
-          <p>Loading...</p>
+        <div className="admin-user-summary">
+          <div className="admin-avatar-container">
+            <img
+              src={profileImage}
+              alt={`${userName}'s profile`}
+              className="admin-user-avatar"
+              onError={(e) => {
+                e.currentTarget.src = defaultAvatar;
+              }}
+            />
+          </div>
+          <h3 className="admin-user-name">{userName}</h3>
+          <p className="admin-user-role">Administrator</p>
         </div>
+
+        <nav className="admin-sidebar-nav">
+          {navItems.map((item) => {
+            const isActive =
+              location.pathname === item.path ||
+              (item.id === "assessments" &&
+                location.pathname.startsWith("/admin/assessments/"));
+
+            return (
+              <Link
+                key={item.id}
+                to={item.path}
+                className={`admin-nav-item ${isActive ? "active" : ""}`}
+                onClick={handleNavItemClick}
+              >
+                <img
+                  src={item.icon}
+                  alt={item.label}
+                  className="admin-nav-icon"
+                />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </aside>
-    );
-  }
-
-  return (
-    <aside className="admin-sidebar">
-      <div className="admin-sidebar-header">
-        <Link
-          to="#"
-          onClick={handleLogoClick}
-          style={{ display: "inline-block", textDecoration: "none" }}
-        >
-          <img src={logoImg} alt="HireLink Logo" className="admin-logo" />
-        </Link>
-      </div>
-
-      <div className="admin-user-summary">
-        <div className="admin-avatar-container">
-          <img
-            src={profileImage}
-            alt={`${userName}'s profile`}
-            className="admin-user-avatar"
-            onError={(e) => {
-              e.currentTarget.src = defaultAvatar;
-            }}
-          />
-        </div>
-        <h3 className="admin-user-name">{userName}</h3>
-        <p className="admin-user-role">Administrator</p>
-      </div>
-
-      <nav className="admin-sidebar-nav">
-        {navItems.map((item) => {
-          const isActive =
-            location.pathname === item.path ||
-            (item.id === "assessments" &&
-              location.pathname.startsWith("/admin/assessments/"));
-
-          return (
-            <Link
-              key={item.id}
-              to={item.path}
-              className={`admin-nav-item ${isActive ? "active" : ""}`}
-            >
-              <img
-                src={item.icon}
-                alt={item.label}
-                className="admin-nav-icon"
-              />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+    </>
   );
 };
 

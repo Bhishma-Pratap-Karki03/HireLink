@@ -1,33 +1,39 @@
-// reviewModel.js - Updated with proper pagination
 const mongoose = require("mongoose");
 
+// Stores company reviews and project reviews.
 const reviewSchema = new mongoose.Schema(
   {
+    // Decides whether this review targets a company or a project.
     targetType: {
       type: String,
       enum: ["company", "project"],
       default: "company",
       index: true,
     },
+    // Company review target.
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: false,
     },
+    // Candidate owner in project review context.
     candidateId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: false,
     },
+    // Project review target.
     projectId: {
       type: mongoose.Schema.Types.ObjectId,
       required: false,
     },
+    // Reviewer user id.
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
+    // Review content.
     rating: {
       type: Number,
       required: true,
@@ -44,6 +50,7 @@ const reviewSchema = new mongoose.Schema(
       trim: true,
       required: true,
     },
+    // Reviewer display info snapshot.
     reviewerName: {
       type: String,
       trim: true,
@@ -59,6 +66,7 @@ const reviewSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    // Moderation and visibility flags.
     isApproved: {
       type: Boolean,
       default: true,
@@ -76,6 +84,7 @@ const reviewSchema = new mongoose.Schema(
   {
     timestamps: true,
     toJSON: {
+      // Returns cleaner API response fields.
       transform: function (doc, ret) {
         ret.id = ret._id;
         delete ret._id;
@@ -86,7 +95,7 @@ const reviewSchema = new mongoose.Schema(
   },
 );
 
-// Prevent duplicate review per user per company/project
+// Prevent duplicate review per user per company/project.
 reviewSchema.index(
   { targetType: 1, companyId: 1, userId: 1 },
   { unique: true, partialFilterExpression: { targetType: "company" } },
@@ -96,7 +105,7 @@ reviewSchema.index(
   { unique: true, partialFilterExpression: { targetType: "project" } },
 );
 
-// Create a compound index for efficient queries
+// Indexes for fast review listing and filtering.
 reviewSchema.index({ targetType: 1, companyId: 1, isApproved: 1, createdAt: -1 });
 reviewSchema.index({ targetType: 1, companyId: 1, status: 1, createdAt: -1 });
 reviewSchema.index({ targetType: 1, projectId: 1, status: 1, createdAt: -1 });

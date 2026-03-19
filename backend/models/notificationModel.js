@@ -1,18 +1,22 @@
 const mongoose = require("mongoose");
 
+// Stores in-app notifications shown to users.
 const notificationSchema = new mongoose.Schema(
   {
+    // User who receives this notification.
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
       index: true,
     },
+    // User who triggered this notification.
     actor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
+    // Notification category.
     type: {
       type: String,
       enum: [
@@ -25,6 +29,7 @@ const notificationSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    // Optional linked entities for specific notification types.
     request: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ConnectionRequest",
@@ -35,11 +40,13 @@ const notificationSchema = new mongoose.Schema(
       ref: "AppliedJob",
       default: null,
     },
+    // Read/unread state.
     isRead: {
       type: Boolean,
       default: false,
       index: true,
     },
+    // Text and route target shown in UI.
     message: {
       type: String,
       required: true,
@@ -54,6 +61,8 @@ const notificationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Fast lookup for recent notifications of one user.
 notificationSchema.index({ user: 1, createdAt: -1 });
 
+// Notification collection.
 module.exports = mongoose.model("Notification", notificationSchema);

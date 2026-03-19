@@ -35,6 +35,8 @@ const AdminContactMessagesPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedMessage, setSelectedMessage] =
     useState<ContactMessageItem | null>(null);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
 
   const token = localStorage.getItem("authToken") || "";
 
@@ -114,7 +116,6 @@ const AdminContactMessagesPage = () => {
 
   const deleteMessage = async (messageId: string) => {
     if (!token) return;
-    if (!window.confirm("Delete this contact message?")) return;
 
     try {
       setActingMessageId(messageId);
@@ -133,8 +134,12 @@ const AdminContactMessagesPage = () => {
       }
 
       setMessages((prev) => prev.filter((item) => item._id !== messageId));
+      setToastType("success");
+      setToastMessage("Contact message deleted.");
     } catch (err: any) {
       setError(err?.message || "Failed to delete message.");
+      setToastType("error");
+      setToastMessage(err?.message || "Failed to delete message.");
     } finally {
       setActingMessageId("");
     }
@@ -171,6 +176,14 @@ const AdminContactMessagesPage = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [statusFilter]);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timeoutId = window.setTimeout(() => {
+      setToastMessage("");
+    }, 2800);
+    return () => window.clearTimeout(timeoutId);
+  }, [toastMessage]);
 
   const formatDateTime = (value?: string | null) => {
     if (!value) return "-";
@@ -457,6 +470,22 @@ const AdminContactMessagesPage = () => {
               <p>{selectedMessage.message}</p>
             </div>
           </div>
+        </div>
+      )}
+      {toastMessage && (
+        <div className={`admin-contact-toast ${toastType}`}>
+          <div className="admin-contact-toast-head">
+            {toastType === "success" ? "Success" : "Error"}
+          </div>
+          <p className="admin-contact-toast-message">{toastMessage}</p>
+          <button
+            type="button"
+            className="admin-contact-toast-close"
+            aria-label="Close toast"
+            onClick={() => setToastMessage("")}
+          >
+            ×
+          </button>
         </div>
       )}
     </div>

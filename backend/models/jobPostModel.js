@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 
+// One interview stage in a job hiring process.
 const interviewStageSchema = new mongoose.Schema(
   {
     name: { type: String, trim: true, required: true },
@@ -8,13 +9,16 @@ const interviewStageSchema = new mongoose.Schema(
   { _id: false },
 );
 
+// Main schema for recruiter job postings.
 const jobPostSchema = new mongoose.Schema(
   {
+    // Recruiter owner of this job post.
     recruiterId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
+    // Basic job info.
     contactEmail: { type: String, trim: true, default: "" },
     jobTitle: { type: String, trim: true, required: true },
     department: { type: String, trim: true, required: true },
@@ -29,6 +33,7 @@ const jobPostSchema = new mongoose.Schema(
       enum: ["male", "female", "both"],
       required: true,
     },
+    // Requirement and compensation details.
     jobLevel: { type: String, trim: true, required: true },
     jobType: { type: String, trim: true, required: true },
     openings: { type: Number, min: 1, required: true },
@@ -43,6 +48,7 @@ const jobPostSchema = new mongoose.Schema(
     salaryTo: { type: String, trim: true, required: true },
     currency: { type: String, trim: true, required: true },
     benefits: [{ type: String, trim: true }],
+    // Hiring process and optional assessment setup.
     interviewStages: [interviewStageSchema],
     assessmentId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -55,6 +61,7 @@ const jobPostSchema = new mongoose.Schema(
       enum: ["admin", "recruiter"],
       default: "recruiter",
     },
+    // Publishing state.
     status: {
       type: String,
       enum: ["draft", "published"],
@@ -65,6 +72,7 @@ const jobPostSchema = new mongoose.Schema(
   {
     timestamps: true,
     toJSON: {
+      // Returns cleaner API response fields.
       transform: function (doc, ret) {
         ret.id = ret._id;
         delete ret._id;
@@ -75,4 +83,5 @@ const jobPostSchema = new mongoose.Schema(
   },
 );
 
+// JobPost collection.
 module.exports = mongoose.model("JobPost", jobPostSchema);

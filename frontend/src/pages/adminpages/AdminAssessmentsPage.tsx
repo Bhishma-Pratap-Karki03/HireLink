@@ -33,6 +33,7 @@ const AdminAssessmentsPage: React.FC = () => {
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<AssessmentItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [togglingId, setTogglingId] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -199,6 +200,48 @@ const AdminAssessmentsPage: React.FC = () => {
     event.preventDefault();
     setCurrentPage(1);
     setSearch(searchInput);
+  };
+
+  const handleToggleStatus = async (item: AssessmentItem) => {
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      setError("Please login to update assessment status.");
+      return;
+    }
+
+    const nextStatus = item.status === "active" ? "inactive" : "active";
+
+    try {
+      setTogglingId(item.id);
+      setError("");
+      const response = await fetch(
+        `http://localhost:5000/api/assessments/${item.id}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status: nextStatus }),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to update assessment status");
+      }
+
+      setAssessments((prev) =>
+        prev.map((assessment) =>
+          assessment.id === item.id
+            ? { ...assessment, status: nextStatus }
+            : assessment,
+        ),
+      );
+    } catch (err: any) {
+      setError(err?.message || "Failed to update assessment status");
+    } finally {
+      setTogglingId("");
+    }
   };
 
   return (
@@ -432,8 +475,28 @@ const AdminAssessmentsPage: React.FC = () => {
                     >
                       <span>{item.title}</span>
                       <span className={`chip ${item.type}`}>{item.type}</span>
-                      <span className={`chip ${item.status}`}>
-                        {item.status}
+                      <span className="admin-assessments-status-cell">
+                        <span className={`chip ${item.status}`}>
+                          {item.status}
+                        </span>
+                        <button
+                          type="button"
+                          className={`admin-assessments-toggle ${
+                            item.status === "active" ? "on" : "off"
+                          }`}
+                          onClick={() => handleToggleStatus(item)}
+                          disabled={togglingId === item.id}
+                          aria-label={`Set ${
+                            item.title
+                          } as ${
+                            item.status === "active" ? "inactive" : "active"
+                          }`}
+                          title={`Set ${
+                            item.status === "active" ? "Inactive" : "Active"
+                          }`}
+                        >
+                          <span className="admin-assessments-toggle-knob" />
+                        </button>
                       </span>
                       <span>{item.difficulty}</span>
                       <span>{item.actualAttempts}</span>
@@ -558,3 +621,4 @@ const AdminAssessmentsPage: React.FC = () => {
 };
 
 export default AdminAssessmentsPage;
+

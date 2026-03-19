@@ -1,52 +1,39 @@
 const mongoose = require("mongoose");
 
-/*
-   Sub-Schema: Recommendation Item
-   Represents a single recommended job inside one recommendation run
-*/
+// One recommended job item inside a single recommendation run.
 const recommendationItemSchema = new mongoose.Schema(
   {
-    jobId: { type: String, required: true }, // ID of the recommended job
+    jobId: { type: String, required: true }, // Recommended job id
     jobTitle: { type: String, default: "" }, // Job title
     companyName: { type: String, default: "" }, // Company name
     location: { type: String, default: "" }, // Job location
-    jobType: { type: String, default: "" }, // Full-time / Part-time / etc
+    jobType: { type: String, default: "" }, // Full-time / Part-time / etc.
     workMode: { type: String, default: "" }, // Remote / Hybrid / On-site
-
-    score: { type: Number, default: 0 }, // ML prediction score (0–100)
-    skillMatchPercent: { type: Number, default: 0 }, // Skill match percentage
-
-    matchedSkills: { type: [String], default: [] }, // Skills candidate has
-    missingSkills: { type: [String], default: [] }, // Skills candidate lacks
-
-    reasons: { type: [String], default: [] }, // Explanation text for recommendation
+    score: { type: Number, default: 0 }, // Overall recommendation score
+    skillMatchPercent: { type: Number, default: 0 }, // Skill match %
+    matchedSkills: { type: [String], default: [] }, // Skills found in profile
+    missingSkills: { type: [String], default: [] }, // Skills not matched
+    reasons: { type: [String], default: [] }, // Explanation lines shown in UI
   },
-  { _id: false }, // Disable automatic _id for each recommendation item
+  { _id: false },
 );
 
-/*
-   Main Schema: Recommendation History
-   Stores one complete recommendation run for a candidate
-*/
+// Stores one full recommendation run for one candidate.
 const recommendationHistorySchema = new mongoose.Schema(
   {
     candidate: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // Reference to User collection
+      ref: "User",
       required: true,
-      index: true, // Indexed for faster search
+      index: true,
     },
-
     recommendations: {
-      type: [recommendationItemSchema], // Array of recommendation items
+      type: [recommendationItemSchema],
       default: [],
     },
   },
-  { timestamps: true }, // Automatically adds createdAt & updatedAt
+  { timestamps: true },
 );
 
-// Export model
-module.exports = mongoose.model(
-  "RecommendationHistory",
-  recommendationHistorySchema,
-);
+// RecommendationHistory collection.
+module.exports = mongoose.model("RecommendationHistory", recommendationHistorySchema);

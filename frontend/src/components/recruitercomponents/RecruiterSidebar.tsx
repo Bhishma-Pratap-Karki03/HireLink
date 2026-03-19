@@ -12,6 +12,7 @@ import messagesIcon from "../../images/Recruiter Profile Page Images/6_317.svg";
 import settingsIcon from "../../images/Recruiter Profile Page Images/6_335.svg";
 import friendRequestsIcon from "../../images/Recruiter Profile Page Images/friend-request.svg";
 import notificationIcon from "../../images/Recruiter Profile Page Images/notification-icon.png";
+import menuIcon from "../../images/Register Page Images/menu.png";
 
 interface UserData {
   id: string;
@@ -34,6 +35,7 @@ const RecruiterSidebar: React.FC = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [profileImage, setProfileImage] = useState<string>(defaultAvatar);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -126,6 +128,10 @@ const RecruiterSidebar: React.FC = () => {
     };
   }, [navigate]);
 
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
   // Determine if user is recruiter
   const isRecruiter = userData?.role === "recruiter";
 
@@ -181,9 +187,84 @@ const RecruiterSidebar: React.FC = () => {
     navigate("/home");
   };
 
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  const handleNavItemClick = () => {
+    if (window.innerWidth <= 1024) {
+      closeMobileMenu();
+    }
+  };
+
   if (isLoading) {
     return (
-      <aside className="recruiter-sidebar">
+      <>
+        <button
+          type="button"
+          className="recruiter-sidebar-mobile-menu-btn"
+          aria-label="Open menu"
+          onClick={() => setIsMobileMenuOpen(true)}
+        >
+          <img
+            src={menuIcon}
+            alt="Menu"
+            className="recruiter-sidebar-mobile-menu-icon"
+          />
+        </button>
+        {isMobileMenuOpen && (
+          <button
+            type="button"
+            className="recruiter-sidebar-mobile-backdrop"
+            aria-label="Close menu"
+            onClick={closeMobileMenu}
+          />
+        )}
+        <aside
+          className={`recruiter-sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}
+        >
+          <div className="recruiter-sidebar-header">
+            <Link
+              to="#"
+              onClick={handleLogoClick}
+              style={{ display: "inline-block", textDecoration: "none" }}
+            >
+              <img
+                src={logoImg}
+                alt="HireLink Logo"
+                className="recruiter-logo"
+              />
+            </Link>
+          </div>
+          <div className="loading-sidebar">
+            <p>Loading...</p>
+          </div>
+        </aside>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="recruiter-sidebar-mobile-menu-btn"
+        aria-label="Open menu"
+        onClick={() => setIsMobileMenuOpen(true)}
+      >
+        <img
+          src={menuIcon}
+          alt="Menu"
+          className="recruiter-sidebar-mobile-menu-icon"
+        />
+      </button>
+      {isMobileMenuOpen && (
+        <button
+          type="button"
+          className="recruiter-sidebar-mobile-backdrop"
+          aria-label="Close menu"
+          onClick={closeMobileMenu}
+        />
+      )}
+      <aside className={`recruiter-sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
         <div className="recruiter-sidebar-header">
           <Link
             to="#"
@@ -193,77 +274,58 @@ const RecruiterSidebar: React.FC = () => {
             <img src={logoImg} alt="HireLink Logo" className="recruiter-logo" />
           </Link>
         </div>
-        <div className="loading-sidebar">
-          <p>Loading...</p>
-        </div>
-      </aside>
-    );
-  }
-
-  return (
-    <aside className="recruiter-sidebar">
-      <div className="recruiter-sidebar-header">
-        <Link
-          to="#"
-          onClick={handleLogoClick}
-          style={{ display: "inline-block", textDecoration: "none" }}
-        >
-          <img src={logoImg} alt="HireLink Logo" className="recruiter-logo" />
-        </Link>
-      </div>
-
-      <div className="recruiter-user-summary">
-        <div
-          className={`recruiter-avatar-container ${
-            isRecruiter
-              ? "recruiter-logo-container"
-              : "candidate-avatar-container"
-          }`}
-        >
-          <img
-            src={profileImage}
-            alt={`${userName}'s company logo`}
-            className={`recruiter-user-avatar ${
-              isRecruiter ? "recruiter-logo" : "candidate-avatar"
+        <div className="recruiter-user-summary">
+          <div
+            className={`recruiter-avatar-container ${
+              isRecruiter
+                ? "recruiter-logo-container"
+                : "candidate-avatar-container"
             }`}
-            onError={(e) => {
-              e.currentTarget.src = defaultAvatar;
-            }}
-          />
+          >
+            <img
+              src={profileImage}
+              alt={`${userName}'s company logo`}
+              className={`recruiter-user-avatar ${
+                isRecruiter ? "recruiter-logo" : "candidate-avatar"
+              }`}
+              onError={(e) => {
+                e.currentTarget.src = defaultAvatar;
+              }}
+            />
+          </div>
+          <h3 className="recruiter-user-name">{userName}</h3>
         </div>
-        <h3 className="recruiter-user-name">{userName}</h3>
 
-        {/* REMOVED currentJobTitle display */}
-      </div>
+        <nav className="recruiter-sidebar-nav">
+          {navItems.map((item) => {
+            const isActive =
+              location.pathname === item.path ||
+              (item.id === "job-postings" &&
+                (location.pathname.startsWith("/recruiter/job-postings") ||
+                  location.pathname === "/recruiter/post-job"));
 
-      <nav className="recruiter-sidebar-nav">
-        {navItems.map((item) => {
-          const isActive =
-            location.pathname === item.path ||
-            (item.id === "job-postings" &&
-              (location.pathname.startsWith("/recruiter/job-postings") ||
-                location.pathname === "/recruiter/post-job"));
-
-          return (
-            <Link
-              key={item.id}
-              to={item.path}
-              className={`recruiter-nav-item ${isActive ? "active" : ""}`}
-            >
-              <img
-                src={item.icon}
-                alt={item.label}
-                className="recruiter-nav-icon"
-                onError={(e) => {
-                  e.currentTarget.src = messagesIcon;
-                }}
-              />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+            return (
+              <Link
+                key={item.id}
+                to={item.path}
+                className={`recruiter-nav-item ${isActive ? "active" : ""}`}
+                onClick={handleNavItemClick}
+              >
+                <img
+                  src={item.icon}
+                  alt={item.label}
+                  className="recruiter-nav-icon"
+                  onError={(e) => {
+                    e.currentTarget.src = messagesIcon;
+                  }}
+                />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+    </>
   );
 };
 
