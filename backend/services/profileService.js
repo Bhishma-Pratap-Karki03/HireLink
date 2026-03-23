@@ -211,6 +211,23 @@ class ProfileService {
       throw error;
     }
 
+    // Unverified candidate/recruiter profiles must stay hidden from public pages.
+    if (
+      ["candidate", "recruiter"].includes(user.role) &&
+      !user.isVerified &&
+      String(viewerId || "") !== String(user._id)
+    ) {
+      const viewer = viewerId
+        ? await User.findById(viewerId).select("role").lean()
+        : null;
+      const isAdmin = viewer?.role === "admin";
+      if (!isAdmin) {
+        const error = new Error("User not found");
+        error.statusCode = 404;
+        throw error;
+      }
+    }
+
     if (["candidate", "recruiter"].includes(user.role) && user.profileVisibility === "private") {
       if (!viewerId) {
         const roleLabel = user.role === "recruiter" ? "employer" : "candidate";

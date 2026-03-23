@@ -25,7 +25,7 @@ const contactRoutes = require("./routes/contactRoutes");
 
 // CORS configuration
 const allowedOrigins = process.env.CLIENT_URL
-  ? process.env.CLIENT_URL.split(",")
+  ? process.env.CLIENT_URL.split(",").map((origin) => origin.trim())
   : ["http://localhost:5173"];
 
 app.use(
@@ -33,14 +33,17 @@ app.use(
     origin: function (origin, callback) {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) !== -1) {
+      const isLocalhostOrigin =
+        /^https?:\/\/localhost(?::\d+)?$/.test(origin) ||
+        /^https?:\/\/127\.0\.0\.1(?::\d+)?$/.test(origin);
+      if (allowedOrigins.indexOf(origin) !== -1 || isLocalhostOrigin) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
-  })
+  }),
 );
 
 // Parse JSON bodies

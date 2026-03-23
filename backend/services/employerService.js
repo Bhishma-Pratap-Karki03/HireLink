@@ -15,6 +15,7 @@ class EmployerService {
     // Only select fields needed for public employers page
     const recruiters = await User.find({
       role: "recruiter",
+      isVerified: true,
       email: { $ne: ADMIN_EMAIL }, // Exclude admin by email
     })
       .select(
@@ -119,6 +120,7 @@ class EmployerService {
     const recruiter = await User.findOne({
       _id: recruiterId,
       role: "recruiter",
+      isVerified: true,
     })
       .select(
         "fullName profilePicture address companySize foundedYear websiteUrl email phone about workspaceImages linkedinUrl instagramUrl facebookUrl profileVisibility"

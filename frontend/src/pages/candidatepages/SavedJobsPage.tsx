@@ -390,7 +390,7 @@ const SavedJobsPage = () => {
                   View Details
                 </button>
                 <button
-                  className="joblist-btn-primary"
+                  className={`joblist-btn-primary${appliedJobs[job.jobId] ? " joblist-btn-applied" : ""}`}
                   onClick={() => openApplyModal(job.jobId)}
                   disabled={appliedJobs[job.jobId]}
                 >
