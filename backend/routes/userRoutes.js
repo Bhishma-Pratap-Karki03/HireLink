@@ -20,7 +20,7 @@ router.post("/register", registerUser);
 
 // POST /api/users/login - Login an existing user
 router.post("/login", loginUser);
-// GET /api/users/candidates - List candidates (recruiter/admin)
+// GET /api/users/candidates - List candidates
 router.get("/candidates", listCandidates);
 
 // Admin user management
