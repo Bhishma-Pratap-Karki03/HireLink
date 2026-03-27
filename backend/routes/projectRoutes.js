@@ -16,28 +16,29 @@ const {
 // Configure multer for file uploads (project cover images)
 const upload = createImageUpload("projects", 5);
 
-// Project management routes
-// POST /api/project - Add new project
+// Add a new project to logged-in user's profile.
+// Supports optional cover image upload with field name `coverImage`.
 router.post(
   "/",
   protect,
   upload.single("coverImage"),
   handleMulterError,
   checkFileValidation,
-  projectController.addProject
+  projectController.addProject,
 );
 
-// PUT /api/project/:projectId - Update project
+// Update an existing project by projectId for logged-in user.
+// Supports optional new cover image upload with field name `coverImage`.
 router.put(
   "/:projectId",
   protect,
   upload.single("coverImage"),
   handleMulterError,
   checkFileValidation,
-  projectController.updateProject
+  projectController.updateProject,
 );
 
-// DELETE /api/project/:projectId - Remove project
+// Delete a project by projectId from logged-in user's profile.
 router.delete("/:projectId", protect, projectController.removeProject);
 
 module.exports = router;

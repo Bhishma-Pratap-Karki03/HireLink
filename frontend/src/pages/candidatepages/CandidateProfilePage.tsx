@@ -18,6 +18,7 @@ import CertificationEditor, {
 } from "../../components/candidatecomponents/CertificationEditor.tsx";
 import "../../styles/CandidateProfilePage.css";
 import fileIcon from "../../images/Candidate Profile Page Images/Resume-icon.png";
+import { resolveAssetUrl } from "../../utils/assetUrl";
 
 // Import images
 import defaultAvatar from "../../images/Register Page Images/Default Profile.webp";
@@ -1751,7 +1752,7 @@ const CandidateProfilePage = () => {
                       {formatFileSize(resumeData.fileSize)}
                     </span>
                     <a
-                      href={`http://localhost:5000${resumeData.url}`}
+                      href={resolveAssetUrl(resumeData.url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="resume-view-link"

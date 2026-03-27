@@ -1,4 +1,4 @@
-// routes/profileRoutes.js - FIXED VERSION
+// Profile routes for candidate/recruiter profile management.
 const express = require("express");
 const router = express.Router();
 const { protect, optionalProtect } = require("../middleware/authMiddleware");
@@ -6,7 +6,7 @@ const profileController = require("../controllers/profileController");
 const multer = require("multer");
 const path = require("path");
 
-// Create simple multer middleware inline
+// Multer setup for profile picture upload (image only, max 5MB).
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
@@ -42,71 +42,84 @@ const upload = multer({
   },
 });
 
-// Public routes
+// Public profile route (optional auth allows private-profile checks for friends/admin).
 router.get("/user/:userId", optionalProtect, profileController.getUserProfile);
 
-// Protected routes (require authentication)
+// Get logged-in user profile.
 router.get("/me", protect, profileController.getMyProfile);
+// Update basic profile fields for logged-in user.
 router.put("/me", protect, profileController.updateProfile);
+// Upload or replace profile picture. Form-data field: profilePicture
 router.post(
   "/me/picture",
   protect,
   upload.single("profilePicture"),
   profileController.uploadProfilePicture
 );
+// Remove current profile picture.
 router.delete("/me/picture", protect, profileController.removeProfilePicture);
 
-// Experience routes
+// Add new experience entry.
 router.post("/me/experience", protect, profileController.addExperience);
+// Update experience entry by experienceId.
 router.put(
   "/me/experience/:experienceId",
   protect,
   profileController.updateExperience
 );
+// Delete experience entry by experienceId.
 router.delete(
   "/me/experience/:experienceId",
   protect,
   profileController.removeExperience
 );
 
-// Education routes
+// Add new education entry.
 router.post("/me/education", protect, profileController.addEducation);
+// Update education entry by educationId.
 router.put(
   "/me/education/:educationId",
   protect,
   profileController.updateEducation
 );
+// Delete education entry by educationId.
 router.delete(
   "/me/education/:educationId",
   protect,
   profileController.removeEducation
 );
 
-// Skill routes
+// Add new skill entry.
 router.post("/me/skills", protect, profileController.addSkill);
+// Update skill entry by skillId.
 router.put("/me/skills/:skillId", protect, profileController.updateSkill);
+// Delete skill entry by skillId.
 router.delete("/me/skills/:skillId", protect, profileController.removeSkill);
 
-// Language routes
+// Add new language entry.
 router.post("/me/languages", protect, profileController.addLanguage);
+// Update language entry by languageId.
 router.put(
   "/me/languages/:languageId",
   protect,
   profileController.updateLanguage
 );
+// Delete language entry by languageId.
 router.delete(
   "/me/languages/:languageId",
   protect,
   profileController.removeLanguage
 );
 
-// Certification routes
+// Add new certification entry.
 router.post("/me/certifications", protect, profileController.addCertification);
+// Update certification entry by certificationId.
 router.put(
   "/me/certifications/:certificationId",
   protect,
   profileController.updateCertification
 );
+// Delete certification entry by certificationId.
 router.delete(
   "/me/certifications/:certificationId",
   protect,
