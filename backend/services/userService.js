@@ -1,4 +1,4 @@
-// User Service handles user registration and login business logic
+﻿// User Service handles user registration and login business logic
 // This service separates the business logic from the HTTP layer
 
 const User = require("../models/userModel");
@@ -48,27 +48,51 @@ class UserService {
       if (existingUser.isVerified) {
         throw new Error("Email already exists and is verified. Please login.");
       } else {
-        // If user exists but isn't verified, update their info and send new verification code
-        const verificationCode = generateVerificationCode();
-        const verificationCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
-
+        // If account exists but not verified, keep same account details.
         existingUser.fullName = fullName;
         existingUser.password = password; // Password will be hashed automatically by model
         existingUser.role = role;
-        existingUser.verificationCode = verificationCode;
-        existingUser.verificationCodeExpires = verificationCodeExpires;
         await existingUser.save();
 
-        // Send verification email to user
-        await sendVerificationEmail(email, verificationCode);
+        // If old verification code is still valid, let user continue with same code and timer.
+        if (
+          existingUser.verificationCode &&
+          existingUser.verificationCodeExpires &&
+          existingUser.verificationCodeExpires > new Date()
+        ) {
+          const timeLeft = Math.max(
+            0,
+            Math.ceil((existingUser.verificationCodeExpires - new Date()) / 1000)
+          );
 
+          return {
+            success: false,
+            emailExists: true,
+            requiresVerification: true,
+            hasActiveCode: true,
+            codeExpired: false,
+            timeLeft,
+            email: existingUser.email,
+            user: {
+              id: existingUser._id,
+              email: existingUser.email,
+            },
+          };
+        }
+
+        // If code expired, ask user to resend from verification page (do not send new code here).
         return {
-          success: true,
+          success: false,
+          emailExists: true,
+          requiresVerification: true,
+          hasActiveCode: false,
+          codeExpired: true,
+          timeLeft: 0,
+          email: existingUser.email,
           user: {
             id: existingUser._id,
             email: existingUser.email,
           },
-          requiresVerification: true,
         };
       }
     }
@@ -88,7 +112,10 @@ class UserService {
     });
 
     await newUser.save();
-    await sendVerificationEmail(email, verificationCode);
+    const emailSent = await sendVerificationEmail(email, verificationCode);
+        if (!emailSent) {
+          throw new Error("Failed to send verification email. Please try again.");
+        }
 
     return {
       success: true,
@@ -154,7 +181,10 @@ class UserService {
         user.verificationCodeExpires = verificationCodeExpires;
         await user.save();
 
-        await sendVerificationEmail(user.email, verificationCode);
+        const emailSent = await sendVerificationEmail(user.email, verificationCode);
+        if (!emailSent) {
+          throw new Error("Failed to send verification email. Please try again.");
+        }
 
         throw {
           name: "VerificationRequired",
@@ -211,3 +241,5 @@ class UserService {
 
 // Export a single instance of the UserService class
 module.exports = new UserService();
+
+

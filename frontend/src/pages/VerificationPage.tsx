@@ -3,8 +3,6 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../styles/VerificationPage.css";
-import loginAvatar1 from "../images/Login Page Images/avatar-1.jpg";
-import testimonialStar from "../images/Public Page/I1_1436_1_3469.svg";
 
 // Define TypeScript interfaces for API responses
 interface VerificationResponse {
@@ -23,12 +21,45 @@ interface VerificationResponse {
 }
 
 interface StatusResponse {
-  isVerified: boolean;
+  isVerified?: boolean;
   hasPendingVerification?: boolean;
+  hasPendingReset?: boolean;
   expiresAt?: string;
   timeLeft?: number;
   isExpired?: boolean;
 }
+
+const getApiBaseUrl = () => {
+  const apiBase = String(import.meta.env.VITE_API_BASE_URL || "").trim();
+  if (apiBase) return apiBase.replace(/\/+$/, "");
+
+  const backendBase = String(import.meta.env.VITE_BACKEND_URL || "").trim();
+  if (backendBase) return `${backendBase.replace(/\/+$/, "")}/api`;
+
+  const host = window.location.hostname;
+  const isLocalHost =
+    host === "localhost" || host === "127.0.0.1" || host === "::1";
+
+  if (isLocalHost) return "http://localhost:5000/api";
+
+  return "https://hirelinkbackendhost.onrender.com/api";
+};
+
+const parseJsonResponse = async <T,>(response: Response): Promise<T> => {
+  const raw = await response.text();
+  if (!raw) return {} as T;
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    const htmlResponse = raw.trim().startsWith("<!DOCTYPE");
+    throw new Error(
+      htmlResponse
+        ? "API returned HTML instead of JSON. Check frontend API base URL configuration."
+        : "Server returned invalid JSON response."
+    );
+  }
+};
 
 const VerificationPage = () => {
   const [verificationCode, setVerificationCode] = useState<string[]>([
@@ -56,24 +87,27 @@ const VerificationPage = () => {
   const initialMessage = location.state?.message || "";
   const fromLogin = location.state?.fromLogin || false;
   const isPasswordReset = location.state?.isPasswordReset || false;
+  const apiBaseUrl = getApiBaseUrl();
 
   // Check if this is for email verification or password reset
   const isVerificationType = !isPasswordReset;
 
   const checkVerificationStatus = async () => {
-    if (!userEmail || isPasswordReset) return;
+    if (!userEmail) return;
 
     setIsCheckingStatus(true);
     try {
+      const statusEndpoint = isPasswordReset
+        ? `${apiBaseUrl}/password/check-status?email=${encodeURIComponent(userEmail)}`
+        : `${apiBaseUrl}/verify/check-status?email=${encodeURIComponent(userEmail)}`;
+
       const response = await fetch(
-        `http://localhost:5000/api/verify/check-status?email=${encodeURIComponent(
-          userEmail
-        )}`
+        statusEndpoint
       );
-      const data: StatusResponse = await response.json();
+      const data = await parseJsonResponse<StatusResponse>(response);
 
       if (response.ok) {
-        if (data.isVerified) {
+        if (!isPasswordReset && data.isVerified) {
           // User already verified, redirect to login
           navigate("/login", {
             state: { message: "Email already verified. Please login." },
@@ -88,11 +122,18 @@ const VerificationPage = () => {
         } else {
           // Code expired or no code
           setTimer(0);
-          setCanResend(data.hasPendingVerification || data.isExpired || false);
+          const canResendValue = isPasswordReset
+            ? data.hasPendingReset || data.isExpired || false
+            : data.hasPendingVerification || data.isExpired || false;
+          setCanResend(canResendValue);
         }
       }
     } catch (error) {
       console.error("Error checking verification status:", error);
+      setStatusMessage(
+        "Unable to check verification status. Please check API URL and try again."
+      );
+      setStatusType("error");
     } finally {
       setIsCheckingStatus(false);
     }
@@ -100,11 +141,11 @@ const VerificationPage = () => {
 
   // Initialize timer and check verification status
   useEffect(() => {
-    if (userEmail && !isPasswordReset) {
+    if (userEmail) {
       checkVerificationStatus();
     } else {
-      // For password reset or no email, set default timer
-      setTimer(900);
+      // No email in state, keep defaults
+      setTimer(0);
       setCanResend(false);
       setIsCheckingStatus(false);
     }
@@ -134,11 +175,11 @@ const VerificationPage = () => {
           }
           return prevTimer - 1;
         });
-      }, 500);
+      }, 1000);
     }
 
-    // Sync with server every 30 seconds to ensure accuracy (only for verification, not password reset)
-    if (userEmail && !isPasswordReset && !isCheckingStatus) {
+    // Sync with server every 30 seconds to keep timer/status accurate.
+    if (userEmail && !isCheckingStatus) {
       syncInterval = setInterval(() => {
         checkVerificationStatus();
       }, 30000);
@@ -149,6 +190,16 @@ const VerificationPage = () => {
       if (syncInterval) clearInterval(syncInterval);
     };
   }, [timer, canResend, userEmail, isPasswordReset, isCheckingStatus]);
+
+  useEffect(() => {
+    if (!statusMessage) return;
+
+    const timerId = setTimeout(() => {
+      setStatusMessage("");
+    }, 4000);
+
+    return () => clearTimeout(timerId);
+  }, [statusMessage]);
 
   const handleInputChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
@@ -220,7 +271,7 @@ const VerificationPage = () => {
       if (isVerificationType) {
         // Email verification flow
         response = await fetch(
-          "http://localhost:5000/api/verify/verify-email",
+          `${apiBaseUrl}/verify/verify-email`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -231,7 +282,7 @@ const VerificationPage = () => {
           }
         );
 
-        data = await response.json();
+        data = await parseJsonResponse<VerificationResponse>(response);
 
         if (!response.ok) {
           if (data.codeExpired) {
@@ -271,7 +322,7 @@ const VerificationPage = () => {
       } else {
         // Password reset verification flow
         response = await fetch(
-          "http://localhost:5000/api/password/verify-code",
+          `${apiBaseUrl}/password/verify-code`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -282,7 +333,7 @@ const VerificationPage = () => {
           }
         );
 
-        data = await response.json();
+        data = await parseJsonResponse<VerificationResponse>(response);
 
         if (!response.ok) {
           if (data.codeExpired) {
@@ -315,7 +366,11 @@ const VerificationPage = () => {
         }, 500);
       }
     } catch (error) {
-      setStatusMessage("An error occurred. Please try again.");
+      const message =
+        error instanceof Error
+          ? error.message
+          : "An error occurred. Please try again.";
+      setStatusMessage(message);
       setStatusType("error");
       console.error("Verification error:", error);
     } finally {
@@ -336,7 +391,7 @@ const VerificationPage = () => {
       if (isVerificationType) {
         // Resend verification code
         response = await fetch(
-          "http://localhost:5000/api/verify/resend-verification",
+          `${apiBaseUrl}/verify/resend-verification`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -346,7 +401,7 @@ const VerificationPage = () => {
       } else {
         // Resend password reset code
         response = await fetch(
-          "http://localhost:5000/api/password/resend-code",
+          `${apiBaseUrl}/password/resend-code`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -355,7 +410,7 @@ const VerificationPage = () => {
         );
       }
 
-      data = await response.json();
+      data = await parseJsonResponse<VerificationResponse>(response);
 
       if (!response.ok) {
         setStatusMessage(data.message || "Failed to resend code");
@@ -387,7 +442,11 @@ const VerificationPage = () => {
         inputRefs.current[0].focus();
       }
     } catch (error) {
-      setStatusMessage("Failed to resend code. Please try again.");
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to resend code. Please try again.";
+      setStatusMessage(message);
       setStatusType("error");
       console.error("Resend error:", error);
     } finally {
@@ -458,25 +517,6 @@ const VerificationPage = () => {
             </div>
           </div>
 
-          <div className="verification-left-bottom">
-            <div className="verification-lb-photo">
-              <img src={loginAvatar1} alt="User" />
-            </div>
-            <div className="verification-lb-text">
-              <div className="verification-lb-stars">
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-                <img src={testimonialStar} alt="star" />
-              </div>
-              <p>
-                &quot;The verification step is quick and secure. I got the code
-                instantly.&quot;
-              </p>
-              <strong>HireLink User</strong>
-            </div>
-          </div>
         </section>
 
         <section className="verification-right-panel">
@@ -523,16 +563,6 @@ const VerificationPage = () => {
               ))}
             </div>
 
-            {statusMessage && (
-              <p
-                className={`status-message ${
-                  statusType === "success" ? "status-success" : "status-error"
-                }`}
-              >
-                {statusMessage}
-              </p>
-            )}
-
             <button
               className="verification-verify-button"
               onClick={handleVerify}
@@ -557,7 +587,7 @@ const VerificationPage = () => {
             <div className="verification-footer-links">
               {canResend && (
                 <button
-                  className={`verification-link-action ${
+                  className={`verification-inline-btn ${
                     isResending ? "disabled" : ""
                   }`}
                   onClick={handleResendCode}
@@ -573,15 +603,15 @@ const VerificationPage = () => {
 
               {isVerificationType ? (
                 <>
-                  <Link to="/register" className="verification-link-action">
+                  <Link to="/register" className="verification-inline-btn">
                     Back to Register Page
                   </Link>
-                  <Link to="/login" className="verification-link-action">
+                  <Link to="/login" className="verification-inline-btn">
                     Back to Login Page
                   </Link>
                 </>
               ) : (
-                <Link to="/forgot-password" className="verification-link-action">
+                <Link to="/forgot-password" className="verification-inline-btn">
                   Back to Forgot Password
                 </Link>
               )}
@@ -612,9 +642,32 @@ const VerificationPage = () => {
         </section>
       </main>
 
+      {statusMessage && (
+        <div
+          className={`verification-toast ${
+            statusType === "success" ? "success" : "error"
+          }`}
+        >
+          <div className="verification-toast-head">
+            {statusType === "success" ? "Success" : "Error"}
+          </div>
+          <p className="verification-toast-message">{statusMessage}</p>
+          <button
+            type="button"
+            className="verification-toast-close"
+            aria-label="Close toast"
+            onClick={() => setStatusMessage("")}
+          >
+            x
+          </button>
+        </div>
+      )}
+
       <Footer />
     </>
   );
 };
 
 export default VerificationPage;
+
+
