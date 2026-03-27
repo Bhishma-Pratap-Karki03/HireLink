@@ -14,8 +14,6 @@ import heroIcon2 from "../images/Employers Page Images/8_209.svg";
 
 // Job list icons (paths reserved in Job List Page Images)
 import locationIcon from "../images/Employers Page Images/location-icond.svg";
-import jobTypeIcon from "../images/Job List Page Images/job-type.svg";
-import workModeIcon from "../images/Job List Page Images/work-mode.svg";
 
 // Interview stage icons (placeholders in Job List Page Images)
 import stageIcon1 from "../images/Job List Page Images/interview-stage-1.png";
@@ -139,6 +137,7 @@ const JobDetailsPage = () => {
   const [applyLoading, setApplyLoading] = useState(false);
   const [applyMessage, setApplyMessage] = useState("");
   const [applyError, setApplyError] = useState("");
+  const [dismissedApplyToastKey, setDismissedApplyToastKey] = useState("");
   const [useCustomResume, setUseCustomResume] = useState(false);
   const [customResumeFile, setCustomResumeFile] = useState<File | null>(null);
   const [applyNote, setApplyNote] = useState("");
@@ -152,7 +151,7 @@ const JobDetailsPage = () => {
     try {
       setLoading(true);
       setError("");
-      const response = await fetch(`http://localhost:5000/api/jobs/${id}`);
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/${id}`);
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data?.message || "Failed to load job details");
@@ -177,7 +176,7 @@ const JobDetailsPage = () => {
     try {
       const jobId = job.id || job._id;
       const res = await fetch(
-        `http://localhost:5000/api/saved-jobs/status/${jobId}`,
+        `${import.meta.env.VITE_API_BASE_URL}/saved-jobs/status/${jobId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -203,7 +202,7 @@ const JobDetailsPage = () => {
     try {
       const jobId = job.id || job._id;
       const res = await fetch(
-        `http://localhost:5000/api/applications/status/${jobId}`,
+        `${import.meta.env.VITE_API_BASE_URL}/applications/status/${jobId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -233,8 +232,8 @@ const JobDetailsPage = () => {
         setAssessmentError("");
         const endpoint =
           job.assessmentSource === "admin"
-            ? `http://localhost:5000/api/assessments/${job.assessmentId}`
-            : `http://localhost:5000/api/recruiter-assessments/${job.assessmentId}`;
+            ? `${import.meta.env.VITE_API_BASE_URL}/assessments/${job.assessmentId}`
+            : `${import.meta.env.VITE_API_BASE_URL}/recruiter-assessments/${job.assessmentId}`;
         const response = await fetch(endpoint);
         const data = await response.json();
         if (!response.ok) {
@@ -285,7 +284,7 @@ const JobDetailsPage = () => {
 
         if (source === "recruiter") {
           const response = await fetch(
-            `http://localhost:5000/api/recruiter-assessments/${job.assessmentId}/meta`,
+            `${import.meta.env.VITE_API_BASE_URL}/recruiter-assessments/${job.assessmentId}/meta`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -311,7 +310,7 @@ const JobDetailsPage = () => {
         }
 
         const response = await fetch(
-          "http://localhost:5000/api/assessments/available",
+          `${import.meta.env.VITE_API_BASE_URL}/assessments/available`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -349,7 +348,7 @@ const JobDetailsPage = () => {
   const resolveLogo = (logo?: string) => {
     if (!logo) return defaultLogo;
     if (logo.startsWith("http")) return logo;
-    return `http://localhost:5000${logo.startsWith("/") ? "" : "/"}${logo}`;
+    return `${import.meta.env.VITE_BACKEND_URL}${logo.startsWith("/") ? "" : "/"}${logo}`;
   };
 
   const formatWorkMode = (mode?: string) => {
@@ -402,6 +401,23 @@ const JobDetailsPage = () => {
     return hasHtmlTag ? content : content.replace(/\n/g, "<br />");
   };
 
+  const applyFeedbackMessage = applyError || applyMessage;
+  const applyFeedbackType = applyError ? "error" : "success";
+  const applyFeedbackKey = `${applyFeedbackType}:${applyFeedbackMessage}`;
+
+  useEffect(() => {
+    setDismissedApplyToastKey("");
+  }, [applyFeedbackKey]);
+
+  useEffect(() => {
+    if (!applyFeedbackMessage) return;
+    const timer = window.setTimeout(() => {
+      setApplyError("");
+      setApplyMessage("");
+    }, 6000);
+    return () => window.clearTimeout(timer);
+  }, [applyFeedbackMessage]);
+
   const openApplyModal = async () => {
     if (!job || !isCandidate) return;
     if (!canApply) {
@@ -424,7 +440,7 @@ const JobDetailsPage = () => {
     }
     try {
       setApplyLoading(true);
-      const profileRes = await fetch("http://localhost:5000/api/profile/me", {
+      const profileRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/profile/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const profileData = await profileRes.json();
@@ -447,7 +463,7 @@ const JobDetailsPage = () => {
     if (!token || !job) return;
     const jobId = job.id || job._id;
     try {
-      const res = await fetch("http://localhost:5000/api/saved-jobs/toggle", {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/saved-jobs/toggle`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -498,7 +514,7 @@ const JobDetailsPage = () => {
       }
 
       const response = await fetch(
-        "http://localhost:5000/api/applications/apply",
+        `${import.meta.env.VITE_API_BASE_URL}/applications/apply`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -512,9 +528,7 @@ const JobDetailsPage = () => {
 
       setApplyMessage("Application submitted. Recruiter will be notified.");
       setIsApplied(true);
-      setTimeout(() => {
-        setApplyModalOpen(false);
-      }, 1200);
+      setApplyModalOpen(false);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to apply";
       setApplyError(message);
@@ -534,6 +548,26 @@ const JobDetailsPage = () => {
   return (
     <div className="job-details-page">
       <Navbar />
+      {applyFeedbackMessage && dismissedApplyToastKey !== applyFeedbackKey && (
+        <div className={`apply-feedback-toast ${applyFeedbackType}`}>
+          <div className="apply-feedback-toast-head">
+            {applyFeedbackType === "success" ? "Success" : "Error"}
+          </div>
+          <p className="apply-feedback-toast-message">{applyFeedbackMessage}</p>
+          <button
+            type="button"
+            className="apply-feedback-toast-close"
+            aria-label="Close toast"
+            onClick={() => {
+              setDismissedApplyToastKey(applyFeedbackKey);
+              setApplyError("");
+              setApplyMessage("");
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <section className="job-details-hero">
         <div className="job-details-hero-wrapper">
@@ -800,8 +834,8 @@ const JobDetailsPage = () => {
                                   }
                                   const base =
                                     job.assessmentSource === "admin"
-                                      ? "http://localhost:5000/api/assessments"
-                                      : "http://localhost:5000/api/recruiter-assessments";
+                                      ? `${import.meta.env.VITE_API_BASE_URL}/assessments`
+                                      : `${import.meta.env.VITE_API_BASE_URL}/recruiter-assessments`;
                                   fetch(
                                     `${base}/${job.assessmentId}/attempts/start`,
                                     {
@@ -975,8 +1009,6 @@ const JobDetailsPage = () => {
         applyNote={applyNote}
         confirmRequirements={confirmRequirements}
         confirmResume={confirmResume}
-        applyError={applyError}
-        applyMessage={applyMessage}
         onClose={closeApplyModal}
         onConfirm={handleConfirmApply}
         onUseCustomResumeChange={setUseCustomResume}
@@ -991,5 +1023,8 @@ const JobDetailsPage = () => {
 };
 
 export default JobDetailsPage;
+
+
+
 
 

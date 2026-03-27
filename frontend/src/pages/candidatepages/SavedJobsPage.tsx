@@ -1,4 +1,4 @@
-import PortalFooter from "../../components/PortalFooter";
+﻿import PortalFooter from "../../components/PortalFooter";
 import { useEffect, useMemo, useState } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -41,6 +41,7 @@ const SavedJobsPage = () => {
   const [applyLoading, setApplyLoading] = useState(false);
   const [applyMessage, setApplyMessage] = useState("");
   const [applyError, setApplyError] = useState("");
+  const [dismissedApplyToastKey, setDismissedApplyToastKey] = useState("");
   const [useCustomResume, setUseCustomResume] = useState(false);
   const [customResumeFile, setCustomResumeFile] = useState<File | null>(null);
   const [applyNote, setApplyNote] = useState("");
@@ -74,7 +75,13 @@ const SavedJobsPage = () => {
   const resolveLogo = (logo?: string) => {
     if (!logo) return defaultLogo;
     if (logo.startsWith("http")) return logo;
-    return `http://localhost:5000${logo.startsWith("/") ? "" : "/"}${logo}`;
+    return `${import.meta.env.VITE_BACKEND_URL}${logo.startsWith("/") ? "" : "/"}${logo}`;
+  };
+
+  const resolveAssetUrl = (value?: string) => {
+    if (!value) return "";
+    if (value.startsWith("http")) return value;
+    return `${import.meta.env.VITE_BACKEND_URL}${value}`;
   };
 
   const formatWorkMode = (mode?: string) => {
@@ -93,7 +100,7 @@ const SavedJobsPage = () => {
       const entries = await Promise.all(
         jobIds.map(async (jobId) => {
           const res = await fetch(
-            `http://localhost:5000/api/applications/status/${jobId}`,
+            `${import.meta.env.VITE_API_BASE_URL}/applications/status/${jobId}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           const data = await res.json();
@@ -115,7 +122,7 @@ const SavedJobsPage = () => {
     }
     try {
       setSavingJobId(jobId);
-      const res = await fetch("http://localhost:5000/api/saved-jobs/toggle", {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/saved-jobs/toggle`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -158,8 +165,8 @@ const SavedJobsPage = () => {
     try {
       setApplyLoading(true);
       const [jobRes, profileRes] = await Promise.all([
-        fetch(`http://localhost:5000/api/jobs/${jobId}`),
-        fetch("http://localhost:5000/api/profile/me", {
+        fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/${jobId}`),
+        fetch(`${import.meta.env.VITE_API_BASE_URL}/profile/me`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -209,7 +216,7 @@ const SavedJobsPage = () => {
         formData.append("resumeUrl", applyProfileResume);
       }
 
-      const response = await fetch("http://localhost:5000/api/applications/apply", {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/applications/apply`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -221,9 +228,7 @@ const SavedJobsPage = () => {
 
       setApplyMessage("Application submitted. Recruiter will be notified.");
       setAppliedJobs((prev) => ({ ...prev, [applyJobId]: true }));
-      setTimeout(() => {
-        setApplyModalOpen(false);
-      }, 1200);
+      setApplyModalOpen(false);
     } catch (err: any) {
       setApplyError(err?.message || "Failed to apply");
     } finally {
@@ -241,7 +246,7 @@ const SavedJobsPage = () => {
       try {
         setLoading(true);
         setError("");
-        const res = await fetch("http://localhost:5000/api/saved-jobs/mine", {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/saved-jobs/mine`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -317,10 +322,48 @@ const SavedJobsPage = () => {
     }
   }, [currentPage, totalPages]);
 
+  const applyFeedbackMessage = applyError || applyMessage;
+  const applyFeedbackType = applyError ? "error" : "success";
+  const applyFeedbackKey = `${applyFeedbackType}:${applyFeedbackMessage}`;
+
+  useEffect(() => {
+    setDismissedApplyToastKey("");
+  }, [applyFeedbackKey]);
+
+  useEffect(() => {
+    if (!applyFeedbackMessage) return;
+    const timer = window.setTimeout(() => {
+      setApplyError("");
+      setApplyMessage("");
+    }, 6000);
+    return () => window.clearTimeout(timer);
+  }, [applyFeedbackMessage]);
+
   return (
     <div className="candidate-dashboard-container">
       <SideNavigation />
       <main className="savedjobs-main joblist-page">
+        {applyFeedbackMessage &&
+          dismissedApplyToastKey !== applyFeedbackKey && (
+            <div className={`apply-feedback-toast ${applyFeedbackType}`}>
+              <div className="apply-feedback-toast-head">
+                {applyFeedbackType === "success" ? "Success" : "Error"}
+              </div>
+              <p className="apply-feedback-toast-message">{applyFeedbackMessage}</p>
+              <button
+                type="button"
+                className="apply-feedback-toast-close"
+                aria-label="Close toast"
+                onClick={() => {
+                  setDismissedApplyToastKey(applyFeedbackKey);
+                  setApplyError("");
+                  setApplyMessage("");
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )}
         <CandidateTopBar
           showSearch
           onSearch={setSearchQuery}
@@ -465,7 +508,7 @@ const SavedJobsPage = () => {
                   <h5>Resume</h5>
                   {applyProfileResume ? (
                     <a
-                      href={`http://localhost:5000${applyProfileResume}`}
+                      href={resolveAssetUrl(applyProfileResume)}
                       target="_blank"
                       rel="noreferrer"
                       className="apply-modal-link"
@@ -564,9 +607,6 @@ const SavedJobsPage = () => {
               </div>
             )}
 
-            {applyError && <div className="apply-modal-error">{applyError}</div>}
-            {applyMessage && <div className="apply-modal-success">{applyMessage}</div>}
-
             <div className="apply-modal-actions">
               <button className="apply-modal-secondary" onClick={closeApplyModal}>
                 Cancel
@@ -590,5 +630,8 @@ const SavedJobsPage = () => {
 };
 
 export default SavedJobsPage;
+
+
+
 
 

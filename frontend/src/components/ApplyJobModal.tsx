@@ -19,8 +19,6 @@ type ApplyJobModalProps = {
   applyNote: string;
   confirmRequirements: boolean;
   confirmResume: boolean;
-  applyError: string;
-  applyMessage: string;
   onClose: () => void;
   onConfirm: () => void;
   onUseCustomResumeChange: (checked: boolean) => void;
@@ -50,6 +48,12 @@ const quillFormats = [
   "link",
 ];
 
+const resolveAssetUrl = (value: string) => {
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+  return `${import.meta.env.VITE_BACKEND_URL}${value}`;
+};
+
 const ApplyJobModal = ({
   isOpen,
   loading,
@@ -60,8 +64,6 @@ const ApplyJobModal = ({
   applyNote,
   confirmRequirements,
   confirmResume,
-  applyError,
-  applyMessage,
   onClose,
   onConfirm,
   onUseCustomResumeChange,
@@ -97,7 +99,7 @@ const ApplyJobModal = ({
               <h5>Resume</h5>
               {profileResume ? (
                 <a
-                  href={`http://localhost:5000${profileResume}`}
+                  href={resolveAssetUrl(profileResume)}
                   target="_blank"
                   rel="noreferrer"
                   className="apply-modal-link"
@@ -198,9 +200,6 @@ const ApplyJobModal = ({
             </label>
           </div>
         )}
-
-        {applyError && <div className="apply-modal-error">{applyError}</div>}
-        {applyMessage && <div className="apply-modal-success">{applyMessage}</div>}
 
         <div className="apply-modal-actions">
           <button className="apply-modal-secondary" onClick={onClose}>

@@ -78,6 +78,8 @@ type PricingPlan = {
 };
 
 const HomePage = () => {
+  const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
   const navigate = useNavigate();
   const [heroSearch, setHeroSearch] = useState("");
   const [heroLocation, setHeroLocation] = useState("");
@@ -101,6 +103,7 @@ const HomePage = () => {
   const [applyLoading, setApplyLoading] = useState(false);
   const [applyMessage, setApplyMessage] = useState("");
   const [applyError, setApplyError] = useState("");
+  const [dismissedApplyToastKey, setDismissedApplyToastKey] = useState("");
   const [useCustomResume, setUseCustomResume] = useState(false);
   const [customResumeFile, setCustomResumeFile] = useState<File | null>(null);
   const [applyNote, setApplyNote] = useState("");
@@ -169,7 +172,7 @@ const HomePage = () => {
         setCompaniesLoading(true);
         setCompaniesError("");
         const response = await fetch(
-          "http://localhost:5000/api/jobs/companies-summary?limit=7",
+          `${API_BASE_URL}/jobs/companies-summary?limit=7`,
         );
         const data = await response.json();
         if (!response.ok) {
@@ -203,7 +206,7 @@ const HomePage = () => {
         setJobsLoading(true);
         setJobsError("");
         const response = await fetch(
-          "http://localhost:5000/api/jobs?sort=newest&page=1&limit=6",
+          `${API_BASE_URL}/jobs?sort=newest&page=1&limit=6`,
         );
         const data = await response.json();
         if (!response.ok) {
@@ -249,7 +252,7 @@ const HomePage = () => {
         const checks = await Promise.all(
           jobs.map(async (job) => {
             const response = await fetch(
-              `http://localhost:5000/api/applications/status/${job.id}`,
+              `${API_BASE_URL}/applications/status/${job.id}`,
               {
                 headers: { Authorization: `Bearer ${token}` },
               },
@@ -289,7 +292,7 @@ const HomePage = () => {
         const checks = await Promise.all(
           jobs.map(async (job) => {
             const response = await fetch(
-              `http://localhost:5000/api/saved-jobs/status/${job.id}`,
+              `${API_BASE_URL}/saved-jobs/status/${job.id}`,
               {
                 headers: { Authorization: `Bearer ${token}` },
               },
@@ -320,7 +323,7 @@ const HomePage = () => {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/saved-jobs/toggle", {
+      const response = await fetch(`${API_BASE_URL}/saved-jobs/toggle`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -341,7 +344,7 @@ const HomePage = () => {
   const resolveLogo = (logo?: string) => {
     if (!logo) return "";
     if (logo.startsWith("http")) return logo;
-    return `http://localhost:5000${logo.startsWith("/") ? "" : "/"}${logo}`;
+    return `${import.meta.env.VITE_BACKEND_URL}${logo.startsWith("/") ? "" : "/"}${logo}`;
   };
 
   const formatWorkMode = (mode?: string) => {
@@ -437,8 +440,25 @@ const HomePage = () => {
     if (search) params.set("search", search);
     if (location) params.set("location", location);
     const query = params.toString();
-    navigate(query ? `/jobs?${query}` : "/jobs");
+    navigate(query ? `${API_BASE_URL}/jobs?${query}` : "/jobs");
   };
+
+  const applyFeedbackMessage = applyError || applyMessage;
+  const applyFeedbackType = applyError ? "error" : "success";
+  const applyFeedbackKey = `${applyFeedbackType}:${applyFeedbackMessage}`;
+
+  useEffect(() => {
+    setDismissedApplyToastKey("");
+  }, [applyFeedbackKey]);
+
+  useEffect(() => {
+    if (!applyFeedbackMessage) return;
+    const timer = window.setTimeout(() => {
+      setApplyError("");
+      setApplyMessage("");
+    }, 6000);
+    return () => window.clearTimeout(timer);
+  }, [applyFeedbackMessage]);
 
   const openApplyModal = async (jobId: string) => {
     if (userRole !== "candidate") return;
@@ -462,8 +482,8 @@ const HomePage = () => {
     try {
       setApplyLoading(true);
       const [jobRes, profileRes] = await Promise.all([
-        fetch(`http://localhost:5000/api/jobs/${jobId}`),
-        fetch("http://localhost:5000/api/profile/me", {
+        fetch(`${API_BASE_URL}/jobs/${jobId}`),
+        fetch(`${API_BASE_URL}/profile/me`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -519,7 +539,7 @@ const HomePage = () => {
 
     try {
       setIsShareLoading(true);
-      const res = await fetch("http://localhost:5000/api/connections/friends", {
+      const res = await fetch(`${API_BASE_URL}/connections/friends`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -562,7 +582,7 @@ const HomePage = () => {
       setIsSendingShare(true);
       setShareError("");
       const content = `Check out this job: ${shareJob.jobTitle} at ${shareJob.companyName}\n${shareLink}`;
-      const res = await fetch("http://localhost:5000/api/messages/send", {
+      const res = await fetch(`${API_BASE_URL}/messages/send`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -613,7 +633,7 @@ const HomePage = () => {
         formData.append("resumeUrl", applyProfileResume);
       }
 
-      const response = await fetch("http://localhost:5000/api/applications/apply", {
+      const response = await fetch(`${API_BASE_URL}/applications/apply`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -625,9 +645,7 @@ const HomePage = () => {
 
       setApplyMessage("Application submitted. Recruiter will be notified.");
       setAppliedJobs((prev) => ({ ...prev, [applyJobId]: true }));
-      setTimeout(() => {
-        setApplyModalOpen(false);
-      }, 1200);
+      setApplyModalOpen(false);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to apply";
       setApplyError(message);
@@ -639,6 +657,26 @@ const HomePage = () => {
   return (
     <div className="home-page">
       <Navbar />
+      {applyFeedbackMessage && dismissedApplyToastKey !== applyFeedbackKey && (
+        <div className={`apply-feedback-toast ${applyFeedbackType}`}>
+          <div className="apply-feedback-toast-head">
+            {applyFeedbackType === "success" ? "Success" : "Error"}
+          </div>
+          <p className="apply-feedback-toast-message">{applyFeedbackMessage}</p>
+          <button
+            type="button"
+            className="apply-feedback-toast-close"
+            aria-label="Close toast"
+            onClick={() => {
+              setDismissedApplyToastKey(applyFeedbackKey);
+              setApplyError("");
+              setApplyMessage("");
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <section id="hero">
         <div className="container hero-container">
@@ -852,7 +890,7 @@ const HomePage = () => {
                           navigate("/login");
                           return;
                         }
-                        navigate(`/jobs/${job.id}`);
+                        navigate(`${API_BASE_URL}/jobs/${job.id}`);
                       }}
                     >
                       View Details
@@ -869,7 +907,7 @@ const HomePage = () => {
                             return;
                           }
                           if (job.assessmentRequired) {
-                            navigate(`/jobs/${job.id}`);
+                            navigate(`${API_BASE_URL}/jobs/${job.id}`);
                             return;
                           }
                           openApplyModal(job.id);
@@ -997,8 +1035,6 @@ const HomePage = () => {
         applyNote={applyNote}
         confirmRequirements={confirmRequirements}
         confirmResume={confirmResume}
-        applyError={applyError}
-        applyMessage={applyMessage}
         onClose={closeApplyModal}
         onConfirm={handleConfirmApply}
         onUseCustomResumeChange={setUseCustomResume}
@@ -1202,6 +1238,12 @@ const HomePage = () => {
 };
 
 export default HomePage;
+
+
+
+
+
+
 
 
 
