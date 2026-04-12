@@ -54,11 +54,22 @@ interface MessageConversationItem {
   unreadCount?: number;
 }
 const NOTIFICATION_DROPDOWN_LIMIT = 20;
+const TOAST_DISMISSED_STORAGE_PREFIX = "notificationToastDismissed:";
+
+const API_BASE_URL =
+  String(import.meta.env.VITE_API_BASE_URL || "").trim() ||
+  "http://localhost:5000/api";
+
+const getBackendBaseUrl = () => {
+  const configured = String(import.meta.env.VITE_BACKEND_URL || "").trim();
+  if (configured) return configured;
+  return API_BASE_URL.replace(/\/api\/?$/, "");
+};
 
 const resolveAvatar = (value?: string) => {
   if (!value) return defaultAvatar;
   if (value.startsWith("http")) return value;
-  return `http://localhost:5000${value}`;
+  return `${getBackendBaseUrl()}${value}`;
 };
 
 const getNotificationTime = (item: NotificationItem) => {
@@ -66,6 +77,27 @@ const getNotificationTime = (item: NotificationItem) => {
   if (!Number.isNaN(primary)) return primary;
   const fallback = new Date(item.createdAt).getTime();
   return Number.isNaN(fallback) ? 0 : fallback;
+};
+
+const formatApplicationNotificationMessage = (item: NotificationItem) => {
+  const raw = (item.message || "").trim();
+  if (item.type !== "application_status_updated" || !raw) return raw;
+
+  const companyName = item.actor?.fullName?.trim() || "the company";
+  const withCompanyMatch = raw.match(
+    /^Your application for "(.+?)" at (.+?) was updated to (.+)\.$/i
+  );
+  if (withCompanyMatch) {
+    return `Your application for "${withCompanyMatch[1]}" at ${companyName} was updated to ${withCompanyMatch[3]}.`;
+  }
+
+  const withoutCompanyMatch = raw.match(
+    /^Your application for "(.+?)" was updated to (.+)\.$/i
+  );
+  if (withoutCompanyMatch) {
+    return `Your application for "${withoutCompanyMatch[1]}" at ${companyName} was updated to ${withoutCompanyMatch[2]}.`;
+  }
+  return `${raw} (${companyName})`;
 };
 
 const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
@@ -77,6 +109,7 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
   const navigate = useNavigate();
   const notificationRef = useRef<HTMLDivElement | null>(null);
   const toastTimersRef = useRef<Record<string, number>>({});
+  const dismissedToastIdsRef = useRef<Set<string>>(new Set());
   const parsedUser =
     typeof window !== "undefined"
       ? (() => {
@@ -90,6 +123,7 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
       : null;
   const userRole = parsedUser?.role || "";
   const userId = parsedUser?.id || "";
+  const dismissedToastStorageKey = `${TOAST_DISMISSED_STORAGE_PREFIX}${userId || "guest"}`;
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notificationLoading, setNotificationLoading] = useState(false);
@@ -122,7 +156,24 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
     return "New Request";
   };
 
+  const getNotificationStatusClass = (type: NotificationItem["type"]) => {
+    if (type === "message_received") return "status-message-pill";
+    if (type === "application_status_updated") return "status-application";
+    if (type === "project_review_received" || type === "company_review_received") {
+      return "status-review";
+    }
+    if (type === "connection_request_accepted") return "status-accepted";
+    return "status-new-request";
+  };
+
   const dismissToast = (notificationId: string) => {
+    dismissedToastIdsRef.current.add(notificationId);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        dismissedToastStorageKey,
+        JSON.stringify(Array.from(dismissedToastIdsRef.current)),
+      );
+    }
     setDismissingToastIds((prev) =>
       prev.includes(notificationId) ? prev : [...prev, notificationId],
     );
@@ -152,7 +203,7 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
         setNotificationError("");
       }
       const response = await fetch(
-        `http://localhost:5000/api/connections/notifications?limit=${NOTIFICATION_DROPDOWN_LIMIT}`,
+        `${API_BASE_URL}/connections/notifications?limit=${NOTIFICATION_DROPDOWN_LIMIT}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -191,7 +242,7 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
         setNotificationError("");
       }
       const response = await fetch(
-        "http://localhost:5000/api/messages/conversations",
+        `${API_BASE_URL}/messages/conversations`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -292,7 +343,7 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
     if (token) {
       try {
         const response = await fetch(
-          "http://localhost:5000/api/connections/notifications/read",
+          `${API_BASE_URL}/connections/notifications/read`,
           {
             method: "POST",
             headers: {
@@ -342,7 +393,7 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
       if (toastTimersRef.current[toast.id]) return;
       toastTimersRef.current[toast.id] = window.setTimeout(() => {
         dismissToast(toast.id);
-      }, 20000);
+      }, 8000);
     });
 
     Object.keys(toastTimersRef.current).forEach((toastId) => {
@@ -353,6 +404,21 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
       }
     });
   }, [notificationToasts]);
+
+  useEffect(() => {
+    if (!userId || typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(dismissedToastStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      dismissedToastIdsRef.current = new Set(
+        parsed.filter((id) => typeof id === "string"),
+      );
+    } catch {
+      dismissedToastIdsRef.current = new Set();
+    }
+  }, [userId, dismissedToastStorageKey]);
 
   useEffect(() => {
     return () => {
@@ -376,6 +442,7 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
     }) => {
       const incoming = payload?.notification;
       if (!incoming) return;
+      if (dismissedToastIdsRef.current.has(incoming.id)) return;
       setConnectionNotificationItems((prev) => {
         const merged = [incoming, ...prev.filter((item) => item.id !== incoming.id)];
         return merged.slice(0, NOTIFICATION_DROPDOWN_LIMIT);
@@ -458,7 +525,7 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
     try {
       await Promise.all(
         unreadConnectionIds.map((notificationId) =>
-          fetch("http://localhost:5000/api/connections/notifications/read", {
+          fetch(`${API_BASE_URL}/connections/notifications/read`, {
             method: "POST",
             headers: {
               Authorization: `Bearer ${token}`,
@@ -587,7 +654,11 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
                         />
                         <div className="recruiter-top-notification-content">
                           <div className="recruiter-top-notification-top">
-                            <span className="recruiter-top-notification-status">
+                            <span
+                              className={`recruiter-top-notification-status ${getNotificationStatusClass(
+                                item.type
+                              )}`}
+                            >
                               {getNotificationLabel(item.type)}
                             </span>
                             <span className="recruiter-top-notification-time">
@@ -597,7 +668,7 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
                             </span>
                           </div>
                           <p className="recruiter-top-notification-message">
-                            {item.message}
+                            {formatApplicationNotificationMessage(item)}
                           </p>
                         </div>
                       </li>
@@ -658,11 +729,17 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
                     e.currentTarget.src = defaultAvatar;
                   }}
                 />
-                <span className="recruiter-top-notification-status">
+                <span
+                  className={`recruiter-top-notification-status ${getNotificationStatusClass(
+                    item.type
+                  )}`}
+                >
                   {getNotificationLabel(item.type)}
                 </span>
               </div>
-              <p className="recruiter-top-toast-message">{item.message}</p>
+              <p className="recruiter-top-toast-message">
+                {formatApplicationNotificationMessage(item)}
+              </p>
             </div>
           ))}
         </div>
@@ -672,3 +749,12 @@ const RecruiterTopBar: React.FC<RecruiterTopBarProps> = ({
 };
 
 export default RecruiterTopBar;
+
+
+
+
+
+
+
+
+

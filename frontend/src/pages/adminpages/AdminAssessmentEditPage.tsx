@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { useNavigate, useParams } from "react-router-dom";
@@ -76,7 +76,7 @@ const AdminAssessmentEditPage: React.FC = () => {
 
       try {
         const response = await fetch(
-          `http://localhost:5000/api/assessments/${id}`,
+          `${import.meta.env.VITE_API_BASE_URL}/assessments/${id}`,
         );
         const data = await response.json();
         if (!response.ok) {
@@ -245,7 +245,6 @@ const AdminAssessmentEditPage: React.FC = () => {
       if (hasNoCorrect) missing.push("Correct Answer");
     }
     if (form.type === "writing") {
-      if (!stripHtml(form.writingTask)) missing.push("Writing Task");
       if (!stripHtml(form.writingInstructions))
         missing.push("Submission Instructions");
       if (!form.writingFormat) missing.push("Submission Format");
@@ -461,7 +460,7 @@ const AdminAssessmentEditPage: React.FC = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/assessments/${id}`,{
+        `${import.meta.env.VITE_API_BASE_URL}/assessments/${id}`,{
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -530,7 +529,7 @@ const AdminAssessmentEditPage: React.FC = () => {
     try {
       setDeleting(true);
       const response = await fetch(
-        `http://localhost:5000/api/assessments/${id}`,
+        `${import.meta.env.VITE_API_BASE_URL}/assessments/${id}`,
         {
           method: "DELETE",
           headers: {
@@ -901,19 +900,6 @@ const AdminAssessmentEditPage: React.FC = () => {
                       <div className="admin-assessment-type-section">
                         <h3>Writing Assignment</h3>
                         <div className="admin-assessment-form-group">
-                          <label>Task Description *</label>
-                          <ReactQuill
-                            theme="snow"
-                            value={form.writingTask}
-                            onChange={(value) =>
-                              updateForm("writingTask", value)
-                            }
-                            modules={quillModules}
-                            formats={quillFormats}
-                            placeholder="Describe the writing task"
-                          />
-                        </div>
-                        <div className="admin-assessment-form-group">
                           <label>Submission Instructions *</label>
                           <ReactQuill
                             theme="snow"
@@ -1155,3 +1141,5 @@ const AdminAssessmentEditPage: React.FC = () => {
 };
 
 export default AdminAssessmentEditPage;
+
+

@@ -18,8 +18,6 @@ import emailIcon from "../images/Employers Page Images/5_124.svg";
 import foundedIcon from "../images/Employers Page Images/5_131.svg";
 
 // Job meta icons from HTML
-import jobLocationIcon from "../images/Employers Page Images/I5_270_1_3220.svg";
-import jobTimeIcon from "../images/Employers Page Images/I5_270_1_3225.svg";
 import jobCardLocationIcon from "../images/Job List Page Images/location.svg";
 import jobCardTypeIcon from "../images/Job List Page Images/job-type.svg";
 import jobCardWorkModeIcon from "../images/Job List Page Images/work-mode.svg";
@@ -28,7 +26,6 @@ import jobCardSavedBookmarkIcon from "../images/Recruiter Job Post Page Images/b
 import jobCardShareIcon from "../images/Recruiter Job Post Page Images/shareFg.svg";
 
 // Share and save icons
-import shareIcon from "../images/Employers Page Images/I5_270_1_3212.svg";
 
 // Star icons from HTML
 import starFilled from "../images/Employers Page Images/5_169.svg";
@@ -49,6 +46,9 @@ import reviewIllustration from "../images/Employers Page Images/3af141ed60825886
 
 // Default logo
 import defaultLogo from "../images/Register Page Images/Default Profile.webp";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 // Define interface for Company details
 interface CompanyDetails {
@@ -129,7 +129,6 @@ const EmployerDetailsPage = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [isCheckingReview, setIsCheckingReview] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionState>("none");
   const [sendingConnection, setSendingConnection] = useState(false);
@@ -173,7 +172,7 @@ const EmployerDetailsPage = () => {
       const token = localStorage.getItem("authToken");
 
       const response = await fetch(
-        `http://localhost:5000/api/employers/${id}`,
+        `${API_BASE_URL}/employers/${id}`,
         {
           method: "GET",
           headers: token
@@ -203,7 +202,7 @@ const EmployerDetailsPage = () => {
             Boolean(currentUserId) && String(currentUserId) === String(id);
 
           if (isSelfRequest && token) {
-            const meRes = await fetch("http://localhost:5000/api/profile/me", {
+            const meRes = await fetch(`${API_BASE_URL}/profile/me`, {
               headers: {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json",
@@ -220,7 +219,7 @@ const EmployerDetailsPage = () => {
                 logo: me.profilePicture
                   ? me.profilePicture.startsWith("http")
                     ? me.profilePicture
-                    : `http://localhost:5000${me.profilePicture}`
+                    : `${import.meta.env.VITE_BACKEND_URL}${me.profilePicture}`
                   : "",
                 location: me.address || "Location not specified",
                 email: me.email || "",
@@ -233,7 +232,7 @@ const EmployerDetailsPage = () => {
                     item?.imageUrl
                       ? item.imageUrl.startsWith("http")
                         ? item.imageUrl
-                        : `http://localhost:5000${item.imageUrl}`
+                        : `${import.meta.env.VITE_BACKEND_URL}${item.imageUrl}`
                       : null,
                   )
                   .filter(Boolean),
@@ -255,7 +254,7 @@ const EmployerDetailsPage = () => {
 
           // Keep hero card visible by loading basic employer listing data.
           const listResponse = await fetch(
-            "http://localhost:5000/api/employers",
+            `${API_BASE_URL}/employers`,
           );
           const listData = await listResponse.json();
 
@@ -301,7 +300,7 @@ const EmployerDetailsPage = () => {
       setJobsLoading(true);
       setJobsError(null);
       const response = await fetch(
-        `http://localhost:5000/api/jobs?recruiterId=${id}&sort=newest&limit=6`,
+        `${API_BASE_URL}/jobs?recruiterId=${id}&sort=newest&limit=6`,
       );
       const data = await response.json();
       if (!response.ok) {
@@ -336,7 +335,7 @@ const EmployerDetailsPage = () => {
     try {
       const token = localStorage.getItem("authToken");
       const response = await fetch(
-        `http://localhost:5000/api/reviews/company/${id}/my-review`,
+        `${API_BASE_URL}/reviews/company/${id}/my-review`,
         {
           method: "GET",
           headers: {
@@ -377,7 +376,7 @@ const EmployerDetailsPage = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/reviews/company/${id}`,
+        `${API_BASE_URL}/reviews/company/${id}`,
         {
           method: "GET",
           headers: {
@@ -457,7 +456,7 @@ const EmployerDetailsPage = () => {
 
       try {
         const res = await fetch(
-          `http://localhost:5000/api/connections/statuses?targetIds=${company.id}`,
+          `${API_BASE_URL}/connections/statuses?targetIds=${company.id}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           },
@@ -494,7 +493,7 @@ const EmployerDetailsPage = () => {
 
       try {
         const res = await fetch(
-          `http://localhost:5000/api/connections/mutual/${company.id}`,
+          `${API_BASE_URL}/connections/mutual/${company.id}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           },
@@ -538,7 +537,7 @@ const EmployerDetailsPage = () => {
       const entries = await Promise.all(
         jobIds.map(async (jobId) => {
           const res = await fetch(
-            `http://localhost:5000/api/applications/status/${jobId}`,
+            `${API_BASE_URL}/applications/status/${jobId}`,
             { headers: { Authorization: `Bearer ${token}` } },
           );
           const data = await res.json();
@@ -562,7 +561,7 @@ const EmployerDetailsPage = () => {
       const entries = await Promise.all(
         jobIds.map(async (jobId) => {
           const res = await fetch(
-            `http://localhost:5000/api/saved-jobs/status/${jobId}`,
+            `${API_BASE_URL}/saved-jobs/status/${jobId}`,
             { headers: { Authorization: `Bearer ${token}` } },
           );
           const data = await res.json();
@@ -583,7 +582,7 @@ const EmployerDetailsPage = () => {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/saved-jobs/toggle", {
+      const res = await fetch(`${API_BASE_URL}/saved-jobs/toggle`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -596,19 +595,6 @@ const EmployerDetailsPage = () => {
       setSavedJobs((prev) => ({ ...prev, [jobId]: Boolean(data?.saved) }));
     } catch {
       // no-op
-    }
-  };
-
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: company?.name || "Company Details",
-        text: `Check out ${company?.name} on HireLink`,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert("Link copied to clipboard!");
     }
   };
 
@@ -654,7 +640,7 @@ const EmployerDetailsPage = () => {
 
     try {
       setSendingConnection(true);
-      const res = await fetch("http://localhost:5000/api/connections/request", {
+      const res = await fetch(`${API_BASE_URL}/connections/request`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -683,7 +669,7 @@ const EmployerDetailsPage = () => {
   const resolveLogo = (logo?: string) => {
     if (!logo) return defaultLogo;
     if (logo.startsWith("http")) return logo;
-    return `http://localhost:5000${logo.startsWith("/") ? "" : "/"}${logo}`;
+    return `${import.meta.env.VITE_BACKEND_URL}${logo.startsWith("/") ? "" : "/"}${logo}`;
   };
 
   const formatRichTextForDisplay = (content?: string) => {
@@ -695,7 +681,7 @@ const EmployerDetailsPage = () => {
   const resolveProfileImage = (profilePicture?: string) => {
     if (!profilePicture || profilePicture.trim() === "") return defaultLogo;
     if (profilePicture.startsWith("http")) return profilePicture;
-    return `http://localhost:5000${profilePicture.startsWith("/") ? "" : "/"}${profilePicture}`;
+    return `${import.meta.env.VITE_BACKEND_URL}${profilePicture.startsWith("/") ? "" : "/"}${profilePicture}`;
   };
 
   // Review form handlers
@@ -747,7 +733,7 @@ const EmployerDetailsPage = () => {
       }
 
       const response = await fetch(
-        `http://localhost:5000/api/reviews/company/${id}`,
+        `${API_BASE_URL}/reviews/company/${id}`,
         {
           method: "POST",
           headers: {
@@ -831,7 +817,7 @@ const EmployerDetailsPage = () => {
     try {
       const token = localStorage.getItem("authToken");
       const response = await fetch(
-        `http://localhost:5000/api/reviews/${existingReview.id}`,
+        `${API_BASE_URL}/reviews/${existingReview.id}`,
         {
           method: "PUT",
           headers: {
@@ -888,12 +874,11 @@ const EmployerDetailsPage = () => {
 
     setSubmittingReview(true);
     setReviewError(null);
-    setShowDeleteConfirm(false);
 
     try {
       const token = localStorage.getItem("authToken");
       const response = await fetch(
-        `http://localhost:5000/api/reviews/${existingReview.id}`,
+        `${API_BASE_URL}/reviews/${existingReview.id}`,
         {
           method: "DELETE",
           headers: {
@@ -1667,39 +1652,13 @@ const EmployerDetailsPage = () => {
                                     : "Submit Review"}
                               </button>
                               {existingReview && (
-                                <>
-                                  {!showDeleteConfirm ? (
-                                    <button
-                                      className="employer-details-delete-review-btn"
-                                      onClick={() => setShowDeleteConfirm(true)}
-                                      disabled={submittingReview}
-                                    >
-                                      Delete Review
-                                    </button>
-                                  ) : (
-                                    <div className="employer-details-inline-confirm">
-                                      <span>Delete your review?</span>
-                                      <button
-                                        className="employer-details-confirm-btn"
-                                        onClick={handleDeleteReview}
-                                        disabled={submittingReview}
-                                      >
-                                        {submittingReview
-                                          ? "Deleting..."
-                                          : "Yes"}
-                                      </button>
-                                      <button
-                                        className="employer-details-cancel-confirm-btn"
-                                        onClick={() =>
-                                          setShowDeleteConfirm(false)
-                                        }
-                                        disabled={submittingReview}
-                                      >
-                                        No
-                                      </button>
-                                    </div>
-                                  )}
-                                </>
+                                <button
+                                  className="employer-details-delete-review-btn"
+                                  onClick={handleDeleteReview}
+                                  disabled={submittingReview}
+                                >
+                                  {submittingReview ? "Deleting..." : "Delete Review"}
+                                </button>
                               )}
                               <button
                                 className="employer-details-cancel-review-btn"
@@ -1891,3 +1850,6 @@ const EmployerDetailsPage = () => {
 };
 
 export default EmployerDetailsPage;
+
+
+

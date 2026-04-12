@@ -64,6 +64,12 @@ const formatDuration = (start?: string | null, end?: string | null) => {
   return `${minutes}m ${seconds}s`;
 };
 
+const resolveAssetUrl = (value: string) => {
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+  return `${import.meta.env.VITE_BACKEND_URL}${value}`;
+};
+
 const AdminAssessmentAttemptDetailPage = () => {
   const navigate = useNavigate();
   const { attemptId } = useParams();
@@ -82,7 +88,7 @@ const AdminAssessmentAttemptDetailPage = () => {
         setLoading(true);
         setError("");
         const res = await fetch(
-          `http://localhost:5000/api/assessments/admin/attempts/${attemptId}`,
+          `${import.meta.env.VITE_API_BASE_URL}/assessments/admin/attempts/${attemptId}`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
         const data = await res.json();
@@ -160,6 +166,16 @@ const AdminAssessmentAttemptDetailPage = () => {
                 <span>Completed In</span>
                 <strong>{formatDuration(attempt.startTime, attempt.submittedAt)}</strong>
               </div>
+              {typeof attempt.score === "number" && (
+                <div className="recruiter-assessment-page-row">
+                  <span>Score</span>
+                  <strong>
+                    {assessment.type === "quiz" && (assessment.quizTotal ?? 0) > 0
+                      ? `${attempt.score}/${assessment.quizTotal}`
+                      : attempt.score}
+                  </strong>
+                </div>
+              )}
 
               {assessment.description && (
                 <div className="recruiter-assessment-page-block">
@@ -298,7 +314,7 @@ const AdminAssessmentAttemptDetailPage = () => {
                       <div className="recruiter-assessment-page-block">
                         <span>Uploaded File</span>
                         <a
-                          href={`http://localhost:5000${assessment.codeFileUrl}`}
+                          href={resolveAssetUrl(assessment.codeFileUrl)}
                           target="_blank"
                           rel="noreferrer"
                         >
@@ -327,3 +343,5 @@ const AdminAssessmentAttemptDetailPage = () => {
 };
 
 export default AdminAssessmentAttemptDetailPage;
+
+

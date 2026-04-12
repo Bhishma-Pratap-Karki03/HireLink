@@ -152,7 +152,6 @@ const AdminAssessmentCreatePage: React.FC = () => {
       if (hasNoCorrect) missing.push("Correct Answer");
     }
     if (form.type === "writing") {
-      if (!stripHtml(form.writingTask)) missing.push("Writing Task");
       if (!stripHtml(form.writingInstructions))
         missing.push("Submission Instructions");
       if (!form.writingFormat) missing.push("Submission Format");
@@ -323,7 +322,7 @@ const AdminAssessmentCreatePage: React.FC = () => {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/assessments", {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/assessments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -347,7 +346,7 @@ const AdminAssessmentCreatePage: React.FC = () => {
                   correctIndex: q.correctIndex,
                 }))
               : [],
-          writingTask: form.writingTask,
+          writingTask: "",
           writingInstructions: form.writingInstructions,
           writingFormat: form.writingFormat,
           codeProblem: form.codeProblem,
@@ -724,19 +723,6 @@ const AdminAssessmentCreatePage: React.FC = () => {
                       <div className="admin-assessment-type-section">
                         <h3>Writing Assignment</h3>
                         <div className="admin-assessment-form-group">
-                          <label>Task Description *</label>
-                          <ReactQuill
-                            theme="snow"
-                            value={form.writingTask}
-                            onChange={(value) =>
-                              updateForm("writingTask", value)
-                            }
-                            modules={quillModules}
-                            formats={quillFormats}
-                            placeholder="Describe the writing task"
-                          />
-                        </div>
-                        <div className="admin-assessment-form-group">
                           <label>Submission Instructions *</label>
                           <ReactQuill
                             theme="snow"
@@ -945,4 +931,6 @@ const AdminAssessmentCreatePage: React.FC = () => {
 };
 
 export default AdminAssessmentCreatePage;
+
+
 

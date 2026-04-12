@@ -111,11 +111,23 @@ const getToastStorageKey = () => {
   return `${NOTIFICATION_TOAST_STORAGE_PREFIX}${userId}`;
 };
 
+const getBackendBaseUrl = () => {
+  const configured = String(import.meta.env.VITE_BACKEND_URL || "").trim();
+  if (configured) return configured;
+  const apiBase = String(import.meta.env.VITE_API_BASE_URL || "").trim();
+  if (apiBase) return apiBase.replace(/\/api\/?$/, "");
+  return "http://localhost:5000";
+};
+
 const resolveAvatar = (value?: string) => {
   if (!value) return defaultAvatar;
   if (value.startsWith("http")) return value;
-  return `http://localhost:5000${value}`;
+  return `${getBackendBaseUrl()}${value}`;
 };
+
+const API_BASE_URL =
+  String(import.meta.env.VITE_API_BASE_URL || "").trim() ||
+  "http://localhost:5000/api";
 
 const getNotificationTime = (item: NotificationItem) => {
   const primary = new Date(item.updatedAt || item.createdAt).getTime();
@@ -123,9 +135,30 @@ const getNotificationTime = (item: NotificationItem) => {
   const fallback = new Date(item.createdAt).getTime();
   return Number.isNaN(fallback) ? 0 : fallback;
 };
+
+const formatApplicationNotificationMessage = (item: NotificationItem) => {
+  const raw = (item.message || "").trim();
+  if (item.type !== "application_status_updated" || !raw) return raw;
+
+  const companyName = item.actor?.fullName?.trim() || "the company";
+  const withCompanyMatch = raw.match(
+    /^Your application for "(.+?)" at (.+?) was updated to (.+)\.$/i
+  );
+  if (withCompanyMatch) {
+    return `Your application for "${withCompanyMatch[1]}" at ${companyName} was updated to ${withCompanyMatch[3]}.`;
+  }
+
+  const withoutCompanyMatch = raw.match(
+    /^Your application for "(.+?)" was updated to (.+)\.$/i
+  );
+  if (withoutCompanyMatch) {
+    return `Your application for "${withoutCompanyMatch[1]}" at ${companyName} was updated to ${withoutCompanyMatch[2]}.`;
+  }
+  return `${raw} (${companyName})`;
+};
 const NOTIFICATION_DROPDOWN_LIMIT = 20;
 
-const Navbar = ({ userType = "candidate" }: NavbarProps) => {
+const Navbar = (_props: NavbarProps) => {
   const ADMIN_VIEWED_CONTACT_STORAGE_KEY = "adminViewedContactNotificationIds";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() =>
@@ -197,7 +230,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/profile/me", {
+      const response = await fetch(`${API_BASE_URL}/profile/me`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -248,13 +281,11 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
           setUserName("User");
         }
 
-        // Set profile picture from database
+        // Set profile picture from database (supports cloud URLs and local uploads with fallback base URL)
         if (data.user.profilePicture && data.user.profilePicture !== "") {
-          if (data.user.profilePicture.startsWith("http")) {
-            setProfileImage(data.user.profilePicture);
-          } else {
-            setProfileImage(`http://localhost:5000${data.user.profilePicture}`);
-          }
+          const resolved = resolveAvatar(data.user.profilePicture);
+          const separator = resolved.includes("?") ? "&" : "?";
+          setProfileImage(`${resolved}${separator}t=${Date.now()}`);
         } else {
           // Use default avatar for users without profile picture
           setProfileImage(defaultAvatar);
@@ -270,9 +301,18 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
-      setIsAuthenticated(false);
-      setUserData(null);
-      setUserName("");
+      // Keep auth UI when token exists, even if profile fetch temporarily fails.
+      const fallbackToken = localStorage.getItem("authToken");
+      if (fallbackToken) {
+        const storedUser = readStoredUserData();
+        setIsAuthenticated(true);
+        setUserData(storedUser);
+        setUserName(readStoredUserName() || "User");
+      } else {
+        setIsAuthenticated(false);
+        setUserData(null);
+        setUserName("");
+      }
       setProfileImage(defaultAvatar);
     }
   };
@@ -339,7 +379,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
         setNotificationError("");
       }
       const response = await fetch(
-        `http://localhost:5000/api/connections/notifications?limit=${NOTIFICATION_DROPDOWN_LIMIT}`,
+        `${API_BASE_URL}/connections/notifications?limit=${NOTIFICATION_DROPDOWN_LIMIT}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -378,7 +418,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
         setNotificationLoading(true);
         setNotificationError("");
       }
-      const response = await fetch("http://localhost:5000/api/messages/conversations", {
+      const response = await fetch(`${API_BASE_URL}/messages/conversations`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -461,7 +501,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
         setNotificationError("");
       }
       const response = await fetch(
-        "http://localhost:5000/api/contact/admin/messages?status=all",
+        `${API_BASE_URL}/contact/admin/messages?status=all`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -589,7 +629,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/connections/notifications/read",
+        `${API_BASE_URL}/connections/notifications/read`,
         {
           method: "POST",
           headers: {
@@ -677,7 +717,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
       if (toastTimersRef.current[toast.id]) return;
       toastTimersRef.current[toast.id] = window.setTimeout(() => {
         dismissToast(toast.id);
-      }, 20000);
+      }, 8000);
     });
 
     Object.keys(toastTimersRef.current).forEach((toastId) => {
@@ -913,12 +953,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
     closeMobileMenu();
 
     // Redirect to login page
-    navigate("/login");
-
-    // Force a small delay and refresh to clear all state
-    setTimeout(() => {
-      window.location.reload();
-    }, 100);
+    navigate("/login", { replace: true });
   };
 
   const handleDashboardClick = () => {
@@ -1009,7 +1044,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
         await Promise.all(
           unreadContacts.map((item) =>
             fetch(
-              `http://localhost:5000/api/contact/admin/messages/${item.contactMessageId}/read`,
+              `${API_BASE_URL}/contact/admin/messages/${item.contactMessageId}/read`,
               {
                 method: "PATCH",
                 headers: {
@@ -1031,7 +1066,7 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
 
         await Promise.all(
           unreadConnectionIds.map((notificationId) =>
-            fetch("http://localhost:5000/api/connections/notifications/read", {
+            fetch(`${API_BASE_URL}/connections/notifications/read`, {
               method: "POST",
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -1191,7 +1226,9 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
                                   ).toLocaleString()}
                                 </span>
                               </div>
-                              <p className="notification-message">{item.message}</p>
+                              <p className="notification-message">
+                                {formatApplicationNotificationMessage(item)}
+                              </p>
                             </div>
                           </div>
                         </li>
@@ -1578,7 +1615,9 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
                     : "New Request"}
                 </span>
               </div>
-              <p className="notification-toast-message">{item.message}</p>
+              <p className="notification-toast-message">
+                {formatApplicationNotificationMessage(item)}
+              </p>
             </div>
           ))}
         </div>
@@ -1588,3 +1627,8 @@ const Navbar = ({ userType = "candidate" }: NavbarProps) => {
 };
 
 export default Navbar;
+
+
+
+
+

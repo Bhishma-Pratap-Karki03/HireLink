@@ -9,7 +9,6 @@ import "../../styles/RecruiterJobPostPage.css";
 import "../../styles/JobListingPage.css";
 
 // Import images
-import postJobCalendarIcon from "../../images/Recruiter Profile Page Images/postjobcalendar.svg";
 import deleteIcon from "../../images/Recruiter Job Post Page Images/deleteIcon.svg";
 import errorIcon from "../../images/Recruiter Job Post Page Images/Error icon.svg";
 import addResponsibilityIcon from "../../images/Recruiter Job Post Page Images/addIcon.svg";
@@ -27,7 +26,6 @@ import addStageIcon from "../../images/Recruiter Job Post Page Images/addIcon.sv
 // New preview section images
 import companyLogo from "../../images/Recruiter Job Post Page Images/companyLogo.png";
 import locationIcon from "../../images/Recruiter Job Post Page Images/location.svg";
-import timeIcon from "../../images/Recruiter Job Post Page Images/timeIcon.svg";
 import successIcon from "../../images/Recruiter Job Post Page Images/successIcon.svg";
 import workModeIcon from "../../images/Job List Page Images/work-mode.svg";
 import jobTypeIcon from "../../images/Job List Page Images/job-type.svg";
@@ -60,9 +58,49 @@ type AssessmentForm = {
   codeEvaluation: string;
 };
 
+const resolveApiBaseUrl = () => {
+  const envUrl = (import.meta.env.VITE_API_BASE_URL || "").trim();
+  if (envUrl) return envUrl.replace(/\/+$/, "");
+  if (typeof window !== "undefined") {
+    const isLocalHost =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+    if (isLocalHost) return "http://localhost:5000/api";
+  }
+  return "/api";
+};
+
+const resolveBackendBaseUrl = () => {
+  const configured = (import.meta.env.VITE_BACKEND_URL || "").trim();
+  if (configured) return configured.replace(/\/+$/, "");
+  const apiBase = resolveApiBaseUrl();
+  if (apiBase.startsWith("http")) {
+    return apiBase.replace(/\/api\/?$/, "");
+  }
+  if (typeof window !== "undefined") {
+    const isLocalHost =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+    if (isLocalHost) return "http://localhost:5000";
+    return window.location.origin;
+  }
+  return "";
+};
+
+const parseJsonResponse = async (response: Response) => {
+  const contentType = response.headers.get("content-type") || "";
+  const text = await response.text();
+  if (!text) return {};
+  if (!contentType.includes("application/json")) {
+    throw new Error("API returned non-JSON response. Check API base URL.");
+  }
+  return JSON.parse(text);
+};
 
 const RecruiterJobPostPage: React.FC = () => {
   const MAX_INTERVIEW_STAGES = 6;
+  const apiBaseUrl = resolveApiBaseUrl();
+  const backendBaseUrl = resolveBackendBaseUrl();
   const navigate = useNavigate();
   const { id: jobIdParam } = useParams();
   const isEditMode = Boolean(jobIdParam);
@@ -93,10 +131,9 @@ const RecruiterJobPostPage: React.FC = () => {
     "Vehicle Insurance",
   ]);
   const [interviewStages, setInterviewStages] = useState<string[]>([""]);
-  const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState("");
   const [submitToast, setSubmitToast] = useState("");
+  const [submitToastType, setSubmitToastType] = useState<"success" | "error">("success");
   const [hasPosted, setHasPosted] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
   const [assessmentEnabled, setAssessmentEnabled] = useState(false);
@@ -233,13 +270,12 @@ const RecruiterJobPostPage: React.FC = () => {
   }, [formData, workMode, gender]);
 
   const isFormComplete = missingFields.length === 0;
-  const shouldShowSuccess = hasPosted || submitSuccess !== "";
 
   useEffect(() => {
     if (!submitToast) return;
     const timer = window.setTimeout(() => {
       setSubmitToast("");
-    }, 2200);
+    }, 4000);
     return () => window.clearTimeout(timer);
   }, [submitToast]);
 
@@ -253,12 +289,12 @@ const RecruiterJobPostPage: React.FC = () => {
       setAssessmentSubmitSuccess("");
       const token = localStorage.getItem("authToken");
       const response = await fetch(
-        `http://localhost:5000/api/recruiter-assessments/${assessmentId}`,
+        `${apiBaseUrl}/recruiter-assessments/${assessmentId}`,
         {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         },
       );
-      const data = await response.json();
+      const data = await parseJsonResponse(response);
       if (!response.ok) {
         throw new Error(data?.message || "Failed to load assessment");
       }
@@ -273,8 +309,8 @@ const RecruiterJobPostPage: React.FC = () => {
     const loadJobForEdit = async () => {
       if (!isEditMode || !jobIdParam) return;
       try {
-        const res = await fetch(`http://localhost:5000/api/jobs/${jobIdParam}`);
-        const data = await res.json();
+        const res = await fetch(`${apiBaseUrl}/jobs/${jobIdParam}`);
+        const data = await parseJsonResponse(res);
         if (!res.ok) {
           throw new Error(data?.message || "Failed to load job");
         }
@@ -329,8 +365,8 @@ const RecruiterJobPostPage: React.FC = () => {
         setAssessmentRequired(Boolean(job.assessmentRequired));
         setAssessmentMode("none");
         setHasPosted(false);
-        setSubmitSuccess("");
-        setSubmitError("");
+        setSubmitToast("");
+        setSubmitToastType("success");
       } catch (error) {
         console.error("Error loading job:", error);
       }
@@ -364,7 +400,6 @@ const RecruiterJobPostPage: React.FC = () => {
       if (hasNoCorrect) missing.push("Correct Answer");
     }
     if (assessmentForm.type === "writing") {
-      if (!stripHtml(assessmentForm.writingTask)) missing.push("Writing Task");
       if (!stripHtml(assessmentForm.writingInstructions))
         missing.push("Submission Instructions");
       if (!assessmentForm.writingFormat) missing.push("Submission Format");
@@ -392,9 +427,9 @@ const RecruiterJobPostPage: React.FC = () => {
 
   const currencyOptions = [
     { code: "NPR", label: "NPR (Rs.)" },
-    { code: "INR", label: "INR (₹)" },
+    { code: "INR", label: "INR (Rs.)" },
     { code: "USD", label: "USD ($)" },
-    { code: "GBP", label: "GBP (£)" },
+    { code: "GBP", label: "GBP (Pound)" },
   ];
 
   const selectedCurrencyLabel =
@@ -578,24 +613,6 @@ const RecruiterJobPostPage: React.FC = () => {
     }));
   };
 
-  const addAssessmentSkill = () => {
-    updateAssessmentForm("skillTags", [...assessmentForm.skillTags, ""]);
-  };
-
-  const updateAssessmentSkill = (index: number, value: string) => {
-    updateAssessmentForm(
-      "skillTags",
-      assessmentForm.skillTags.map((item, i) => (i === index ? value : item)),
-    );
-  };
-
-  const removeAssessmentSkill = (index: number) => {
-    updateAssessmentForm(
-      "skillTags",
-      assessmentForm.skillTags.filter((_, i) => i !== index),
-    );
-  };
-
   const addAssessmentLanguage = () => {
     updateAssessmentForm("codeLanguages", [...assessmentForm.codeLanguages, ""]);
   };
@@ -617,31 +634,31 @@ const RecruiterJobPostPage: React.FC = () => {
 
   const handlePostJob = async () => {
     if (!isFormComplete) {
-      setSubmitError("Please complete all required fields before posting.");
-      setSubmitSuccess("");
+      setSubmitToastType("error");
+      setSubmitToast("Please complete all required fields before posting.");
       return;
     }
 
     const token = localStorage.getItem("authToken");
     if (!token) {
-      setSubmitError("Please log in to post a job.");
-      setSubmitSuccess("");
+      setSubmitToastType("error");
+      setSubmitToast("Please log in to post a job.");
       return;
     }
 
     if (hasPosted && !isEditMode) {
-      setSubmitError("You have already posted this job.");
-      setSubmitSuccess("");
+      setSubmitToastType("error");
+      setSubmitToast("You have already posted this job.");
       return;
     }
 
     setIsSubmitting(true);
-    setSubmitError("");
-    setSubmitSuccess("");
+    setSubmitToast("");
+    setSubmitToastType("success");
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/jobs${isEditMode ? `/${jobIdParam}` : ""}`,
+        `${apiBaseUrl}/jobs${isEditMode ? `/${jobIdParam}` : ""}`,
         {
         method: isEditMode ? "PUT" : "POST",
         headers: {
@@ -679,27 +696,28 @@ const RecruiterJobPostPage: React.FC = () => {
         }),
       });
 
-      const data = await response.json();
+      const data = await parseJsonResponse(response);
       if (!response.ok) {
         throw new Error(data?.message || "Failed to post job");
       }
 
-      setSubmitSuccess(
-        isEditMode ? "Job updated successfully!" : "Job posted successfully!"
-      );
-      setSubmitToast(
-        isEditMode ? "Job updated successfully!" : "Job posted successfully!"
-      );
+      const successMessage = isEditMode
+        ? "Job updated successfully!"
+        : "Job posted successfully!";
+      setSubmitToastType("success");
+      setSubmitToast(successMessage);
       setHasPosted(true);
       setTimeout(() => {
         if (!isEditMode) {
           resetForm();
         }
-        navigate("/recruiter/job-postings");
+        navigate("/recruiter/job-postings", {
+          state: { toastMessage: successMessage, toastType: "success" },
+        });
       }, 900);
     } catch (error: any) {
-      setSubmitError(error.message || "Failed to post job");
-      setSubmitSuccess("");
+      setSubmitToastType("error");
+      setSubmitToast(error.message || "Failed to post job");
     } finally {
       setIsSubmitting(false);
     }
@@ -723,17 +741,6 @@ const RecruiterJobPostPage: React.FC = () => {
     setHasPosted(false);
   };
 
-  const userId = (() => {
-    try {
-      const userDataStr = localStorage.getItem("userData");
-      if (!userDataStr) return "";
-      const userData = JSON.parse(userDataStr);
-      return userData.id || "";
-    } catch {
-      return "";
-    }
-  })();
-
   const companyName = (() => {
     try {
       const userDataStr = localStorage.getItem("userData");
@@ -751,7 +758,7 @@ const RecruiterJobPostPage: React.FC = () => {
   const resolveCompanyLogoPath = (logo?: string) => {
     if (!logo) return "";
     if (logo.startsWith("http")) return logo;
-    return `http://localhost:5000${logo.startsWith("/") ? "" : "/"}${logo}`;
+    return `${backendBaseUrl}${logo.startsWith("/") ? "" : "/"}${logo}`;
   };
 
   const defaultEmail = (() => {
@@ -794,13 +801,13 @@ const RecruiterJobPostPage: React.FC = () => {
       try {
         const token = localStorage.getItem("authToken");
         if (!token) return;
-        const response = await fetch("http://localhost:5000/api/profile/me", {
+        const response = await fetch(`${apiBaseUrl}/profile/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
         if (!response.ok) return;
-        const data = await response.json();
+        const data = await parseJsonResponse(response);
         const apiLogo = resolveCompanyLogoPath(
           data?.user?.profilePicture || data?.user?.logo || "",
         );
@@ -881,7 +888,7 @@ const RecruiterJobPostPage: React.FC = () => {
       setAssessmentSubmitError("");
       const isUpdate = Boolean(selectedAssessmentId);
       const response = await fetch(
-        `http://localhost:5000/api/recruiter-assessments${isUpdate ? `/${selectedAssessmentId}` : ""}`,
+        `${apiBaseUrl}/recruiter-assessments${isUpdate ? `/${selectedAssessmentId}` : ""}`,
         {
         method: isUpdate ? "PUT" : "POST",
         headers: {
@@ -906,7 +913,7 @@ const RecruiterJobPostPage: React.FC = () => {
                   correctIndex: q.correctIndex,
                 }))
               : [],
-          writingTask: assessmentForm.writingTask,
+          writingTask: "",
           writingInstructions: assessmentForm.writingInstructions,
           writingFormat: assessmentForm.writingFormat,
           codeProblem: assessmentForm.codeProblem,
@@ -915,7 +922,7 @@ const RecruiterJobPostPage: React.FC = () => {
           codeEvaluation: assessmentForm.codeEvaluation,
         }),
       });
-      const data = await response.json();
+      const data = await parseJsonResponse(response);
       if (!response.ok) {
         throw new Error(data?.message || "Failed to save assessment");
       }
@@ -991,15 +998,18 @@ const RecruiterJobPostPage: React.FC = () => {
           <div className="recruiter-postjob-scrollable-content">
             <div className="recruiter-postjob-content-wrapper">
               {submitToast && (
-                <div className="recruiter-jobpost-toast">
+                <div className={`recruiter-jobpost-toast recruiter-jobpost-toast--${submitToastType}`}>
                   <button
                     type="button"
                     className="recruiter-jobpost-toast-close"
                     onClick={() => setSubmitToast("")}
                     aria-label="Close"
                   >
-                    ×
+                    {"\u00D7"}
                   </button>
+                  <div className="recruiter-jobpost-toast-head">
+                    {submitToastType === "success" ? "Success" : "Error"}
+                  </div>
                   <p className="recruiter-jobpost-toast-message">{submitToast}</p>
                 </div>
               )}
@@ -2003,25 +2013,6 @@ const RecruiterJobPostPage: React.FC = () => {
                               <div className="recruiter-postjob-assessment-type">
                                 <h4>Writing Assignment</h4>
                                 <div className="recruiter-postjob-form-group">
-                                  <label>Task Description *</label>
-                                  <div className="recruiter-postjob-quill-editor">
-                                    <ReactQuill
-                                      theme="snow"
-                                      value={assessmentForm.writingTask}
-                                      readOnly={isAssessmentReadOnly}
-                                      onChange={(value) =>
-                                        updateAssessmentForm(
-                                          "writingTask",
-                                          value,
-                                        )
-                                      }
-                                      modules={quillModules}
-                                      formats={quillFormats}
-                                      placeholder="Describe the writing task"
-                                    />
-                                  </div>
-                                </div>
-                                <div className="recruiter-postjob-form-group">
                                   <label>Submission Instructions *</label>
                                   <div className="recruiter-postjob-quill-editor">
                                     <ReactQuill
@@ -2299,19 +2290,19 @@ const RecruiterJobPostPage: React.FC = () => {
 
                       <div
                         className={`recruiter-jobpost-alert-box ${
-                          shouldShowSuccess || isFormComplete
+                          isFormComplete
                             ? "recruiter-jobpost-alert-box--success"
                             : "recruiter-jobpost-alert-box--error"
                         }`}
                       >
                         <img
                           src={
-                            shouldShowSuccess || isFormComplete
+                            isFormComplete
                               ? successIcon
                               : errorIcon
                           }
                           alt={
-                            shouldShowSuccess || isFormComplete
+                            isFormComplete
                               ? "Success"
                               : "Missing Info"
                           }
@@ -2320,40 +2311,28 @@ const RecruiterJobPostPage: React.FC = () => {
                         <div className="recruiter-jobpost-alert-content">
                           <div
                             className={`recruiter-jobpost-alert-title ${
-                              shouldShowSuccess || isFormComplete
+                              isFormComplete
                                 ? "recruiter-jobpost-alert-title--success"
                                 : "recruiter-jobpost-alert-title--error"
                             }`}
                           >
-                            {shouldShowSuccess || isFormComplete
+                            {isFormComplete
                               ? "Posting looks great!"
                               : "Missing required information"}
                           </div>
                           <div
                             className={`recruiter-jobpost-alert-desc ${
-                              shouldShowSuccess || isFormComplete
+                              isFormComplete
                                 ? "recruiter-jobpost-alert-desc--success"
                                 : "recruiter-jobpost-alert-desc--error"
                             }`}
                           >
-                            {shouldShowSuccess
-                              ? "Job posted successfully."
-                              : isFormComplete
-                                ? "All required fields are completed."
-                                : `Please complete: ${missingFields.join(", ")}.`}
+                            {isFormComplete
+                              ? "All required fields are completed."
+                              : `Please complete: ${missingFields.join(", ")}.`}
                           </div>
                         </div>
                       </div>
-                      {submitError && (
-                        <div className="recruiter-jobpost-error-text">
-                          {submitError}
-                        </div>
-                      )}
-                      {submitSuccess && (
-                        <div className="recruiter-jobpost-success-text">
-                          {submitSuccess}
-                        </div>
-                      )}
 
                       <div className="recruiter-jobpost-main-action-buttons">
                           <button
@@ -2394,3 +2373,8 @@ const RecruiterJobPostPage: React.FC = () => {
 };
 
 export default RecruiterJobPostPage;
+
+
+
+
+

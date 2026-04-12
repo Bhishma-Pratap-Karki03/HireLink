@@ -21,7 +21,7 @@ type AttemptItem = {
   attemptNumber: number;
   submittedAt: string;
   score: number | null;
-  quizTotal: number;
+  quizTotal: number | null;
 };
 
 const formatDate = (value?: string) => {
@@ -53,7 +53,7 @@ const AdminAssessmentAttemptsPage = () => {
     try {
       setLoading(true);
       setError("");
-      const res = await fetch("http://localhost:5000/api/assessments/admin/attempts", {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/assessments/admin/attempts`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -129,7 +129,7 @@ const AdminAssessmentAttemptsPage = () => {
     try {
       setDismissingId(attemptId);
       const res = await fetch(
-        `http://localhost:5000/api/assessments/admin/attempts/${attemptId}`,
+        `${import.meta.env.VITE_API_BASE_URL}/assessments/admin/attempts/${attemptId}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
@@ -189,6 +189,7 @@ const AdminAssessmentAttemptsPage = () => {
                   <span>Type</span>
                   <span>Candidate</span>
                   <span>Attempt</span>
+                  <span>Score</span>
                   <span>Submitted</span>
                   <span>Actions</span>
                 </header>
@@ -217,9 +218,22 @@ const AdminAssessmentAttemptsPage = () => {
                       </span>
                       <span>
                         {item.attemptNumber}
-                        {item.assessmentType === "quiz" && item.quizTotal > 0
-                          ? ` (${item.score ?? 0}/${item.quizTotal})`
+                        {item.assessmentType === "quiz" && typeof item.score === "number"
+                          ? item.quizTotal && item.quizTotal > 0
+                            ? ` (${item.score}/${item.quizTotal})`
+                            : ` (${item.score})`
                           : ""}
+                      </span>
+                      <span>
+                        {item.assessmentType === "quiz" && typeof item.score === "number" ? (
+                          <strong className="admin-assessment-attempt-score">
+                            {item.quizTotal && item.quizTotal > 0
+                              ? `${item.score}/${item.quizTotal}`
+                              : `${item.score}`}
+                          </strong>
+                        ) : (
+                          "-"
+                        )}
                       </span>
                       <span>{formatDate(item.submittedAt)}</span>
                       <div className="admin-assessments-actions">
@@ -310,3 +324,5 @@ const AdminAssessmentAttemptsPage = () => {
 };
 
 export default AdminAssessmentAttemptsPage;
+
+
